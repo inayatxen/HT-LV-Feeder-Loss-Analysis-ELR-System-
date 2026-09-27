@@ -1,0 +1,241 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export type FeederCategory = 'LV' | 'HV';
+export type FeederType = 'LT' | 'HT' | 'LV' | 'HV';
+
+export type JobTitle = string;
+
+export interface JobTitleOption {
+  code: string;
+  shortLabel: string;
+  fullTitle: string;
+  roleDescription: string;
+  department: string;
+}
+
+export const PRESET_JOB_TITLES: string[] = [
+  'Sub-Divisional Officer (SDO)',
+  'Executive Engineer (XEN)',
+  'Superintending Engineer (SE)',
+  'Chief Engineer (CE)',
+  'Planning & Design Engineer (ELR)',
+  'Assistant Manager (Operations)',
+  'Line Superintendent (LS-1)',
+  'Line Superintendent (LS-2)',
+  'Junior Engineer (JE)',
+  'Distribution Feeder Incharge',
+  'Energy Loss Reduction (ELR) Officer',
+  'Power Distribution Consultant'
+];
+
+export const JOB_TITLE_OPTIONS: JobTitleOption[] = [
+  {
+    code: 'SDO',
+    shortLabel: 'SDO',
+    fullTitle: 'Sub-Divisional Officer (SDO)',
+    roleDescription: 'Assistant Manager (Operations) & Field Feeder Incharge',
+    department: 'Operation Sub-Division'
+  },
+  {
+    code: 'XEN',
+    shortLabel: 'XEN',
+    fullTitle: 'Executive Engineer (XEN)',
+    roleDescription: 'Deputy Manager (Operations) & Division Head',
+    department: 'Operation Division'
+  },
+  {
+    code: 'SE',
+    shortLabel: 'SE',
+    fullTitle: 'Superintending Engineer (SE)',
+    roleDescription: 'Manager (Planning, Design & ELR Directorate)',
+    department: 'Circle Office & ELR Directorate'
+  },
+  {
+    code: 'CE',
+    shortLabel: 'Chief Engineer',
+    fullTitle: 'Chief Engineer (CE)',
+    roleDescription: 'General Manager (Operations & Technical Planning)',
+    department: 'DISCO Headquarters'
+  },
+  {
+    code: 'PLANNING',
+    shortLabel: 'Planning Engr',
+    fullTitle: 'Planning & Design Engineer',
+    roleDescription: 'Energy Loss Reduction (ELR) Specialist',
+    department: 'Planning & Engineering Directorate'
+  },
+  {
+    code: 'LS',
+    shortLabel: 'Line Supt (LS-1)',
+    fullTitle: 'Line Superintendent (LS-1 / LS-2)',
+    roleDescription: 'Feeder Inspection & Network Maintenance Supervisor',
+    department: 'Distribution Field Crew'
+  },
+  {
+    code: 'JE',
+    shortLabel: 'Junior Engr (JE)',
+    fullTitle: 'Junior Engineer (JE)',
+    roleDescription: 'Distribution Network Field Engineer',
+    department: 'Sub-Division Engineering'
+  },
+  {
+    code: 'CONSULTANT',
+    shortLabel: 'Consultant',
+    fullTitle: 'Power Distribution Consultant',
+    roleDescription: 'Independent Loss Reduction & Grid Auditor',
+    department: 'External Technical Advisory'
+  }
+];
+
+export interface Conductor {
+  code: string;
+  name: string;
+  resistancePerKm: number; // Ohms/km at 50/75°C
+  reactancePerKm: number;  // Ohms/km at 50Hz
+  ampacity: number;        // Maximum continuous current in Amperes
+  type: 'ACSR' | 'COPPER' | 'PVC_ALUM' | 'ABC';
+  description: string;
+}
+
+export interface TransformerSpec {
+  capacityKva: number;
+  primaryVoltageKv: number;
+  secondaryVoltageKv: number;
+  ironLossKw: number;      // No-load losses
+  copperLossKw: number;    // Full-load copper loss
+  impedancePercent: number;
+}
+
+export interface FeederNode {
+  id: string;              // e.g. "0.0", "1.0", "2.0"
+  label: string;           // Display name e.g. "Node 0 (Transformer)", "Pole 1"
+  poleNumber?: string;
+  threePhaseCustomers: number;
+  singlePhaseCustomers: number;
+  spotLoadAmps?: number;
+  spotLoadKva?: number;
+  spotLoadPowerFactor?: number;
+  spotLoadVoltage?: number;
+  capacitorKvar?: number;  // Shunt capacitor installed at this node
+  isTransformerNode?: boolean;
+  x?: number;              // Diagram visual layout coordinate
+  y?: number;
+}
+
+export interface FeederSegment {
+  id: string;
+  fromNodeId: string;
+  toNodeId: string;
+  lengthKm: number;        // Length in kilometers
+  conductorCode: string;
+  proposedConductorCode?: string; // For what-if reconductoring
+}
+
+export interface SegmentAnalysisResult {
+  segment: FeederSegment;
+  fromNodeId: string;
+  toNodeId: string;
+  lengthKm: number;
+  lengthMeters: number;
+  threePhaseCustomers: number;
+  singlePhaseCustomers: number;
+  conductor: Conductor;
+  currentAmps: number;
+  percentLoading: number;  // Current / Conductor Ampacity * 100
+  voltDropVolts: number;
+  percentVoltDrop: number; // Cumulative voltage drop % from source
+  cumulativeVoltDropVolts: number;
+  receivingVoltage: number;
+  lineLossKw: number;
+  powerFactor: number;
+  downstreamKva: number;
+  downstreamKw: number;
+  downstreamKvar: number;
+  isHighLoss: boolean;
+  isHighDrop: boolean;
+}
+
+export interface FeederAnalysisSummary {
+  feederName: string;
+  feederType: FeederType;
+  baseVoltage: number;            // 400V for LT, 11000V for HT
+  loadPerSinglePhaseKva: number;  // e.g. 2.0 kVA
+  operatingPowerFactor: number;   // e.g. 0.85
+  loadFactor: number;             // e.g. 0.60
+  lossLoadFactor: number;         // e.g. 0.408 (0.2*LF + 0.8*LF^2)
+  annualGrowthRate: number;       // e.g. 0.05 (5%)
+  
+  // Transformer specs
+  existingTransformerKva: number;
+  proposedTransformerKva: number;
+  
+  // Results
+  totalCircuitLengthKm: number;
+  totalSinglePhaseCustomers: number;
+  totalThreePhaseCustomers: number;
+  totalSystemDemandKva: number;
+  totalSystemDemandKw: number;
+  totalSourceCurrentAmps: number;
+  totalCapacitorKvar: number;
+  
+  // Transformer Loading
+  existingTransformerLoadingPercent: number;
+  proposedTransformerLoadingPercent: number;
+  isTransformerOverloaded: boolean;
+  
+  // Losses
+  totalLineLossKw: number;
+  transformationLossKw: number;
+  totalPowerLossKw: number;
+  percentPowerLoss: number;
+  
+  annualEnergyLossKwh: number;
+  percentAnnualEnergyLoss: number;
+  
+  // Worst node drop
+  worstVoltageDropPercent: number;
+  worstVoltageDropNodeId: string;
+  worstVoltageVolts: number;
+  
+  // Segment details
+  segmentResults: SegmentAnalysisResult[];
+}
+
+export interface ForecastYearResult {
+  year: number;
+  demandKva: number;
+  currentAmps: number;
+  existingLoadingPercent: number;
+  proposedLoadingPercent: number;
+  lineLossesKw: number;
+  totalPowerLossKw: number;
+  annualEnergyLossKwh: number;
+  percentPowerLoss: number;
+  percentEnergyLoss: number;
+}
+
+export interface FeederData {
+  id: string;
+  name: string;
+  description: string;
+  type: FeederType;
+  category?: FeederCategory;
+  substationName: string;
+  gridVoltageKv: number;
+  nominalVoltage: number; // 400 for LT, 11000 for HT
+  loadPerSinglePhaseCustomerKva: number;
+  operatingPowerFactor: number;
+  loadFactor: number;
+  annualGrowthRatePercent: number;
+  tariffPerKwh: number; // Currency per kWh for financial savings calculation
+  currencySymbol: string; // e.g. "PKR" or "$"
+  
+  existingTransformerKva: number;
+  proposedTransformerKva: number;
+  
+  nodes: FeederNode[];
+  segments: FeederSegment[];
+}
