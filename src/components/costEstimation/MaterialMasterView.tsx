@@ -21,7 +21,9 @@ import {
   Filter,
   ArrowUpDown,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface MaterialMasterViewProps {
@@ -41,13 +43,36 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
   const [editingMaterial, setEditingMaterial] = useState<MaterialItem | null>(null);
   const [viewingHistoryMaterial, setViewingHistoryMaterial] = useState<MaterialItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
-  // New rate modal state
+  // Edit material state
+  const [editCode, setEditCode] = useState<string>('');
+  const [editName, setEditName] = useState<string>('');
+  const [editSpecification, setEditSpecification] = useState<string>('');
+  const [editUnit, setEditUnit] = useState<string>('');
   const [newMaterialRate, setNewMaterialRate] = useState<number>(0);
   const [newLabourRate, setNewLabourRate] = useState<number>(0);
+  const [newInstallationRate, setNewInstallationRate] = useState<number>(0);
+  const [newTransportationRate, setNewTransportationRate] = useState<number>(0);
   const [newEffectiveDate, setNewEffectiveDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [rateChangeRemarks, setRateChangeRemarks] = useState<string>('');
   const [approvedBy, setApprovedBy] = useState<string>('Chief Engineer (P&D) PESCO');
+
+  // Add new material form state
+  const [newMaterialForm, setNewMaterialForm] = useState({
+    code: '',
+    name: '',
+    category: 'POLES' as MaterialCategory,
+    unit: 'Nos',
+    specification: '',
+    voltageApplicability: 'HT' as 'HT' | 'LT' | 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 15000,
+    labourRate: 2000,
+    installationRate: 1200,
+    transportationRate: 800,
+    effectiveFrom: new Date().toISOString().split('T')[0]
+  });
 
   // Filtered materials
   const filteredMaterials = materials.filter(m => {
@@ -62,8 +87,14 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
 
   const handleOpenEdit = (item: MaterialItem) => {
     setEditingMaterial(item);
+    setEditCode(item.code);
+    setEditName(item.name);
+    setEditSpecification(item.specification);
+    setEditUnit(item.unit);
     setNewMaterialRate(item.materialRate);
     setNewLabourRate(item.labourRate);
+    setNewInstallationRate(item.installationRate || 0);
+    setNewTransportationRate(item.transportationRate || 0);
     setNewEffectiveDate(new Date().toISOString().split('T')[0]);
     setRateChangeRemarks('');
   };
@@ -89,14 +120,71 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
 
     const updated: MaterialItem = {
       ...editingMaterial,
+      code: editCode.trim().toUpperCase() || editingMaterial.code,
+      name: editName.trim() || editingMaterial.name,
+      specification: editSpecification.trim() || editingMaterial.specification,
+      unit: editUnit.trim() || editingMaterial.unit,
       materialRate: Number(newMaterialRate),
       labourRate: Number(newLabourRate),
+      installationRate: Number(newInstallationRate),
+      transportationRate: Number(newTransportationRate),
       effectiveFrom: newEffectiveDate,
       rateHistory: updatedHistory
     };
 
     onSaveMaterial(updated);
     setEditingMaterial(null);
+  };
+
+  const handleCreateNewMaterial = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMaterialForm.code.trim() || !newMaterialForm.name.trim()) return;
+
+    const newId = `mat-${newMaterialForm.code.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
+    const item: MaterialItem = {
+      id: newId,
+      code: newMaterialForm.code.trim().toUpperCase(),
+      name: newMaterialForm.name.trim(),
+      category: newMaterialForm.category,
+      unit: newMaterialForm.unit.trim() || 'Nos',
+      specification: newMaterialForm.specification.trim(),
+      voltageApplicability: newMaterialForm.voltageApplicability,
+      defaultQtyFactor: Number(newMaterialForm.defaultQtyFactor) || 0,
+      materialRate: Number(newMaterialForm.materialRate) || 0,
+      labourRate: Number(newMaterialForm.labourRate) || 0,
+      installationRate: Number(newMaterialForm.installationRate) || 0,
+      transportationRate: Number(newMaterialForm.transportationRate) || 0,
+      effectiveFrom: newMaterialForm.effectiveFrom || new Date().toISOString().split('T')[0],
+      isActive: true,
+      rateHistory: [
+        {
+          id: `rh-${Date.now()}`,
+          rate: Number(newMaterialForm.materialRate) || 0,
+          labourRate: Number(newMaterialForm.labourRate) || 0,
+          effectiveFrom: newMaterialForm.effectiveFrom || new Date().toISOString().split('T')[0],
+          approvedBy: approvedBy,
+          remarks: 'Initial item creation'
+        }
+      ]
+    };
+
+    onSaveMaterial(item);
+    setIsAddingNew(false);
+    // Reset form
+    setNewMaterialForm({
+      code: '',
+      name: '',
+      category: 'POLES',
+      unit: 'Nos',
+      specification: '',
+      voltageApplicability: 'HT',
+      defaultQtyFactor: 1,
+      materialRate: 15000,
+      labourRate: 2000,
+      installationRate: 1200,
+      transportationRate: 800,
+      effectiveFrom: new Date().toISOString().split('T')[0]
+    });
   };
 
   return (
@@ -228,10 +316,28 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                   return (
                     <tr key={mat.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-2.5 px-3 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
-                      <td className="py-2.5 px-3 font-bold text-slate-900">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px]">
-                          {mat.code}
-                        </span>
+                      <td className="py-2.5 px-3">
+                        <div className="flex items-center gap-1.5 group/code">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-mono font-bold text-slate-900 group-hover/code:bg-blue-50 group-hover/code:text-blue-700 transition-colors">
+                            {mat.code}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard?.writeText(mat.code);
+                              setCopiedCode(mat.code);
+                              setTimeout(() => setCopiedCode(null), 2000);
+                            }}
+                            className="opacity-0 group-hover/code:opacity-100 text-slate-400 hover:text-blue-600 transition-opacity p-0.5 cursor-pointer"
+                            title="Copy Material Code"
+                          >
+                            {copiedCode === mat.code ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </td>
                       <td className="py-2.5 px-4 font-sans max-w-sm">
                         <span className="font-bold text-slate-900 block leading-snug">{mat.name}</span>
@@ -313,21 +419,56 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
             </div>
 
             <form onSubmit={handleSaveRateRevision} className="p-5 space-y-4">
-              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-                <span className="text-[11px] font-mono text-blue-700 font-bold block">{editingMaterial.code}</span>
-                <h4 className="text-sm font-bold text-slate-900 mt-0.5">{editingMaterial.name}</h4>
-                <p className="text-xs text-slate-500 mt-0.5">{editingMaterial.specification}</p>
-                <div className="flex items-center gap-3 mt-2 text-xs text-slate-600 font-mono">
-                  <span>Unit: <strong>{editingMaterial.unit}</strong></span>
-                  <span>·</span>
-                  <span>Category: <strong>{editingMaterial.category}</strong></span>
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase">Material Code</label>
+                    <input
+                      type="text"
+                      value={editCode}
+                      onChange={(e) => setEditCode(e.target.value.toUpperCase())}
+                      className="w-full px-2 py-1 bg-white border border-slate-300 rounded font-mono font-bold text-xs text-blue-700"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-600 uppercase">Unit of Measurement</label>
+                    <input
+                      type="text"
+                      value={editUnit}
+                      onChange={(e) => setEditUnit(e.target.value)}
+                      className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-800"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase">Material Name</label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="w-full px-2 py-1 bg-white border border-slate-300 rounded font-bold text-xs text-slate-900"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase">Specifications / Standards</label>
+                  <textarea
+                    rows={2}
+                    value={editSpecification}
+                    onChange={(e) => setEditSpecification(e.target.value)}
+                    className="w-full px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700"
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Material Rate (PKR / {editingMaterial.unit})
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    Material Rate (PKR)
                   </label>
                   <input
                     type="number"
@@ -335,15 +476,14 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                     step="any"
                     value={newMaterialRate}
                     onChange={(e) => setNewMaterialRate(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Current: Rs. {editingMaterial.materialRate.toLocaleString()}</span>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Labour / Erection Rate (PKR)
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    Labour Rate (PKR)
                   </label>
                   <input
                     type="number"
@@ -351,10 +491,37 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                     step="any"
                     value={newLabourRate}
                     onChange={(e) => setNewLabourRate(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                  <span className="text-[10px] text-slate-400 mt-1 block">Current: Rs. {editingMaterial.labourRate.toLocaleString()}</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    Installation Rate
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newInstallationRate}
+                    onChange={(e) => setNewInstallationRate(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-0.5">
+                    Transport Rate
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newTransportationRate}
+                    onChange={(e) => setNewTransportationRate(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
 
@@ -419,6 +586,228 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                   className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-xs transition-colors cursor-pointer"
                 >
                   Save & Apply Rate Revision
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add New Material Modal */}
+      {isAddingNew && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-emerald-400" />
+                <span className="font-bold text-sm">Add New Material to CSR Catalog</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddingNew(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewMaterial} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Material Code *
+                  </label>
+                  <input
+                    type="text"
+                    value={newMaterialForm.code}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, code: e.target.value.toUpperCase() })}
+                    placeholder="e.g. POL-09-PCC, CND-DOG-ACSR"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
+                    <span>Quick prefix:</span>
+                    {['POL-', 'CND-', 'CBL-', 'INS-', 'HW-', 'TRF-', 'SW-', 'STR-', 'PNL-', 'EQP-'].map(pfx => (
+                      <button
+                        key={pfx}
+                        type="button"
+                        onClick={() => setNewMaterialForm(prev => ({ ...prev, code: pfx }))}
+                        className="hover:text-blue-600 font-mono underline"
+                      >
+                        {pfx}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Category *
+                  </label>
+                  <select
+                    value={newMaterialForm.category}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, category: e.target.value as MaterialCategory })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="POLES">POLES</option>
+                    <option value="CONDUCTORS">CONDUCTORS</option>
+                    <option value="INSULATORS">INSULATORS</option>
+                    <option value="HARDWARE">HARDWARE</option>
+                    <option value="TRANSFORMERS">TRANSFORMERS</option>
+                    <option value="OTHER">OTHER</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Material Name / Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={newMaterialForm.name}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, name: e.target.value })}
+                    placeholder="e.g. PCC Pole 11 Meter / ACSR Dog Conductor"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Unit *
+                  </label>
+                  <select
+                    value={newMaterialForm.unit}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, unit: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Nos">Nos (Each)</option>
+                    <option value="Km">Km (Kilometer)</option>
+                    <option value="Meter">Meter</option>
+                    <option value="Set">Set</option>
+                    <option value="Kg">Kg</option>
+                    <option value="Job">Job / Lumpsum</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Specification & WAPDA Standard Reference
+                </label>
+                <textarea
+                  rows={2}
+                  value={newMaterialForm.specification}
+                  onChange={(e) => setNewMaterialForm({ ...newMaterialForm, specification: e.target.value })}
+                  placeholder="e.g. Technical parameters, DDS standard reference, dimensions, tensile grade..."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Voltage Class
+                  </label>
+                  <select
+                    value={newMaterialForm.voltageApplicability}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, voltageApplicability: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="HT">HT (High Tension / 11kV)</option>
+                    <option value="LT">LT (Low Tension / 400V)</option>
+                    <option value="BOTH">BOTH (Universal HT/LT)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Effective From Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newMaterialForm.effectiveFrom}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, effectiveFrom: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-100">
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Material Rate (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newMaterialForm.materialRate}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, materialRate: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Labour Rate (PKR) *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newMaterialForm.labourRate}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, labourRate: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Installation (PKR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newMaterialForm.installationRate}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, installationRate: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                    Transport (PKR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={newMaterialForm.transportationRate}
+                    onChange={(e) => setNewMaterialForm({ ...newMaterialForm, transportationRate: Number(e.target.value) })}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => setIsAddingNew(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-xs transition-colors cursor-pointer"
+                >
+                  Save Material to Database
                 </button>
               </div>
             </form>

@@ -32,7 +32,7 @@ export function calculateQuantitiesForLine(
   const steps: CalculationStep[] = [];
   const itemMap = new Map<string, EstimateItem>();
 
-  const findMat = (code: string) => materials.find(m => m.code === code && m.isActive);
+  const findMat = (code: string) => materials.find(m => (m.code === code || m.id === code || m.code.includes(code) || code.includes(m.code)) && m.isActive);
 
   // 1. HT Pole Calculation
   const htKm = Number(details.htLengthKm) || 0;
@@ -99,9 +99,24 @@ export function calculateQuantitiesForLine(
   if (htKm > 0) {
     const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
     const htConductorKm = parseFloat((htKm * 3 * sagMultiplier).toFixed(3));
-    const condCode = details.conductorSize === 'PANTHER' ? 'CND-PANTHER-ACSR' : 
-                     details.conductorSize === 'RABBIT' ? 'CND-RABBIT-ACSR' : 'CND-DOG-ACSR';
-    const mat = findMat(condCode) || findMat('CND-DOG-ACSR');
+    
+    let condCode = '2110'; // Default Dog
+    const sizeUpper = (details.conductorSize || '').toUpperCase();
+    if (sizeUpper.includes('OSPREY') || sizeUpper.includes('OSPRAY') || sizeUpper === '2160') {
+      condCode = '2160';
+    } else if (sizeUpper.includes('PANTHER')) {
+      condCode = '2160';
+    } else if (sizeUpper.includes('RABBIT') || sizeUpper === '2120') {
+      condCode = '2120';
+    } else if (sizeUpper.includes('ANT') || sizeUpper === '2340') {
+      condCode = '2340';
+    } else if (sizeUpper.includes('INSULATED') || sizeUpper === '2361') {
+      condCode = '2361';
+    } else {
+      condCode = '2110';
+    }
+    
+    const mat = findMat(condCode) || findMat('2110') || findMat('CND-DOG-ACSR');
 
     steps.push({
       component: 'HT 11kV Conductor',
@@ -171,7 +186,23 @@ export function calculateQuantitiesForLine(
 
   // 5. Add HT Poles to BOQ
   if (actualHtPoles > 0) {
-    const mat = findMat('POL-11-PCC');
+    let poleCode = '1113'; // Default HT Spun Pole 36ft / PCC
+    const poleUpper = (details.poleType || '').toUpperCase();
+    if (poleUpper.includes('45FT') || poleUpper.includes('SPUN_45') || poleUpper.includes('1114') || details.poleHeightMeters === 13.7 || details.poleHeightMeters === 14) {
+      poleCode = '1114'; // HT Spun Pole 45 Feet
+    } else if (poleUpper.includes('STEEL') || poleUpper.includes('STRUCTURE') || poleUpper.includes('1210') || poleUpper.includes('75007') || poleUpper.includes('1213')) {
+      if (poleUpper.includes('45') || poleUpper.includes('75007')) {
+        poleCode = '75007'; // HT Structure 45 Feet
+      } else if (poleUpper.includes('58') || poleUpper.includes('1213')) {
+        poleCode = '1213'; // HT Structure 58 Feet
+      } else {
+        poleCode = '1210'; // HT Structure 34.8 Feet
+      }
+    } else {
+      poleCode = '1113'; // HT Spun Pole 36 Feet
+    }
+
+    const mat = findMat(poleCode) || findMat('1113') || findMat('POL-11-PCC');
     if (mat) {
       itemMap.set(mat.code, {
         id: `item-${mat.code}`,

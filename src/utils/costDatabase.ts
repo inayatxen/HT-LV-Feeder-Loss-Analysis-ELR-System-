@@ -59,15 +59,32 @@ export async function initCostDatabase(): Promise<{
 }> {
   const db = await openCostDb();
 
-  // 1. Check & Seed Materials
-  const materials = await getAllRecords<MaterialItem>(db, 'materials');
-  let activeMaterials = materials;
-  if (materials.length === 0) {
-    for (const mat of INITIAL_MATERIALS) {
-      await putRecord(db, 'materials', mat);
+  // 1. Check & Seed Materials (with automatic sync for newly added standard materials/codes)
+  const existingMaterials = await getAllRecords<MaterialItem>(db, 'materials');
+  const existingMap = new Map(existingMaterials.map(m => [m.id, m]));
+
+  for (const initial of INITIAL_MATERIALS) {
+    if (!existingMap.has(initial.id)) {
+      await putRecord(db, 'materials', initial);
+      existingMap.set(initial.id, initial);
+    } else {
+      const existing = existingMap.get(initial.id)!;
+      if (existing.code !== initial.code || existing.name !== initial.name || existing.category !== initial.category) {
+        const updated = {
+          ...existing,
+          code: initial.code,
+          name: initial.name,
+          category: initial.category,
+          unit: initial.unit || existing.unit,
+          specification: initial.specification || existing.specification,
+          voltageApplicability: initial.voltageApplicability || existing.voltageApplicability
+        };
+        await putRecord(db, 'materials', updated);
+        existingMap.set(initial.id, updated);
+      }
     }
-    activeMaterials = INITIAL_MATERIALS;
   }
+  const activeMaterials = Array.from(existingMap.values());
 
   // 2. Check & Seed Design Factors
   let designFactors = await getSetting<DesignFactorsConfig>(db, 'design_factors');
@@ -88,13 +105,16 @@ export async function initCostDatabase(): Promise<{
 
   // 4. Check & Seed Initial Estimates
   let estimates = await getAllRecords<CostEstimateRecord>(db, 'estimates');
-  if (estimates.length === 0) {
-    const seedEstimates = createSeedEstimates(activeMaterials, designFactors);
-    for (const est of seedEstimates) {
-      await putRecord(db, 'estimates', est);
+  const seedEstimates = createSeedEstimates(activeMaterials, designFactors);
+  const estimateMap = new Map(estimates.map(e => [e.id, e]));
+
+  for (const seed of seedEstimates) {
+    if (!estimateMap.has(seed.id)) {
+      await putRecord(db, 'estimates', seed);
+      estimateMap.set(seed.id, seed);
     }
-    estimates = seedEstimates;
   }
+  estimates = Array.from(estimateMap.values());
 
   return {
     estimates,
@@ -105,18 +125,201 @@ export async function initCostDatabase(): Promise<{
 }
 
 function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsConfig): CostEstimateRecord[] {
-  // Sample 1: 11kV HT Extension at Gulbhar Colony
-  const lineDetails1 = {
-    htLengthKm: 2.2,
-    ltLengthKm: 0.8,
-    htPoles: 24,
-    ltPoles: 20,
-    staySets: 12,
+  // Combination 1: 4 Spans HT Line with Dog Conductor & HT Steel Structure Poles
+  const ld1 = {
+    htLengthKm: 0.4,
+    ltLengthKm: 0,
+    htPoles: 6,
+    ltPoles: 0,
+    staySets: 4,
+    roadCrossings: 1,
+    canalCrossings: 0,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'DOG',
+    poleType: 'STEEL_STRUCTURE',
+    poleHeightMeters: 11,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc1 = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld1, factors, materials);
+  const charges1 = computeEstimateCharges(calc1.items, 0.4, {
+    method: 'PER_KM',
+    distanceKm: 15,
+    ratePerKm: 180,
+    loadingUnloadingFixed: 8000
+  });
+
+  const est1: CostEstimateRecord = {
+    id: 'est-ht-4spans-dog-steel',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-00401',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-09-28',
+      division: 'Peshawar City Division',
+      subDivision: 'University Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'University Town 11kV Feeder',
+      feederCode: 'FDR-UTN-02',
+      proposedLocation: 'University Road Sector B-2 Extension',
+      villageLocality: 'University Town',
+      gpsLatitude: '34.0020 N',
+      gpsLongitude: '71.4850 E',
+      applicantDepartment: 'High Highway Department / Commercial Expansion',
+      schemeProjectName: 'HT Line Shift & Extension Scheme (4 Spans Dog Conductor on Steel Lattice Structure Poles)',
+      purposeOfWork: 'Construction of 4 Spans (0.4 km) 11kV HT Overhead Line using ACSR Dog Conductor and HT Steel Structure Poles (34.8 ft).',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN Peshawar)',
+      approvedBy: 'Engr. Abdul Rehman (SE Circle-1)'
+    },
+    type: 'HT_LINE_EXTENSION',
+    status: 'APPROVED',
+    lineDetails: ld1,
+    items: calc1.items,
+    charges: charges1,
+    calculationSteps: calc1.steps,
+    auditTrail: [
+      { id: 'aud-s1', timestamp: '2026-09-28 09:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate for 4 Spans HT Line (Dog + Steel Structures)' },
+      { id: 'aud-s2', timestamp: '2026-09-28 11:30', user: 'Engr. Tariq Khan', role: 'XEN', action: 'Approved technical BOQ' }
+    ],
+    createdAt: '2026-09-28T09:00:00.000Z',
+    updatedAt: '2026-09-28T11:30:00.000Z'
+  };
+
+  // Combination 2: 1 Kilometer HT Line with Osprey Conductor & HT Spun Poles 45 Feet
+  const ld2 = {
+    htLengthKm: 1.0,
+    ltLengthKm: 0,
+    htPoles: 12,
+    ltPoles: 0,
+    staySets: 6,
     roadCrossings: 2,
     canalCrossings: 0,
-    transformerStructures: 1,
-    transformerCount: 1,
-    transformerCapacityKva: 100,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'OSPREY',
+    poleType: 'SPUN_45FT',
+    poleHeightMeters: 13.7,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc2 = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld2, factors, materials);
+  const charges2 = computeEstimateCharges(calc2.items, 1.0, {
+    method: 'PER_KM',
+    distanceKm: 25,
+    ratePerKm: 180,
+    loadingUnloadingFixed: 12000
+  });
+
+  const est2: CostEstimateRecord = {
+    id: 'est-ht-1km-osprey-spun45',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-01002',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-09-28',
+      division: 'Cantt Division Peshawar',
+      subDivision: 'Saddar Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'Saddar Heavy Trunk 11kV Feeder',
+      feederCode: 'FDR-SDR-01',
+      proposedLocation: 'Khyber Road to Mall Road Trunk Reinforcement',
+      villageLocality: 'Peshawar Cantt',
+      gpsLatitude: '34.0110 N',
+      gpsLongitude: '71.5320 E',
+      applicantDepartment: 'PESCO System Reinforcement / ELR Division',
+      schemeProjectName: '1.0 KM Heavy Feeder Construction (Osprey Conductor on 45-Feet HT Spun Poles)',
+      purposeOfWork: 'Erection of 1.0 Kilometer 11kV Trunk Line with ACSR Osprey Conductor and 45 Feet Heavy HT Spun PCC Poles for high load capacity.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN)'
+    },
+    type: 'HT_LINE_EXTENSION',
+    status: 'SUBMITTED',
+    lineDetails: ld2,
+    items: calc2.items,
+    charges: charges2,
+    calculationSteps: calc2.steps,
+    auditTrail: [
+      { id: 'aud-s3', timestamp: '2026-09-28 14:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Submitted estimate for 1.0 km Osprey + 45ft Spun Poles' }
+    ],
+    createdAt: '2026-09-28T14:00:00.000Z',
+    updatedAt: '2026-09-28T14:00:00.000Z'
+  };
+
+  // Combination 3: 4 Spans HT Line with Osprey Conductor & HT Steel Structure Poles (45ft)
+  const ld3 = {
+    htLengthKm: 0.4,
+    ltLengthKm: 0,
+    htPoles: 6,
+    ltPoles: 0,
+    staySets: 4,
+    roadCrossings: 1,
+    canalCrossings: 0,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'OSPREY',
+    poleType: 'STEEL_STRUCTURE_45FT',
+    poleHeightMeters: 13.7,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc3 = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld3, factors, materials);
+  const charges3 = computeEstimateCharges(calc3.items, 0.4, { method: 'PER_KM', distanceKm: 20, ratePerKm: 180, loadingUnloadingFixed: 8000 });
+
+  const est3: CostEstimateRecord = {
+    id: 'est-ht-4spans-osprey-steel45',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-00403',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-09-29',
+      division: 'Swat Division',
+      subDivision: 'Mingora Sub-Division',
+      circle: 'Swat Circle',
+      district: 'Swat',
+      feederName: 'Mingora Express 11kV Feeder',
+      feederCode: 'FDR-MNG-03',
+      proposedLocation: 'River Swat Crossing Section',
+      villageLocality: 'Mingora',
+      gpsLatitude: '34.7710 N',
+      gpsLongitude: '72.3600 E',
+      applicantDepartment: 'Irrigation & Power Dept / PESCO',
+      schemeProjectName: 'River Crossing HT Line (4 Spans Osprey Conductor on 45ft Steel Structure Towers)',
+      purposeOfWork: '4 Spans (0.4 km) heavy span river crossing with Osprey conductor on 45ft Steel Structure Towers.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)'
+    },
+    type: 'HT_LINE_EXTENSION',
+    status: 'DRAFT',
+    lineDetails: ld3,
+    items: calc3.items,
+    charges: charges3,
+    calculationSteps: calc3.steps,
+    auditTrail: [],
+    createdAt: '2026-09-29T08:00:00.000Z',
+    updatedAt: '2026-09-29T08:00:00.000Z'
+  };
+
+  // Combination 4: 1.0 km HT Line with Dog Conductor & HT Spun Poles 36 Feet
+  const ld4 = {
+    htLengthKm: 1.0,
+    ltLengthKm: 0,
+    htPoles: 12,
+    ltPoles: 0,
+    staySets: 6,
+    roadCrossings: 2,
+    canalCrossings: 0,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
     circuitsCount: 1,
     conductorType: 'ACSR',
     conductorSize: 'DOG',
@@ -124,118 +327,43 @@ function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsCo
     poleHeightMeters: 11,
     insulatorType: 'PIN_DISC'
   };
-  const calc1 = calculateQuantitiesForLine('COMBINED_HT_LT', lineDetails1, factors, materials);
-  const charges1 = computeEstimateCharges(calc1.items, 3.0, {
-    method: 'PER_KM',
-    distanceKm: 28,
-    ratePerKm: 180,
-    loadingUnloadingFixed: 15000
-  });
+  const calc4 = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld4, factors, materials);
+  const charges4 = computeEstimateCharges(calc4.items, 1.0, { method: 'PER_KM', distanceKm: 30, ratePerKm: 180, loadingUnloadingFixed: 10000 });
 
-  const est1: CostEstimateRecord = {
-    id: 'est-gulbhar-2026-001',
+  const est4: CostEstimateRecord = {
+    id: 'est-ht-1km-dog-spun36',
     projectInfo: {
-      estimateNo: 'EST-PESH-2026-00101',
+      estimateNo: 'EST-PESH-2026-01004',
       revisionNo: 'Rev-00',
-      estimateDate: '2026-09-15',
-      division: 'Peshawar City',
-      subDivision: 'Gulbhar Sub-Division',
-      circle: 'Peshawar Circle-1',
-      district: 'Peshawar',
-      feederName: 'Gulbhar Colony 11kV Feeder',
-      feederCode: 'FDR-GLB-01',
-      proposedLocation: 'Gulbhar Mohallah New Abadi Sector B',
-      villageLocality: 'Gulbhar Colony',
-      gpsLatitude: '34.0151 N',
-      gpsLongitude: '71.5249 E',
-      applicantDepartment: 'Local Community / Provincial Govt Electrification Scheme',
-      schemeProjectName: 'Khyber Pakhtunkhwa Village Electrification Phase-IV',
-      purposeOfWork: 'Extension of 11kV Line & Installation of 100 kVA Transformer for voltage improvement and loss reduction.',
+      estimateDate: '2026-09-29',
+      division: 'Mardan Division',
+      subDivision: 'Mardan City Sub-Division',
+      circle: 'Mardan Circle',
+      district: 'Mardan',
+      feederName: 'Mardan City 11kV Feeder',
+      feederCode: 'FDR-MDN-01',
+      proposedLocation: 'Nowshera Road Rural Extension',
+      villageLocality: 'Mardan',
+      gpsLatitude: '34.1980 N',
+      gpsLongitude: '72.0400 E',
+      applicantDepartment: 'Rural Electrification Division',
+      schemeProjectName: 'Standard 1.0 KM 11kV HT Extension (ACSR Dog Conductor on 36ft PCC Spun Poles)',
+      purposeOfWork: 'Standard 1.0 km 11kV line extension using Dog Conductor and 36ft PCC Spun Poles.',
       preparedBy: 'Engr. M. Inayat',
-      designation: 'Sub-Divisional Officer (SDO)',
-      checkedBy: 'Engr. Tariq Khan (XEN Peshawar City)',
-      approvedBy: 'Engr. Abdul Rehman (SE Circle-1)'
+      designation: 'Sub-Divisional Officer (SDO)'
     },
-    type: 'COMBINED_HT_LT',
+    type: 'HT_LINE_EXTENSION',
     status: 'APPROVED',
-    lineDetails: lineDetails1,
-    items: calc1.items,
-    charges: charges1,
-    calculationSteps: calc1.steps,
-    auditTrail: [
-      { id: 'aud-1', timestamp: '2026-09-15 10:30', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created initial estimate draft' },
-      { id: 'aud-2', timestamp: '2026-09-16 14:15', user: 'Engr. Tariq Khan', role: 'XEN', action: 'Verified technical BOQ & forwarded for sanction' },
-      { id: 'aud-3', timestamp: '2026-09-18 11:00', user: 'Engr. Abdul Rehman', role: 'SE', action: 'Officially sanctioned and approved under Work Order #PESCO/W-9442' }
-    ],
-    createdAt: '2026-09-15T10:30:00.000Z',
-    updatedAt: '2026-09-18T11:00:00.000Z'
+    lineDetails: ld4,
+    items: calc4.items,
+    charges: charges4,
+    calculationSteps: calc4.steps,
+    auditTrail: [],
+    createdAt: '2026-09-29T08:30:00.000Z',
+    updatedAt: '2026-09-29T08:30:00.000Z'
   };
 
-  // Sample 2: 11kV Feeder Trunk Line for Hayatabad
-  const lineDetails2 = {
-    htLengthKm: 4.5,
-    ltLengthKm: 0,
-    htPoles: 48,
-    ltPoles: 0,
-    staySets: 18,
-    roadCrossings: 3,
-    canalCrossings: 1,
-    transformerStructures: 0,
-    transformerCount: 0,
-    transformerCapacityKva: 0,
-    circuitsCount: 1,
-    conductorType: 'ACSR',
-    conductorSize: 'PANTHER',
-    poleType: 'PCC',
-    poleHeightMeters: 11,
-    insulatorType: 'PIN_DISC'
-  };
-  const calc2 = calculateQuantitiesForLine('COMPLETE_HT_FEEDER', lineDetails2, factors, materials);
-  const charges2 = computeEstimateCharges(calc2.items, 4.5, {
-    method: 'PER_KM',
-    distanceKm: 40,
-    ratePerKm: 180,
-    loadingUnloadingFixed: 25000
-  });
-
-  const est2: CostEstimateRecord = {
-    id: 'est-hayatabad-2026-002',
-    projectInfo: {
-      estimateNo: 'EST-KHYB-2026-00102',
-      revisionNo: 'Rev-01',
-      estimateDate: '2026-09-22',
-      division: 'Khyber Division',
-      subDivision: 'Hayatabad Sub-Division',
-      circle: 'Khyber Circle',
-      district: 'Peshawar',
-      feederName: 'Hayatabad Industrial Feeder',
-      feederCode: 'FDR-HYD-04',
-      proposedLocation: 'Industrial Estate Phase-VII Extension',
-      villageLocality: 'Hayatabad Phase-VII',
-      gpsLatitude: '33.9850 N',
-      gpsLongitude: '71.4320 E',
-      applicantDepartment: 'Khyber Pakhtunkhwa Economic Zones Dev & Mgmt Co (KPEZDMC)',
-      schemeProjectName: 'PESCO ELR Feeder Bifurcation & Industrial Relief Scheme',
-      purposeOfWork: 'Construction of 4.5 km Dedicated 11kV ACSR Panther Feeder to relieve overloaded 11kV feeder.',
-      preparedBy: 'Engr. M. Inayat',
-      designation: 'Sub-Divisional Officer (SDO)',
-      checkedBy: 'Engr. Tariq Khan (XEN)'
-    },
-    type: 'COMPLETE_HT_FEEDER',
-    status: 'SUBMITTED',
-    lineDetails: lineDetails2,
-    items: calc2.items,
-    charges: charges2,
-    calculationSteps: calc2.steps,
-    auditTrail: [
-      { id: 'aud-4', timestamp: '2026-09-22 09:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate from Template 4' },
-      { id: 'aud-5', timestamp: '2026-09-24 16:20', user: 'Engr. M. Inayat', role: 'SDO', action: 'Submitted for Technical Sanction to XEN' }
-    ],
-    createdAt: '2026-09-22T09:00:00.000Z',
-    updatedAt: '2026-09-24T16:20:00.000Z'
-  };
-
-  return [est1, est2];
+  return [est1, est2, est3, est4];
 }
 
 // -------------------------------------------------------------

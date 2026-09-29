@@ -695,8 +695,120 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </button>
             </div>
 
-            {/* Estimate Type Selector */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-blue-50/40 p-3.5 rounded-xl border border-blue-100">
+            {/* Quick Combination Presets Bar */}
+            <div className="bg-slate-900 text-white p-3.5 rounded-xl space-y-2 border border-slate-800 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold flex items-center gap-1.5 text-amber-300">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  Quick HT Line Combination Presets:
+                </span>
+                <span className="text-[10px] text-slate-400">Click to auto-configure line length, conductor & pole structure</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 0.4,
+                      conductorSize: 'DOG',
+                      poleType: 'STEEL_STRUCTURE',
+                      poleHeightMeters: 11
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 1.0,
+                      conductorSize: 'OSPREY',
+                      poleType: 'SPUN_45FT',
+                      poleHeightMeters: 13.7
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-900 bg-sky-300 hover:bg-sky-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 1.0 KM HT + Osprey Conductor + HT Spun Poles 45ft
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 0.4,
+                      conductorSize: 'OSPREY',
+                      poleType: 'STEEL_STRUCTURE_45FT',
+                      poleHeightMeters: 13.7
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 4 Spans HT + Osprey + Steel Structure 45ft
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 1.0,
+                      conductorSize: 'DOG',
+                      poleType: 'PCC',
+                      poleHeightMeters: 11
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-800 bg-emerald-300 hover:bg-emerald-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 1.0 KM HT + Dog + Spun Poles 36ft (PCC)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 0.4,
+                      conductorSize: 'RABBIT',
+                      poleType: 'SPUN_45FT',
+                      poleHeightMeters: 13.7
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-slate-800 bg-purple-300 hover:bg-purple-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 4 Spans HT + Rabbit + Spun Poles 45ft
+                </button>
+              </div>
+            </div>
+
+            {/* Estimate Type & Structure Selector Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-blue-50/40 p-3.5 rounded-xl border border-blue-100">
               <div>
                 <label className="block text-xs font-bold text-blue-900 mb-1">Estimate Scope / Type</label>
                 <select
@@ -723,10 +835,27 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   onChange={(e) => setLineDetails({ ...lineDetails, conductorSize: e.target.value })}
                   className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="DOG">ACSR Dog (100 mm² - Standard Mainline)</option>
-                  <option value="RABBIT">ACSR Rabbit (50 mm² - Branch Spur)</option>
-                  <option value="WEASEL">ACSR Weasel (30 mm² - Light Spur)</option>
-                  <option value="PANTHER">ACSR Panther (200 mm² - Heavy Trunk)</option>
+                  <option value="DOG">ACSR Dog 7/0.186 (100 mm² - Code 2110)</option>
+                  <option value="OSPREY">Osprey Conductor (200 mm² - Code 2160)</option>
+                  <option value="RABBIT">ACSR Rabbit 7/0.132 (50 mm² - Code 2120)</option>
+                  <option value="INSULATED_DOG">Insulated DOG Conductor (11kV - Code 2361)</option>
+                  <option value="PANTHER">ACSR Panther (200 mm² Heavy Feeder)</option>
+                  <option value="ANT">AAC Ant Conductor 7/0.122 (Code 2340)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-blue-900 mb-1">HT Pole / Structure Type</label>
+                <select
+                  value={lineDetails.poleType || 'PCC'}
+                  onChange={(e) => setLineDetails({ ...lineDetails, poleType: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PCC">HT Spun Pole 36 Feet / PCC 11m (Code 1113)</option>
+                  <option value="SPUN_45FT">HT Spun Pole 45 Feet (Code 1114)</option>
+                  <option value="STEEL_STRUCTURE">HT Steel Structure Pole 34.8 Feet (Code 1210)</option>
+                  <option value="STEEL_STRUCTURE_45FT">HT Steel Structure Pole 45 Feet (Code 75007)</option>
+                  <option value="STEEL_STRUCTURE_58FT">HT Heavy Steel Structure 58 Feet (Code 1213)</option>
                 </select>
               </div>
             </div>
