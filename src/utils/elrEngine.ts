@@ -905,7 +905,8 @@ export function calculateBifurcationFourStatements(
       totalPowerLossKw,
       percentPowerLoss,
       annualEnergyLossKwh,
-      annualLossCostPkr
+      annualLossCostPkr,
+      segmentResults: zoneSegments
     };
   }
 

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   BifurcationFourStatementDossier, 
-  BifurcationZoneAnalysisStatement 
+  BifurcationZoneAnalysisStatement,
+  SegmentAnalysisResult 
 } from '../types/feeder';
 import { 
   Split, 
@@ -23,7 +24,13 @@ import {
   Activity,
   Layers,
   Sparkles,
-  Gauge
+  Gauge,
+  Table,
+  ChevronDown,
+  ChevronUp,
+  FileSpreadsheet,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface BifurcationStatementsPanelProps {
@@ -40,6 +47,18 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
   isPrintView = false
 }) => {
   const { t1Year0, t1Year5, t2Year0, t2Year5, combinedYear0, combinedYear5, reliefBenefits } = dossier;
+
+  // Active view in interactive mode
+  const [activeNodeTab, setActiveNodeTab] = useState<'all' | 't1_yr0' | 't1_yr5' | 't2_yr0' | 't2_yr5'>('all');
+  const [expandedSection, setExpandedSection] = useState<{
+    overview: boolean;
+    nodeStatements: boolean;
+    matrixTable: boolean;
+  }>({
+    overview: true,
+    nodeStatements: true,
+    matrixTable: true
+  });
 
   const renderStatementCard = (stmt: BifurcationZoneAnalysisStatement, bgTheme: 'blue' | 'purple') => {
     const isT1 = stmt.transformerId === 'T1';
@@ -102,7 +121,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               <span className={`font-bold ${stmt.worstVoltageDropPercent > 9.0 ? 'text-rose-600' : 'text-slate-900'}`}>
                 -{stmt.worstVoltageDropPercent}%
               </span>
-              <span className="text-[10px] text-slate-500 block">({stmt.worstVoltageVolts} V @ {stmt.worstVoltageDropNodeId})</span>
+              <span className="text-[10px] text-slate-500 block">({stmt.worstVoltageVolts} V @ Node {stmt.worstVoltageDropNodeId.replace('.0', '')})</span>
             </div>
 
             <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -151,6 +170,205 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
     );
   };
 
+  // Node Analysis Schedule Table Generator for a Single Statement
+  const renderNodeAnalysisTable = (
+    stmt: BifurcationZoneAnalysisStatement,
+    statementNumber: 1 | 2 | 3 | 4,
+    themeColor: 'blue' | 'purple'
+  ) => {
+    const isT1 = stmt.transformerId === 'T1';
+    const isYr0 = stmt.year === 0;
+    const isBlue = themeColor === 'blue';
+    const segments = stmt.segmentResults || [];
+
+    const totalCust1Ph = segments.reduce((sum, s) => sum + s.singlePhaseCustomers, 0);
+    const totalCust3Ph = segments.reduce((sum, s) => sum + s.threePhaseCustomers, 0);
+    const totalLengthM = segments.reduce((sum, s) => sum + s.lengthMeters, 0);
+    const totalLossKw = segments.reduce((sum, s) => sum + s.lineLossKw, 0);
+    const totalEnergyKwh = stmt.annualEnergyLossKwh;
+
+    return (
+      <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none print:border-slate-800 print-avoid-break mb-6">
+        {/* Table Title Banner */}
+        <div className={`px-4 py-3 ${isBlue ? (isYr0 ? 'bg-blue-900' : 'bg-slate-900') : (isYr0 ? 'bg-purple-900' : 'bg-slate-900')} text-white flex flex-wrap items-center justify-between gap-2`}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center font-mono font-bold text-xs text-amber-300">
+              #{statementNumber}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-xs sm:text-sm tracking-wide uppercase">
+                  NODE ANALYSIS STATEMENT {statementNumber}: {stmt.transformerId === 'T1' ? 'TRANSFORMER T-1 (MAIN FEEDER PORTION)' : 'TRANSFORMER T-2 (BIFURCATED LINE PORTION)'}
+                </span>
+                <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${isYr0 ? 'bg-emerald-500 text-slate-950' : 'bg-amber-400 text-slate-950'}`}>
+                  {isYr0 ? '0 Year (Current Peak)' : 'After 5 Years (+5% Compounded)'}
+                </span>
+              </div>
+              <span className="text-[11px] text-slate-300 font-sans block mt-0.5">
+                {stmt.transformerName} · Rating: <strong>{stmt.capacityKva} kVA</strong> · Total Spans: <strong>{stmt.spansCount}</strong> · Total Demand: <strong>{stmt.demandKva} kVA ({stmt.currentAmps} A)</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="text-right font-mono text-xs">
+            <div className={`font-bold ${stmt.isOverloaded ? 'text-rose-300' : 'text-emerald-300'}`}>
+              Loading: {stmt.transformerLoadingPercent}%
+            </div>
+            <span className="text-[10px] text-slate-300">
+              Worst Drop: -{stmt.worstVoltageDropPercent}% ({stmt.worstVoltageVolts}V @ {stmt.worstVoltageDropNodeId.replace('.0', '')})
+            </span>
+          </div>
+        </div>
+
+        {/* Node-by-Node Load Flow Schedule */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse font-mono tabular-nums">
+            <thead>
+              <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-[11px]">
+                <th className="py-2.5 px-2 text-center w-8">#</th>
+                <th className="py-2.5 px-2 text-center">Span (From → To)</th>
+                <th className="py-2.5 px-2 text-right">Length (m)</th>
+                <th className="py-2.5 px-2 text-right">1-Ph Cust</th>
+                <th className="py-2.5 px-2 text-right">3-Ph Cust</th>
+                <th className="py-2.5 px-2.5 text-left font-sans">Conductor</th>
+                <th className="py-2.5 px-2.5 text-right">Downstream Load</th>
+                <th className="py-2.5 px-2 text-right">Current (A)</th>
+                <th className="py-2.5 px-2 text-right">Span Drop (V)</th>
+                <th className="py-2.5 px-2 text-right">Cum. Drop %</th>
+                <th className="py-2.5 px-2 text-right">End Voltage (V)</th>
+                <th className="py-2.5 px-2 text-right bg-amber-50/70 text-amber-950">Loss (kW)</th>
+                <th className="py-2.5 px-2 text-center font-sans">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {segments.length === 0 ? (
+                <tr>
+                  <td colSpan={13} className="py-4 text-center text-slate-500 font-sans">
+                    No segments assigned to this transformer zone.
+                  </td>
+                </tr>
+              ) : (
+                segments.map((seg, idx) => {
+                  const isCriticalDrop = seg.percentVoltDrop > 9.0;
+                  const isHighLoss = seg.lineLossKw > 0.8;
+                  const spanFrom = seg.fromNodeId.replace('.0', '');
+                  const spanTo = seg.toNodeId.replace('.0', '');
+
+                  return (
+                    <tr 
+                      key={seg.segment.id || `${seg.fromNodeId}-${seg.toNodeId}-${idx}`} 
+                      className={`hover:bg-slate-50/80 transition-colors ${
+                        idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'
+                      }`}
+                    >
+                      <td className="py-2 px-2 text-center text-slate-400 font-sans text-[10px]">
+                        {idx + 1}
+                      </td>
+                      <td className="py-2 px-2 text-center font-bold text-slate-900">
+                        <span className="bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                          {spanFrom} → {spanTo}
+                        </span>
+                      </td>
+                      <td className="py-2 px-2 text-right">
+                        {seg.lengthMeters} m
+                      </td>
+                      <td className="py-2 px-2 text-right font-medium text-slate-700">
+                        {seg.singlePhaseCustomers}
+                      </td>
+                      <td className="py-2 px-2 text-right font-bold text-purple-700">
+                        {seg.threePhaseCustomers}
+                      </td>
+                      <td className="py-2 px-2.5 text-left font-sans text-[11px] font-medium text-slate-800">
+                        {seg.conductor.code}
+                      </td>
+                      <td className="py-2 px-2.5 text-right font-semibold text-slate-900">
+                        {seg.downstreamKva.toFixed(1)} kVA
+                      </td>
+                      <td className="py-2 px-2 text-right font-bold text-blue-900">
+                        {seg.currentAmps.toFixed(1)} A
+                      </td>
+                      <td className="py-2 px-2 text-right text-slate-700">
+                        {seg.voltDropVolts.toFixed(1)} V
+                      </td>
+                      <td className={`py-2 px-2 text-right font-bold ${
+                        isCriticalDrop ? 'text-rose-600 bg-rose-50/70' : 'text-slate-900'
+                      }`}>
+                        -{seg.percentVoltDrop.toFixed(1)}%
+                      </td>
+                      <td className={`py-2 px-2 text-right font-bold ${
+                        isCriticalDrop ? 'text-rose-700' : 'text-emerald-800'
+                      }`}>
+                        {seg.receivingVoltage.toFixed(1)} V
+                      </td>
+                      <td className="py-2 px-2 text-right font-bold text-amber-700 bg-amber-50/50">
+                        {seg.lineLossKw.toFixed(3)}
+                      </td>
+                      <td className="py-2 px-2 text-center font-sans text-[10px]">
+                        {isCriticalDrop ? (
+                          <span className="px-1.5 py-0.5 rounded font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                            Low Volt
+                          </span>
+                        ) : isHighLoss ? (
+                          <span className="px-1.5 py-0.5 rounded font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                            High Loss
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Normal
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+            <tfoot>
+              <tr className="bg-slate-900 text-white font-bold">
+                <td colSpan={2} className="py-2.5 px-3 text-center text-amber-400 font-sans uppercase tracking-wider text-xs">
+                  STATEMENT {statementNumber} TOTALS
+                </td>
+                <td className="py-2.5 px-2 text-right text-amber-300">
+                  {totalLengthM} m ({stmt.zoneLengthKm} km)
+                </td>
+                <td className="py-2.5 px-2 text-right">
+                  {totalCust1Ph}
+                </td>
+                <td className="py-2.5 px-2 text-right text-purple-300">
+                  {totalCust3Ph}
+                </td>
+                <td className="py-2.5 px-2.5 text-left font-sans text-[11px]">
+                  {stmt.spansCount} Spans
+                </td>
+                <td className="py-2.5 px-2.5 text-right text-amber-300">
+                  {stmt.demandKva} kVA ({stmt.demandKw} kW)
+                </td>
+                <td className="py-2.5 px-2 text-right text-blue-300">
+                  {stmt.currentAmps} A
+                </td>
+                <td className="py-2.5 px-2 text-right">
+                  -
+                </td>
+                <td className="py-2.5 px-2 text-right text-rose-300">
+                  Max: -{stmt.worstVoltageDropPercent}%
+                </td>
+                <td className="py-2.5 px-2 text-right text-emerald-300">
+                  Min: {stmt.worstVoltageVolts} V
+                </td>
+                <td className="py-2.5 px-2 text-right text-amber-300 bg-slate-950">
+                  {stmt.lineLossKw} kW
+                </td>
+                <td className="py-2.5 px-2 text-center text-emerald-400 font-sans text-[10px]">
+                  {stmt.annualEnergyLossKwh.toLocaleString()} kWh/yr
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       
@@ -163,14 +381,14 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-black tracking-tight uppercase">
-                Line Bifurcation & T-2 Transformer Dual-Zone Analysis
+                Line Bifurcation & T-2 Transformer Dual-Zone Node Analysis
               </h2>
               <span className="bg-purple-500/20 text-purple-300 border border-purple-400/40 text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase print:text-slate-900 print:border-slate-700">
                 4 Statements Active
               </span>
             </div>
             <p className="text-xs text-slate-300 print:text-slate-600 mt-0.5">
-              Comparative engineering evaluation of Transformer 1 (T-1) & Transformer 2 (T-2) line portions at 0 Year vs after 5 Years ({dossier.growthRatePercent}% annual growth).
+              Node-by-node load flow and electrical span analysis of Transformer 1 (T-1) & Transformer 2 (T-2) line portions at 0 Year vs after 5 Years ({dossier.growthRatePercent}% annual growth).
             </p>
           </div>
         </div>
@@ -181,7 +399,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
             className="no-print flex items-center gap-1.5 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
           >
             <Printer className="w-4 h-4" />
-            <span>Print 4 Statements</span>
+            <span>Print All 4 Node Analyses</span>
           </button>
         )}
       </div>
@@ -222,13 +440,13 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
       </div>
 
       {/* ========================================================
-          THE FOUR ANALYSIS STATEMENTS (4-QUADRANT VIEW)
+          THE FOUR ANALYSIS STATEMENTS (4-QUADRANT SUMMARY CARDS)
          ======================================================== */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
             <Layers className="w-4 h-4 text-purple-600" />
-            <span>The 4 Engineering Analysis Statements</span>
+            <span>4 Engineering Analysis Statements Overview</span>
           </h3>
           <span className="text-[11px] font-mono text-slate-500">
             Split Node: <strong>Node {dossier.bifurcationNodeId}</strong> · T-2: <strong>{dossier.additionalTransformerKva} kVA</strong>
@@ -240,7 +458,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="text-[11px] font-bold text-blue-900 mb-1.5 flex items-center justify-between">
               <span>STATEMENT 1: T-1 ZONE AT 0 YEAR (PRESENT)</span>
-              <span className="text-[10px] text-blue-600 font-mono">Trunk & Upstream Poles</span>
+              <span className="text-[10px] text-blue-600 font-mono">Trunk & Upstream Poles ({t1Year0.spansCount} Spans)</span>
             </div>
             {renderStatementCard(t1Year0, 'blue')}
           </div>
@@ -249,7 +467,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="text-[11px] font-bold text-blue-900 mb-1.5 flex items-center justify-between">
               <span>STATEMENT 2: T-1 ZONE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR)</span>
-              <span className="text-[10px] text-blue-600 font-mono">5-Year Growth Compounded</span>
+              <span className="text-[10px] text-blue-600 font-mono">5-Year Growth Compounded ({t1Year5.spansCount} Spans)</span>
             </div>
             {renderStatementCard(t1Year5, 'blue')}
           </div>
@@ -258,7 +476,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="text-[11px] font-bold text-purple-900 mb-1.5 flex items-center justify-between">
               <span>STATEMENT 3: T-2 ZONE AT 0 YEAR (COMMISSIONING)</span>
-              <span className="text-[10px] text-purple-600 font-mono">Bifurcated Downstream Branch</span>
+              <span className="text-[10px] text-purple-600 font-mono">Bifurcated Branch ({t2Year0.spansCount} Spans)</span>
             </div>
             {renderStatementCard(t2Year0, 'purple')}
           </div>
@@ -267,11 +485,112 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="text-[11px] font-bold text-purple-900 mb-1.5 flex items-center justify-between">
               <span>STATEMENT 4: T-2 ZONE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR)</span>
-              <span className="text-[10px] text-purple-600 font-mono">5-Year Growth Compounded</span>
+              <span className="text-[10px] text-purple-600 font-mono">5-Year Growth Compounded ({t2Year5.spansCount} Spans)</span>
             </div>
             {renderStatementCard(t2Year5, 'purple')}
           </div>
         </div>
+      </div>
+
+      {/* ========================================================
+          THE FOUR NODE ANALYSIS STATEMENTS (NODE-BY-NODE TABLES)
+         ======================================================== */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-4 h-4 text-purple-700" />
+            <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Node-by-Node Analysis Schedules (All 4 Statements)
+            </h3>
+          </div>
+
+          {/* Statement Tab Switcher in Interactive Mode */}
+          <div className="no-print flex flex-wrap items-center gap-1 text-xs">
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('all')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 'all'
+                  ? 'bg-purple-700 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+              }`}
+            >
+              All 4 Node Statements
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('t1_yr0')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 't1_yr0'
+                  ? 'bg-blue-700 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-blue-900 hover:bg-blue-50'
+              }`}
+            >
+              Stmt 1: T-1 (0 Yr)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('t1_yr5')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 't1_yr5'
+                  ? 'bg-blue-900 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-blue-900 hover:bg-blue-50'
+              }`}
+            >
+              Stmt 2: T-1 (5 Yrs)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('t2_yr0')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 't2_yr0'
+                  ? 'bg-purple-700 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-purple-900 hover:bg-purple-50'
+              }`}
+            >
+              Stmt 3: T-2 (0 Yr)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('t2_yr5')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 't2_yr5'
+                  ? 'bg-purple-900 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-purple-900 hover:bg-purple-50'
+              }`}
+            >
+              Stmt 4: T-2 (5 Yrs)
+            </button>
+          </div>
+        </div>
+
+        {/* 1. Statement 1 Node Table */}
+        {(activeNodeTab === 'all' || activeNodeTab === 't1_yr0' || isPrintView) && (
+          <div>
+            {renderNodeAnalysisTable(t1Year0, 1, 'blue')}
+          </div>
+        )}
+
+        {/* 2. Statement 2 Node Table */}
+        {(activeNodeTab === 'all' || activeNodeTab === 't1_yr5' || isPrintView) && (
+          <div>
+            {renderNodeAnalysisTable(t1Year5, 2, 'blue')}
+          </div>
+        )}
+
+        {/* 3. Statement 3 Node Table */}
+        {(activeNodeTab === 'all' || activeNodeTab === 't2_yr0' || isPrintView) && (
+          <div>
+            {renderNodeAnalysisTable(t2Year0, 3, 'purple')}
+          </div>
+        )}
+
+        {/* 4. Statement 4 Node Table */}
+        {(activeNodeTab === 'all' || activeNodeTab === 't2_yr5' || isPrintView) && (
+          <div>
+            {renderNodeAnalysisTable(t2Year5, 4, 'purple')}
+          </div>
+        )}
       </div>
 
       {/* ========================================================

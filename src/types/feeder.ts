@@ -280,6 +280,7 @@ export interface BifurcationZoneAnalysisStatement {
   percentPowerLoss: number;
   annualEnergyLossKwh: number;
   annualLossCostPkr: number;
+  segmentResults: SegmentAnalysisResult[];
 }
 
 export interface BifurcationFourStatementDossier {

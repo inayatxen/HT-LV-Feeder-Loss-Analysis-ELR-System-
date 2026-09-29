@@ -37,7 +37,8 @@ import {
   Sparkles,
   FileCode2,
   Check,
-  Activity
+  Activity,
+  Columns
 } from 'lucide-react';
 import { 
   generateTechnicalRecommendations,
@@ -46,6 +47,7 @@ import {
 import { JobTitle, JOB_TITLE_OPTIONS } from '../types/feeder';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
+import { FeederSLDViewer, SLDSchemeType } from './FeederSLDViewer';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -91,8 +93,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   }, [feeder, effectiveBifurcationConfig, activeTransformerKva]);
 
   const [displayMode, setDisplayMode] = useState<
-    'full_report' | 'bifurcation_4_statements' | 'single_line_diagram' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix'
+    'full_report' | 'bifurcation_4_statements' | 'single_line_diagram' | 'tri_sld_schemes' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix'
   >(effectiveBifurcationConfig.enabled ? 'full_report' : 'full_report');
+
+  const [sldScheme, setSldScheme] = useState<SLDSchemeType>(
+    effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined'
+  );
 
   // Per-Page Print Settings State
   const [showPrintSettings, setShowPrintSettings] = useState(false);
@@ -122,9 +128,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   });
 
   // Quick Preset Handlers
-  const handleApplyPreset = (preset: 'all' | 'bifurcation_only' | 'sld_only' | 'forms_only' | 'summary_matrix') => {
+  const handleApplyPreset = (preset: 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix') => {
     if (preset === 'all') {
       setDisplayMode('full_report');
+      setSldScheme(effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined');
       setPagesToPrint({
         summarySpecs: true,
         bifurcationStatements: effectiveBifurcationConfig.enabled,
@@ -149,6 +156,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setPageBreakMode('compact_flow');
     } else if (preset === 'sld_only') {
       setDisplayMode('single_line_diagram');
+      setSldScheme('combined');
       setPagesToPrint({
         summarySpecs: false,
         bifurcationStatements: false,
@@ -159,6 +167,20 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         recommendations: false
       });
       setPageOrientation('landscape');
+    } else if (preset === 'tri_sld_only') {
+      setDisplayMode('single_line_diagram');
+      setSldScheme('tri_scheme');
+      setPagesToPrint({
+        summarySpecs: false,
+        bifurcationStatements: false,
+        singleLineDiagram: true,
+        inputFormImage1: false,
+        outputScheduleImage2: false,
+        table1Matrix: false,
+        recommendations: false
+      });
+      setPageOrientation('landscape');
+      setPageBreakMode('page_per_section');
     } else if (preset === 'forms_only') {
       setDisplayMode('dual_form');
       setPagesToPrint({
@@ -423,7 +445,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   className="px-2.5 py-1 rounded bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-600/80 cursor-pointer font-bold text-[11px] flex items-center gap-1"
                 >
                   <Split className="w-3 h-3 text-purple-300" />
-                  <span>Bifurcation 4-Statements</span>
+                  <span>Bifurcation 4-Node Statements</span>
                 </button>
                 <button
                   type="button"
@@ -431,6 +453,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/80 cursor-pointer font-medium text-[11px]"
                 >
                   SLD Blueprint (Landscape)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('tri_sld_only')}
+                  className="px-2.5 py-1 rounded bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-600/80 cursor-pointer font-bold text-[11px] flex items-center gap-1"
+                >
+                  <Columns className="w-3 h-3 text-indigo-300" />
+                  <span>3 SLD Schemes (Exist, P-1, P-2)</span>
                 </button>
                 <button
                   type="button"
@@ -743,13 +773,28 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               }`}
             >
               <Split className="w-3.5 h-3.5 text-purple-600" />
-              <span>Line Bifurcation & T-2 (4 Statements)</span>
+              <span>Line Bifurcation & T-2 (4 Node Statements)</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setDisplayMode('single_line_diagram');
+                setSldScheme('tri_scheme');
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                displayMode === 'single_line_diagram' && sldScheme === 'tri_scheme'
+                  ? 'bg-emerald-700 text-white font-bold shadow-xs'
+                  : 'bg-white text-emerald-950 hover:bg-emerald-50 border border-emerald-300'
+              }`}
+            >
+              <Columns className="w-3.5 h-3.5 text-emerald-600" />
+              <span>3 SLD Schemes (Exist, P-1, P-2)</span>
             </button>
 
             <button
               onClick={() => setDisplayMode('single_line_diagram')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
-                displayMode === 'single_line_diagram'
+                displayMode === 'single_line_diagram' && sldScheme !== 'tri_scheme'
                   ? 'bg-indigo-600 text-white font-bold shadow-xs'
                   : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
               }`}
@@ -923,383 +968,83 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           )}
 
           {/* ========================================================
-              PAGE 2: SINGLE LINE DIAGRAM (SLD) BLUEPRINT
+              PAGE 2: SINGLE LINE DIAGRAM (SLD) BLUEPRINTS (Exist, Proposed-1, Proposed-2)
              ======================================================== */}
-          {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram') && (
-            <div className="print-page-break print-avoid-break space-y-3">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-100 p-2 border-l-4 border-indigo-600 flex items-center justify-between">
-                <span>2. Single Line Diagram (SLD) & Radial Network Topology Map</span>
-                <span className="text-[10px] font-mono text-indigo-800 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-                  Engineering Blueprint · Dedicated Page
-                </span>
-              </h2>
-
-              <p className="text-xs text-slate-600">
-                Schematic electrical topology showing feeding substation, distribution poles, lateral branches, branch currents, conductor codes, and cumulative voltage drops:
-              </p>
-
-              {/* High-Resolution Printable SVG Canvas Card */}
-              <div className="border-2 border-slate-800 rounded-xl overflow-hidden bg-white shadow-xs">
-                {/* Blueprint Drawing Header Bar */}
-                <div className="bg-slate-900 text-white px-4 py-2 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Network className="w-4 h-4 text-amber-400" />
-                    <span className="font-bold tracking-wider uppercase">
-                      Single Line Diagram: {feeder.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 font-mono text-[11px] text-slate-300">
-                    <span>Voltage: <strong>{feeder.nominalVoltage}V</strong></span>
-                    <span>·</span>
-                    <span>Peak Current: <strong>{summary.totalSourceCurrentAmps}A</strong></span>
-                    <span>·</span>
-                    <span>Spans: <strong>{summary.segmentResults.length}</strong></span>
-                  </div>
+          {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
+            <div className="print-page-break print-avoid-break space-y-4">
+              <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    <Network className="w-4 h-4 text-indigo-700" />
+                    <span>2. Single Line Diagram (SLD) Topology & Bifurcation Schemes</span>
+                  </h2>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Separate electrical single line diagrams for Existing (Exist: Baseline), Proposed-1 (T-1 Line Portion), and Proposed-2 (T-2 Bifurcated Line Portion).
+                  </p>
                 </div>
 
-                {/* SVG Drawing Area */}
-                <div className="w-full overflow-x-auto bg-slate-50/50 p-4 flex items-center justify-center">
-                  <svg
-                    width={layout.width}
-                    height={layout.height}
-                    viewBox={layout.viewBox}
-                    className="w-full max-w-full h-auto select-none"
-                    style={{ minHeight: '320px' }}
+                {/* Scheme Switcher in Report Viewer (no-print) */}
+                <div className="no-print flex flex-wrap items-center gap-1 text-xs">
+                  <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
+                  <button
+                    type="button"
+                    onClick={() => setSldScheme('combined')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      sldScheme === 'combined' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                    }`}
                   >
-                    <defs>
-                      <marker
-                        id="print-arrow"
-                        viewBox="0 0 10 10"
-                        refX="6"
-                        refY="5"
-                        markerWidth="5"
-                        markerHeight="5"
-                        orient="auto-start-reverse"
-                      >
-                        <path d="M 0 1 L 8 5 L 0 9 z" fill="#475569" />
-                      </marker>
-                    </defs>
-
-                    {/* Render Segments (Lines) */}
-                    {layout.segments.map(seg => {
-                      const segResult = segmentResultMap.get(`${seg.fromNodeId}->${seg.toNodeId}`);
-                      const isHighDrop = segResult && segResult.percentVoltDrop > 9.0;
-                      const isHighLoss = segResult && segResult.isHighLoss;
-                      const isCutSegment = summary.bifurcationActive && seg.toNodeId === summary.bifurcationNodeId;
-                      const isFedByT2 = segResult?.fedByTransformer === 'T2';
-
-                      const strokeColor = isCutSegment
-                        ? '#94a3b8'
-                        : (isFedByT2
-                            ? '#7c3aed'
-                            : (isHighLoss || isHighDrop ? '#dc2626' : '#2563eb'));
-
-                      const x1 = seg.x1;
-                      const y1 = seg.y1;
-                      const x2 = seg.x2;
-                      const y2 = seg.y2;
-                      const midX = seg.midX;
-                      const midY = seg.midY;
-
-                      return (
-                        <g key={seg.id}>
-                          {/* Segment line */}
-                          <line
-                            x1={x1}
-                            y1={y1}
-                            x2={x2}
-                            y2={y2}
-                            stroke={strokeColor}
-                            strokeWidth={isHighLoss ? 4 : 3}
-                            strokeLinecap="round"
-                            strokeDasharray={isCutSegment ? "6 6" : undefined}
-                          />
-
-                          {/* Segment Info Label Box */}
-                          <g transform={`translate(${midX}, ${midY - 14})`}>
-                            <rect
-                              x="-40"
-                              y="-11"
-                              width="80"
-                              height="22"
-                              rx="4"
-                              fill="#ffffff"
-                              stroke={isFedByT2 ? '#7c3aed' : (isHighLoss ? '#dc2626' : '#64748b')}
-                              strokeWidth="1.2"
-                              className="filter drop-shadow-xs"
-                            />
-                            <text
-                              x="0"
-                              y="-1"
-                              textAnchor="middle"
-                              fill="#0f172a"
-                              fontSize="8.5"
-                              fontFamily="monospace"
-                              fontWeight="bold"
-                            >
-                              {isCutSegment 
-                                ? 'TIE OPEN' 
-                                : (segResult ? `${segResult.currentAmps}A (${segResult.fedByTransformer || 'T1'})` : 'Span')}
-                            </text>
-                            <text
-                              x="0"
-                              y="8"
-                              textAnchor="middle"
-                              fill={isHighLoss ? '#b91c1c' : '#475569'}
-                              fontSize="7.5"
-                              fontFamily="monospace"
-                              fontWeight="600"
-                            >
-                              {isCutSegment ? 'Bifurcated' : (segResult ? `${segResult.lineLossKw} kW` : '')}
-                            </text>
-                          </g>
-
-                          {/* Conductor Code & Length */}
-                          {segResult && (
-                            <g transform={`translate(${midX}, ${midY + 15})`}>
-                              <rect
-                                x="-32"
-                                y="-6"
-                                width="64"
-                                height="12"
-                                rx="3"
-                                fill="#f1f5f9"
-                                stroke="#cbd5e1"
-                                strokeWidth="0.8"
-                              />
-                              <text
-                                x="0"
-                                y="3"
-                                textAnchor="middle"
-                                fill="#334155"
-                                fontSize="7"
-                                fontFamily="monospace"
-                                fontWeight="bold"
-                              >
-                                {segResult.conductor.code} · {Math.round(segResult.lengthKm * 1000)}m
-                              </text>
-                            </g>
-                          )}
-                        </g>
-                      );
-                    })}
-
-                    {/* Render Nodes (Poles & Substations) */}
-                    {layout.nodes.map(node => {
-                      const x = node.x;
-                      const y = node.y;
-                      const isBifurcationInjectionNode = summary.bifurcationActive && node.id === summary.bifurcationNodeId;
-                      const incomingSegResult = summary.segmentResults.find(r => r.toNodeId === node.id);
-
-                      return (
-                        <g key={node.id} transform={`translate(${x}, ${y})`}>
-                          {/* Transformer Node */}
-                          {node.isTransformerNode ? (
-                            <g>
-                              <rect
-                                x="-24"
-                                y="-24"
-                                width="48"
-                                height="48"
-                                rx="6"
-                                fill="#065f46"
-                                stroke="#047857"
-                                strokeWidth="2"
-                              />
-                              <Zap className="w-5 h-5 text-amber-300" x="-10" y="-13" />
-                              <text
-                                x="0"
-                                y="11"
-                                textAnchor="middle"
-                                fill="#ffffff"
-                                fontSize="8"
-                                fontWeight="bold"
-                                fontFamily="monospace"
-                              >
-                                T-1: {summary.existingTransformerKva}kVA
-                              </text>
-                              <text
-                                x="0"
-                                y="19"
-                                textAnchor="middle"
-                                fill="#a7f3d0"
-                                fontSize="7"
-                                fontFamily="monospace"
-                              >
-                                {summary.existingTransformerLoadingPercent}% Load
-                              </text>
-                            </g>
-                          ) : (
-                            /* Regular Distribution Pole Node */
-                            <g>
-                              <circle
-                                r="12"
-                                fill={isBifurcationInjectionNode ? '#581c87' : '#1e293b'}
-                                stroke={incomingSegResult && incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#475569'}
-                                strokeWidth="2"
-                              />
-                              <text
-                                x="0"
-                                y="3.5"
-                                textAnchor="middle"
-                                fill="#ffffff"
-                                fontSize="9"
-                                fontWeight="bold"
-                                fontFamily="monospace"
-                              >
-                                {node.id.replace('.0', '')}
-                              </text>
-                            </g>
-                          )}
-
-                          {/* Bifurcation T-2 Substation Badge */}
-                          {isBifurcationInjectionNode && (
-                            <g transform="translate(0, -40)">
-                              <rect
-                                x="-32"
-                                y="-14"
-                                width="64"
-                                height="28"
-                                rx="4"
-                                fill="#581c87"
-                                stroke="#a855f7"
-                                strokeWidth="1.5"
-                              />
-                              <text
-                                x="0"
-                                y="-2"
-                                textAnchor="middle"
-                                fill="#ffffff"
-                                fontSize="8"
-                                fontWeight="bold"
-                                fontFamily="monospace"
-                              >
-                                T-2 Added
-                              </text>
-                              <text
-                                x="0"
-                                y="8"
-                                textAnchor="middle"
-                                fill="#e9d5ff"
-                                fontSize="7.5"
-                                fontFamily="monospace"
-                              >
-                                {summary.additionalTransformerKva}kVA
-                              </text>
-                              <line x1="0" y1="14" x2="0" y2="28" stroke="#a855f7" strokeWidth="1.5" strokeDasharray="2 2" />
-                            </g>
-                          )}
-
-                          {/* 3-Phase Customer Badge */}
-                          {node.threePhaseCustomers > 0 && (
-                            <g transform="translate(-13, -13)">
-                              <circle r="6.5" fill="#7c3aed" stroke="#ffffff" strokeWidth="1" />
-                              <text
-                                x="0"
-                                y="2"
-                                textAnchor="middle"
-                                fill="#ffffff"
-                                fontSize="6"
-                                fontWeight="bold"
-                              >
-                                3Φ
-                              </text>
-                            </g>
-                          )}
-
-                          {/* Node Label Below */}
-                          <text
-                            x="0"
-                            y={node.isTransformerNode ? 34 : 22}
-                            textAnchor="middle"
-                            fill="#0f172a"
-                            fontSize="8.5"
-                            fontWeight="bold"
-                          >
-                            Node {node.id.replace('.0', '')}
-                          </text>
-
-                          {/* Customer count */}
-                          {!node.isTransformerNode && (
-                            <text
-                              x="0"
-                              y="31"
-                              textAnchor="middle"
-                              fill="#475569"
-                              fontSize="7.5"
-                              fontFamily="monospace"
-                            >
-                              {node.singlePhaseCustomers} cust {node.threePhaseCustomers ? `+ ${node.threePhaseCustomers}(3Φ)` : ''}
-                            </text>
-                          )}
-
-                          {/* Voltage drop */}
-                          {incomingSegResult && (
-                            <text
-                              x="0"
-                              y="40"
-                              textAnchor="middle"
-                              fill={incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#0284c7'}
-                              fontSize="7.5"
-                              fontFamily="monospace"
-                              fontWeight="bold"
-                            >
-                              -{incomingSegResult.percentVoltDrop}% ({incomingSegResult.receivingVoltage}V)
-                            </text>
-                          )}
-                        </g>
-                      );
-                    })}
-                  </svg>
-                </div>
-
-                {/* Blueprint Drawing Legend Footer */}
-                <div className="bg-slate-100 border-t border-slate-200 px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-700">
-                  <div className="flex flex-wrap items-center gap-4">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3.5 h-3.5 rounded bg-emerald-800 border border-emerald-600 flex items-center justify-center">
-                        <Zap className="w-2.5 h-2.5 text-amber-300" />
-                      </div>
-                      <span>Transformer Substation (T-1)</span>
-                    </div>
-
-                    {summary.bifurcationActive && (
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3.5 h-3.5 rounded bg-purple-900 border border-purple-400 flex items-center justify-center">
-                          <Zap className="w-2.5 h-2.5 text-amber-300" />
-                        </div>
-                        <span>Additional Transformer (T-2)</span>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-slate-800" />
-                      <span>Distribution Pole</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-3.5 h-3.5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[7px] font-bold">
-                        3Φ
-                      </div>
-                      <span>3-Phase Load</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-1 bg-blue-600 rounded" />
-                      <span>Standard Span</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-5 h-1 bg-red-600 rounded" />
-                      <span>High Drop (&gt;9%) / Loss</span>
-                    </div>
-                  </div>
-
-                  <div className="font-mono text-[10px] text-slate-500">
-                    Scale: Schematic · WAPDA ELR Standards
-                  </div>
+                    Combined
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSldScheme('exist')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      sldScheme === 'exist' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-amber-950 border border-amber-300'
+                    }`}
+                  >
+                    Exist
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSldScheme('proposed_1')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      sldScheme === 'proposed_1' ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-900 border border-blue-300'
+                    }`}
+                  >
+                    Proposed-1
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSldScheme('proposed_2')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                      sldScheme === 'proposed_2' ? 'bg-purple-600 text-white font-bold' : 'bg-white text-purple-900 border border-purple-300'
+                    }`}
+                  >
+                    Proposed-2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSldScheme('tri_scheme')}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1 ${
+                      sldScheme === 'tri_scheme' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-900 border border-emerald-300'
+                    }`}
+                  >
+                    <Columns className="w-3 h-3" />
+                    <span>3-Scheme (Exist vs P-1 vs P-2)</span>
+                  </button>
                 </div>
               </div>
+
+              {/* Render SLD Diagrams */}
+              <FeederSLDViewer
+                feeder={feeder}
+                summary={summary}
+                existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                scheme={sldScheme}
+                theme="light"
+                isPrintView={true}
+                showMetrics={true}
+              />
             </div>
           )}
 
