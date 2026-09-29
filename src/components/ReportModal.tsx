@@ -257,6 +257,71 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     printScale === 'presentation' ? 'print:text-sm print:leading-relaxed' :
     'print:text-xs print:leading-normal';
 
+  // Official PESCO - WAPDA Header for all PDF / printed pages
+  const renderOfficialHeader = (sectionSubtitle?: string, pageNumberText?: string, isFirstPage: boolean = false) => {
+    if (!includePageHeaders && !isFirstPage) return null;
+    const isSoloView = displayMode !== 'full_report';
+    const showOnScreen = isFirstPage || isSoloView || pageBreakMode === 'page_per_section';
+
+    return (
+      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full ${showOnScreen ? 'block' : 'hidden print:block'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <img
+            src="/pesco-logo.svg"
+            alt="PESCO Logo"
+            className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
+          />
+          
+          <div className="text-center flex-1">
+            {includePageHeaders && (
+              <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
+                PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+              </div>
+            )}
+            <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
+              ENERGY LOSS REDUCTION (ELR) ENGINEERING REPORT
+            </h1>
+            <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
+              {sectionSubtitle || 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'}
+            </div>
+          </div>
+
+          <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
+              <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">WAPDA</span>
+              <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">ELR</span>
+              <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">STD</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
+          <span>Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Date: <strong>{today}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Category: <strong>{feeder.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Nominal Voltage: <strong>{feeder.nominalVoltage} V</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Division: <strong>Peshawar City</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span className="text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-300">
+            Prepared by: <strong>{officerTitle}</strong>
+          </span>
+          {pageNumberText && (
+            <>
+              <span aria-hidden="true" className="hidden sm:inline">·</span>
+              <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 text-[11px]">
+                {pageNumberText}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Export current report / tables as CSV
   const handleExportCsv = () => {
     const headers = [
@@ -1037,53 +1102,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             (displayMode === 'input_form_image1' && pagesToPrint.inputFormImage1) || 
             (displayMode === 'output_schedule_image2' && pagesToPrint.outputScheduleImage2) || 
             (displayMode === 'table1_matrix' && pagesToPrint.table1Matrix)) && (
-            <div className="border-b-2 border-slate-900 pb-5 print-avoid-break">
-              <div className="flex items-center justify-between gap-4">
-                <img
-                  src="/pesco-logo.svg"
-                  alt="PESCO Logo"
-                  className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain"
-                />
-                
-                <div className="text-center flex-1">
-                  {includePageHeaders && (
-                    <div className="text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
-                      PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-                    </div>
-                  )}
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-950 uppercase tracking-tight">
-                    ENERGY LOSS REDUCTION (ELR) ENGINEERING REPORT
-                  </h1>
-                  <div className="text-xs font-semibold text-slate-600 mt-0.5">
-                    Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study
-                  </div>
-                </div>
-
-                <div className="hidden sm:flex flex-col items-center justify-center w-20 shrink-0 text-center">
-                  <div className="w-14 h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                    <span className="text-[9px] font-black uppercase text-slate-900 leading-none">WAPDA</span>
-                    <span className="text-[11px] font-black text-amber-600 leading-tight">ELR</span>
-                    <span className="text-[8px] font-bold text-slate-600 leading-none">STD</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs font-mono text-slate-600 mt-3 pt-2.5 border-t border-slate-200">
-                <span>Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong></span>
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-                <span>Date: <strong>{today}</strong></span>
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-                <span>Category: <strong>{feeder.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-                <span>Nominal Voltage: <strong>{feeder.nominalVoltage} V</strong></span>
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-                <span>Division: <strong>Peshawar City</strong></span>
-                <span aria-hidden="true" className="hidden sm:inline">·</span>
-                <span className="text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-300">
-                  Prepared by: <strong>{officerTitle}</strong>
-                </span>
-              </div>
-            </div>
+            renderOfficialHeader('Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study', pageBreakMode === 'page_per_section' ? 'Page 1' : undefined, true)
           )}
 
           {/* Section 1: Feeder & Network Specifications */}
@@ -1141,6 +1160,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
             <div className="print-page-break print-avoid-break space-y-4">
+              {renderOfficialHeader('Single Line Diagram (SLD) Topology & Bifurcation Schemes', pageBreakMode === 'page_per_section' ? 'Page 2' : undefined)}
               <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
@@ -1222,6 +1242,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
             <div className="print-page-break print-avoid-break space-y-4">
+              {renderOfficialHeader('Line Bifurcation & Additional Transformer (T-2) 4-Statement Study', pageBreakMode === 'page_per_section' ? 'Page 3' : undefined)}
               <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
@@ -1250,6 +1271,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.inputFormImage1 && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'dual_form') && (
             <div className="print-page-break print-avoid-break">
+              {renderOfficialHeader('Form Display A: Feeder Spans Input Data Schedule (Ref. image1.png)', pageBreakMode === 'page_per_section' ? 'Page 4' : undefined)}
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-blue-600 flex items-center justify-between">
                 <span>FORM DISPLAY A: FEEDER SPANS INPUT DATA TABLE (image1.png)</span>
                 <span className="text-[10px] font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
@@ -1332,6 +1354,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.outputScheduleImage2 && (displayMode === 'full_report' || displayMode === 'output_schedule_image2' || displayMode === 'dual_form') && (
             <div className="print-page-break print-avoid-break">
+              {renderOfficialHeader('Form Display B: Calculated Segment Load Flow & Loss Schedule (Ref. image2.png)', pageBreakMode === 'page_per_section' ? 'Page 5' : undefined)}
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-emerald-600 flex items-center justify-between">
                 <span>FORM DISPLAY B: CALCULATED SEGMENT LOAD FLOW & LOSS SCHEDULE (image2.png)</span>
                 <span className="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -1446,6 +1469,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.table1Matrix && (displayMode === 'full_report' || displayMode === 'table1_matrix') && (
             <div className="print-page-break print-avoid-break">
+              {renderOfficialHeader('Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)', pageBreakMode === 'page_per_section' ? 'Page 6' : undefined)}
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
                 <span>3. Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)</span>
                 <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: PKR 38.5 / kWh · Page {pageBreakMode === 'page_per_section' ? '5' : ''}</span>
@@ -1567,6 +1591,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
              ======================================================== */}
           {pagesToPrint.recommendations && (displayMode === 'full_report') && (
             <div className="print-page-break print-avoid-break space-y-4">
+              {renderOfficialHeader('Priority Engineering Remediation Directives & Approvals', pageBreakMode === 'page_per_section' ? 'Page 7' : undefined)}
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500">
                 4. Priority Engineering Remediation Directives
               </h2>
