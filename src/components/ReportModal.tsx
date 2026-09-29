@@ -111,6 +111,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [printScale, setPrintScale] = useState<PrintScale>('standard');
   const [includePageHeaders, setIncludePageHeaders] = useState(true);
   const [includeSignatures, setIncludeSignatures] = useState(true);
+  const [includeWatermark, setIncludeWatermark] = useState(true);
+  const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
 
   // Per-Page Inclusion Toggles
   const [pagesToPrint, setPagesToPrint] = useState<{
@@ -313,6 +315,24 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           DYNAMIC @MEDIA PRINT STYLES WITH PER-PAGE CONTROLS
          ======================================================== */}
       <style>{`
+        .screen-watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 520px;
+          height: 520px;
+          max-width: 65vw;
+          max-height: 65vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 20;
+          mix-blend-mode: multiply;
+          opacity: ${includeWatermark ? Math.min(watermarkOpacity, 0.06) : 0};
+        }
+
         @media print {
           @page {
             size: ${pageOrientation === 'landscape' ? 'landscape' : 'portrait'};
@@ -327,13 +347,34 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           .no-print {
             display: none !important;
           }
+          .print-watermark {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 520px !important;
+            max-width: 75vw !important;
+            height: 520px !important;
+            max-height: 75vh !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            pointer-events: none !important;
+            z-index: 9999 !important;
+            mix-blend-mode: multiply !important;
+            opacity: ${includeWatermark ? watermarkOpacity : 0} !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           .print-page-break {
             break-before: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
             page-break-before: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
+            position: relative !important;
           }
           .print-avoid-break {
             break-inside: avoid !important;
             page-break-inside: avoid !important;
+            position: relative !important;
           }
           .print-container {
             width: 100% !important;
@@ -342,9 +383,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             margin: 0 !important;
             border: none !important;
             box-shadow: none !important;
+            position: relative !important;
           }
           table {
             page-break-inside: auto;
+            position: relative !important;
           }
           tr {
             page-break-inside: avoid;
@@ -568,14 +611,37 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 </div>
               </div>
 
-              {/* Setting 3: Header & Verification Options */}
+              {/* Setting 3: Header, Watermark & Verification Options */}
               <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
                 <label className="text-slate-200 font-bold block flex items-center justify-between">
-                  <span>3. Running Header & Seals</span>
+                  <span>3. Running Header & Watermark</span>
                   <span className="text-[10px] font-mono text-amber-400 font-normal">Watermark / Stamp</span>
                 </label>
-                <div className="flex items-center gap-4 pt-1">
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={includeWatermark}
+                      onChange={(e) => setIncludeWatermark(e.target.checked)}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-400 cursor-pointer"
+                    />
+                    <span className="font-bold text-amber-300">Logo Watermark</span>
+                  </label>
+
+                  {includeWatermark && (
+                    <select
+                      value={watermarkOpacity}
+                      onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
+                      className="bg-slate-950 border border-slate-700 rounded px-2 py-1 text-[11px] font-mono text-amber-300 outline-none"
+                      title="Adjust watermark opacity"
+                    >
+                      <option value={0.04}>Subtle (4%)</option>
+                      <option value={0.07}>Standard (7%)</option>
+                      <option value={0.12}>Prominent (12%)</option>
+                    </select>
+                  )}
+
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
                       type="checkbox"
                       checked={includePageHeaders}
@@ -585,7 +651,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     <span>Header Stamp</span>
                   </label>
 
-                  <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
                       type="checkbox"
                       checked={includeSignatures}
@@ -881,8 +947,37 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {/* Printable Report Document Body */}
-        <div className={`p-4 sm:p-8 lg:p-10 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-7xl mx-auto' : ''} ${scaleWrapperClass}`} id="printable-report">
+        <div className={`relative p-4 sm:p-8 lg:p-10 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-7xl mx-auto' : ''} ${scaleWrapperClass}`} id="printable-report">
           
+          {/* Official PESCO - WAPDA Logo Watermark (repeats on every physical page in print view, and visible on-screen) */}
+          {includeWatermark && (
+            <>
+              {/* Print Watermark: repeats on every physical page via CSS position: fixed with mix-blend-mode: multiply */}
+              <div 
+                aria-hidden="true" 
+                className="print-watermark hidden print:flex items-center justify-center pointer-events-none select-none"
+              >
+                <img
+                  src="/pesco-logo.svg"
+                  alt="Official PESCO WAPDA Logo Watermark"
+                  className="w-[500px] h-[500px] max-w-[75vw] max-h-[75vh] object-contain"
+                />
+              </div>
+
+              {/* Screen Watermark: subtle background watermark behind content while viewing in report modal */}
+              <div 
+                aria-hidden="true" 
+                className="screen-watermark no-print pointer-events-none select-none flex items-center justify-center"
+              >
+                <img
+                  src="/pesco-logo.svg"
+                  alt="Official PESCO WAPDA Logo Watermark"
+                  className="w-[460px] h-[460px] max-w-[65vw] max-h-[65vh] object-contain"
+                />
+              </div>
+            </>
+          )}
+
           {/* ========================================================
               PAGE 1 / HEADER: OFFICIAL LETTERHEAD & EXECUTIVE SPECS
              ======================================================== */}
