@@ -38,7 +38,9 @@ import {
   FileCode2,
   Check,
   Activity,
-  Columns
+  Columns,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { 
   generateTechnicalRecommendations,
@@ -99,6 +101,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [sldScheme, setSldScheme] = useState<SLDSchemeType>(
     effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined'
   );
+
+  const [isMaximized, setIsMaximized] = useState(true);
 
   // Per-Page Print Settings State
   const [showPrintSettings, setShowPrintSettings] = useState(false);
@@ -299,7 +303,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const enabledPagesCount = Object.values(pagesToPrint).filter(Boolean).length;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 print:p-0 print:bg-white print:static">
+    <div className={`fixed inset-0 z-50 overflow-y-auto ${
+      isMaximized 
+        ? 'bg-slate-950 p-0 flex flex-col' 
+        : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4'
+    } print:p-0 print:bg-white print:static`}>
       
       {/* ========================================================
           DYNAMIC @MEDIA PRINT STYLES WITH PER-PAGE CONTROLS
@@ -351,10 +359,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         }
       `}</style>
 
-      <div className="bg-white w-full max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 print:m-0 print:shadow-none print:border-none print:rounded-none flex flex-col max-h-[94vh] print:max-h-none print-container">
+      <div className={`bg-white w-full ${
+        isMaximized 
+          ? 'min-h-screen rounded-none my-0 max-w-none shadow-none border-none flex-1 flex flex-col' 
+          : 'max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 max-h-[94vh] flex flex-col'
+      } print:m-0 print:shadow-none print:border-none print:rounded-none print:max-h-none print-container`}>
         
         {/* Top Action Bar (hidden when printing) */}
-        <div className="p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 no-print border-b border-slate-800">
+        <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 no-print border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-3">
             <img
               src="/pesco-logo.svg"
@@ -401,15 +413,26 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
             >
               <Printer className="w-4 h-4" />
               <span>Print / Save as PDF</span>
             </button>
 
+            {/* Maximize / Restore Screen Button */}
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              title={isMaximized ? "Restore Window View" : "Maximize Screen View"}
+            >
+              {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
             <button
               onClick={onClose}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Close Report"
             >
               <X className="w-5 h-5" />
             </button>
@@ -858,7 +881,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {/* Printable Report Document Body */}
-        <div className={`p-6 sm:p-10 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${scaleWrapperClass}`} id="printable-report">
+        <div className={`p-4 sm:p-8 lg:p-10 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-7xl mx-auto' : ''} ${scaleWrapperClass}`} id="printable-report">
           
           {/* ========================================================
               PAGE 1 / HEADER: OFFICIAL LETTERHEAD & EXECUTIVE SPECS
