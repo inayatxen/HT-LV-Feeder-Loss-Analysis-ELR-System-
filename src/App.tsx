@@ -421,6 +421,7 @@ export default function App() {
               onQuickCapacitor={handleSetCapacitor}
               activeCapacitors={activeCapacitors}
               activeConductors={activeConductors}
+              onOpenPrintReport={() => setIsReportOpen(true)}
             />
           </div>
         )}

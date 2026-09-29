@@ -1,0 +1,222 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <!-- Sky Gradient -->
+    <linearGradient id="pescoSky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="60%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#bae6fd" />
+    </linearGradient>
+
+    <!-- Sun Glow Gradient -->
+    <linearGradient id="pescoSun" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#ea580c" />
+      <stop offset="50%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#fde047" />
+    </linearGradient>
+
+    <!-- Green Ground Gradient -->
+    <linearGradient id="pescoGrass" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#84cc16" />
+      <stop offset="100%" stop-color="#4d7c0f" />
+    </linearGradient>
+
+    <!-- Circular Text Paths -->
+    <!-- Top Arc for "PESHAWAR ELECTRIC SUPPLY COMPANY" -->
+    <path id="topTextArc" d="M 58 200 A 142 142 0 1 1 342 200" fill="none" />
+    
+    <!-- Bottom Inner Arc for "WAPDA" -->
+    <path id="bottomWapdaArc" d="M 120 285 A 105 105 0 0 0 280 285" fill="none" />
+
+    <!-- Bottom Outer Arc for "PESCO" -->
+    <path id="bottomPescoArc" d="M 100 322 A 142 142 0 0 0 300 322" fill="none" />
+
+    <!-- Checkered pattern for Bab-e-Khyber pillars -->
+    <pattern id="pescoChecker" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#ffffff" />
+      <rect x="6" width="6" height="6" fill="#000000" />
+      <rect y="6" width="6" height="6" fill="#000000" />
+      <rect x="6" y="6" width="6" height="6" fill="#ffffff" />
+    </pattern>
+
+    <!-- Clip path for the circular artwork inside the gear -->
+    <clipPath id="innerArtCircle">
+      <circle cx="200" cy="200" r="126" />
+    </clipPath>
+  </defs>
+
+  <!-- ==========================================
+       1. OUTER BLACK GEAR COGWHEEL (16 TEETH)
+       ========================================== -->
+  <g fill="#000000">
+    <!-- Center ring base -->
+    <circle cx="200" cy="200" r="172" />
+
+    <!-- 16 Cogwheel Teeth rotated at 22.5 deg intervals -->
+    <!-- 0 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" />
+    <!-- 22.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(22.5 200 200)" />
+    <!-- 45 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(45 200 200)" />
+    <!-- 67.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(67.5 200 200)" />
+    <!-- 90 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(90 200 200)" />
+    <!-- 112.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(112.5 200 200)" />
+    <!-- 135 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(135 200 200)" />
+    <!-- 157.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(157.5 200 200)" />
+    <!-- 180 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(180 200 200)" />
+    <!-- 202.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(202.5 200 200)" />
+    <!-- 225 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(225 200 200)" />
+    <!-- 247.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(247.5 200 200)" />
+    <!-- 270 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(270 200 200)" />
+    <!-- 292.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(292.5 200 200)" />
+    <!-- 315 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(315 200 200)" />
+    <!-- 337.5 deg -->
+    <rect x="182" y="8" width="36" height="34" rx="3" transform="rotate(337.5 200 200)" />
+  </g>
+
+  <!-- Outer Ring White Stroke -->
+  <circle cx="200" cy="200" r="172" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.15" />
+
+  <!-- ==========================================
+       2. INNER CIRCLE ARTWORK (Clipped to Circle)
+       ========================================== -->
+  <g clip-path="url(#innerArtCircle)">
+    <!-- Sky Background -->
+    <circle cx="200" cy="200" r="126" fill="url(#pescoSky)" />
+
+    <!-- Sun Rays (Golden Triangular Flares) -->
+    <g fill="#facc15" stroke="#eab308" stroke-width="1">
+      <!-- 13 distinct rays radiating outward -->
+      <polygon points="200,145 195,82 205,82" />
+      <polygon points="200,145 178,86 187,83" />
+      <polygon points="200,145 213,83 222,86" />
+      <polygon points="200,145 162,95 170,90" />
+      <polygon points="200,145 230,90 238,95" />
+      <polygon points="200,145 148,108 155,101" />
+      <polygon points="200,145 245,101 252,108" />
+      <polygon points="200,145 137,124 143,116" />
+      <polygon points="200,145 257,116 263,124" />
+      <polygon points="200,145 130,143 134,134" />
+      <polygon points="200,145 266,134 270,143" />
+      <polygon points="200,145 127,162 129,153" />
+      <polygon points="200,145 271,153 273,162" />
+    </g>
+
+    <!-- Rising Sun Core (Half Disc) -->
+    <circle cx="200" cy="148" r="44" fill="url(#pescoSun)" stroke="#ca8a04" stroke-width="1.5" />
+
+    <!-- Mountain Silhouette (Khyber Pass Range) with dark crags & white highlights -->
+    <path d="M 70 220 Q 110 160 140 178 Q 165 152 205 150 Q 245 155 285 182 Q 310 195 330 220 L 330 250 L 70 250 Z" fill="#18181b" />
+    <!-- Mountain ridge highlights -->
+    <path d="M 85 215 Q 110 170 135 182 Q 155 165 175 160" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.85" />
+    <path d="M 180 162 Q 205 152 230 160 Q 255 175 280 190" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.85" />
+    <path d="M 115 190 L 130 185 L 140 200" fill="none" stroke="#e4e4e7" stroke-width="2.5" opacity="0.9" />
+    <path d="M 285 185 L 305 198 L 315 212" fill="none" stroke="#e4e4e7" stroke-width="2.5" opacity="0.9" />
+
+    <!-- Transmission Electricity Tower / Pylon (Right Side) -->
+    <g stroke="#000000" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <!-- Main Legs -->
+      <line x1="268" y1="210" x2="280" y2="128" />
+      <line x1="298" y1="210" x2="286" y2="128" />
+      <!-- Peak Point -->
+      <line x1="280" y1="128" x2="283" y2="120" />
+      <line x1="286" y1="128" x2="283" y2="120" />
+      <!-- Cross Arms (3 tiers of electrical arms) -->
+      <line x1="248" y1="140" x2="318" y2="136" stroke-width="2.5" />
+      <line x1="242" y1="156" x2="324" y2="152" stroke-width="2.5" />
+      <line x1="236" y1="174" x2="330" y2="170" stroke-width="2.5" />
+      <!-- Internal Cross Braces (Lattice) -->
+      <line x1="277" y1="140" x2="289" y2="156" stroke-width="1.2" />
+      <line x1="289" y1="140" x2="277" y2="156" stroke-width="1.2" />
+      <line x1="275" y1="156" x2="291" y2="174" stroke-width="1.2" />
+      <line x1="291" y1="156" x2="275" y2="174" stroke-width="1.2" />
+      <line x1="272" y1="174" x2="294" y2="200" stroke-width="1.2" />
+      <line x1="294" y1="174" x2="272" y2="200" stroke-width="1.2" />
+    </g>
+
+    <!-- Transmission Power Lines / Conductors (Sweeping from Tower across mountains) -->
+    <g fill="none" stroke="#000000" stroke-width="2" opacity="0.95">
+      <path d="M 70 178 Q 160 162 248 140" />
+      <path d="M 70 192 Q 160 175 242 156" />
+      <path d="M 70 208 Q 160 190 236 174" />
+      <!-- Lines extending to the right -->
+      <path d="M 318 136 Q 328 138 335 142" />
+      <path d="M 324 152 Q 330 154 335 157" />
+      <path d="M 330 170 Q 332 171 335 173" />
+    </g>
+
+    <!-- Green Field / Lawn (Lower Half Crescent) -->
+    <path d="M 70 240 Q 200 215 330 240 A 126 126 0 0 1 70 240 Z" fill="url(#pescoGrass)" />
+
+    <!-- Bab-e-Khyber (Famous Khyber Pass Gate Monument) -->
+    <g>
+      <!-- Base Shadow -->
+      <rect x="122" y="272" width="156" height="5" fill="#14532d" opacity="0.4" rx="2" />
+
+      <!-- Outer Castle Wall Outline (Black border) -->
+      <path d="M 124 274 L 140 194 L 152 194 L 152 190 L 158 190 L 158 194 L 168 194 L 168 190 L 174 190 L 174 194 L 226 194 L 226 190 L 232 190 L 232 194 L 242 194 L 242 190 L 248 190 L 248 194 L 260 194 L 276 274 Z" fill="#000000" stroke="#000000" stroke-width="2" />
+
+      <!-- Main Gate Fortress Body (White/Checkered Texture) -->
+      <!-- Left Pillar -->
+      <path d="M 128 272 L 142 196 L 172 196 L 172 226 L 164 226 L 154 272 Z" fill="url(#pescoChecker)" stroke="#000000" stroke-width="1.5" />
+      
+      <!-- Right Pillar -->
+      <path d="M 272 272 L 258 196 L 228 196 L 228 226 L 236 226 L 246 272 Z" fill="url(#pescoChecker)" stroke="#000000" stroke-width="1.5" />
+
+      <!-- Center Arch Top Span -->
+      <rect x="170" y="196" width="60" height="30" fill="#000000" />
+      <rect x="172" y="198" width="56" height="26" fill="url(#pescoChecker)" />
+
+      <!-- Central Arch Opening (Dark Tunnel Pass) -->
+      <path d="M 164 272 L 170 226 Q 200 220 230 226 L 236 272 Z" fill="#000000" />
+
+      <!-- Gate Crenellations (Battlements on top of towers) -->
+      <!-- Left Tower Turret -->
+      <path d="M 142 196 L 142 188 L 148 188 L 148 192 L 154 192 L 154 188 L 160 188 L 160 192 L 166 192 L 166 188 L 172 188 L 172 196 Z" fill="#ffffff" stroke="#000000" stroke-width="1.2" />
+      <!-- Right Tower Turret -->
+      <path d="M 228 196 L 228 188 L 234 188 L 234 192 L 240 192 L 240 188 L 246 188 L 246 192 L 252 192 L 252 188 L 258 188 L 258 196 Z" fill="#ffffff" stroke="#000000" stroke-width="1.2" />
+
+      <!-- Slit Windows in Pillars -->
+      <rect x="146" y="235" width="8" height="14" rx="2" fill="#000000" stroke="#ffffff" stroke-width="1" />
+      <rect x="246" y="235" width="8" height="14" rx="2" fill="#000000" stroke="#ffffff" stroke-width="1" />
+    </g>
+
+    <!-- WAPDA Text over the green lawn -->
+    <text x="200" y="306" text-anchor="middle" fill="#000000" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="20" letter-spacing="4">
+      WAPDA
+    </text>
+  </g>
+
+  <!-- Inner Golden Ring Separator Border -->
+  <circle cx="200" cy="200" r="126" fill="none" stroke="#000000" stroke-width="5" />
+  <circle cx="200" cy="200" r="128" fill="none" stroke="#facc15" stroke-width="1.5" />
+
+  <!-- ==========================================
+       3. WHITE ARC TEXT ON BLACK GEAR
+       ========================================== -->
+  <!-- Top Arc: "PESHAWAR ELECTRIC SUPPLY COMPANY" -->
+  <text fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="18.5" letter-spacing="2.2">
+    <textPath href="#topTextArc" startOffset="50%" text-anchor="middle">
+      PESHAWAR ELECTRIC SUPPLY COMPANY
+    </textPath>
+  </text>
+
+  <!-- Bottom Outer Arc: "PESCO" -->
+  <text fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="24" letter-spacing="8">
+    <textPath href="#bottomPescoArc" startOffset="50%" text-anchor="middle">
+      P E S C O
+    </textPath>
+  </text>
+</svg>

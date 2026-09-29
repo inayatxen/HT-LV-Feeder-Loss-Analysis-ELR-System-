@@ -22,7 +22,8 @@ import {
   BatteryCharging,
   SlidersHorizontal,
   Split,
-  Move
+  Move,
+  Printer
 } from 'lucide-react';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 
@@ -35,6 +36,7 @@ interface SingleLineDiagramProps {
   onQuickCapacitor?: (nodeId: string, kvar: number) => void;
   activeCapacitors?: Record<string, number>;
   activeConductors?: Record<string, string>;
+  onOpenPrintReport?: () => void;
 }
 
 export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
@@ -45,7 +47,8 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
   onQuickReconductor,
   onQuickCapacitor,
   activeCapacitors,
-  activeConductors
+  activeConductors,
+  onOpenPrintReport
 }) => {
   const [zoom, setZoom] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'standard' | 'voltage' | 'losses'>('standard');
@@ -169,8 +172,19 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
           )}
         </div>
 
-        {/* Zoom Controls */}
+        {/* Zoom Controls & Print Button */}
         <div className="flex items-center gap-1.5">
+          {onOpenPrintReport && (
+            <button
+              onClick={onOpenPrintReport}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 shadow-2xs transition-colors cursor-pointer mr-2"
+              title="Print Single Line Diagram or Save as PDF"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print SLD</span>
+            </button>
+          )}
+
           <button
             onClick={() => setZoom(prev => Math.max(0.5, Number((prev - 0.15).toFixed(2))))}
             className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"

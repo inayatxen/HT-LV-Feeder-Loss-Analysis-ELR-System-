@@ -81,21 +81,28 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="w-full px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
           
           {/* 1. Brand Identity */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
-              <Zap className="w-4 h-4" />
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="relative group shrink-0">
+              <img
+                src="/pesco-logo.svg"
+                alt="PESCO WAPDA Logo"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-amber-500/40 shadow-sm transition-transform group-hover:scale-105"
+              />
+              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[8px] font-black shadow-xs">
+                ⚡
+              </span>
             </div>
             <div className="leading-tight">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs sm:text-sm font-bold tracking-tight text-white whitespace-nowrap">
-                  HT & LV Feeder Loss Analysis
+                  PESCO Feeder Loss Analysis
                 </span>
-                <span className="hidden md:inline-block text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700">
+                <span className="hidden md:inline-block text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
                   WAPDA ELR
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 hidden lg:block leading-none mt-0.5">
-                Transformer Overloading, Line Losses & Voltage Drop Engine
+                Peshawar Electric Supply Company · Technical Loss Reduction System
               </p>
             </div>
           </div>

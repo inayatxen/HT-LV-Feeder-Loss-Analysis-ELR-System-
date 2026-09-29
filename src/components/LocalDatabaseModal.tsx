@@ -226,18 +226,20 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
         {/* Modal Top Bar */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Database className="w-5 h-5" />
-            </div>
+            <img
+              src="/pesco-logo.svg"
+              alt="PESCO Logo"
+              className="w-10 h-10 rounded-full border border-amber-500/40 shadow-xs shrink-0"
+            />
             <div>
               <h3 className="text-base font-bold text-white flex items-center gap-2">
-                Local Database Manager
+                PESCO Local Database Manager
                 <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60">
                   IndexedDB
                 </span>
               </h3>
               <p className="text-xs text-slate-400">
-                Persistent client-side storage for feeder models, calculations, and analysis snapshots.
+                Peshawar Electric Supply Company · Persistent client-side storage for feeder models, calculations, and analysis snapshots.
               </p>
             </div>
           </div>

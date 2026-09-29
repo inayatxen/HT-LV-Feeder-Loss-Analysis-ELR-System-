@@ -170,13 +170,15 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
         
         {/* Header */}
         <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <FolderPlus className="w-5 h-5" />
-            </div>
+          <div className="flex items-center gap-3">
+            <img
+              src="/pesco-logo.svg"
+              alt="PESCO Logo"
+              className="w-10 h-10 rounded-full border border-amber-500/40 shadow-xs shrink-0"
+            />
             <div>
               <h2 className="text-base font-bold leading-tight">Start New Loss Analysis Job</h2>
-              <p className="text-xs text-slate-400">Configure study parameters, grid location & initial layout</p>
+              <p className="text-xs text-slate-400">PESCO / WAPDA · Configure study parameters, grid location & layout</p>
             </div>
           </div>
           <button
