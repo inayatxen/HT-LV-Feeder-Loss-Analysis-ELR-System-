@@ -252,6 +252,87 @@ export interface ForecastYearResult {
   t2LineLossKw?: number;
 }
 
+export interface BifurcationZoneAnalysisStatement {
+  transformerId: 'T1' | 'T2';
+  transformerName: string;
+  year: 0 | 5;
+  yearLabel: string;
+  capacityKva: number;
+  injectionNodeId: string;
+  connected1PhCust: number;
+  connected3PhCust: number;
+  totalConnectedCust: number;
+  zoneLengthKm: number;
+  zoneLengthMeters: number;
+  spansCount: number;
+  demandKva: number;
+  demandKw: number;
+  currentAmps: number;
+  powerFactor: number;
+  transformerLoadingPercent: number;
+  isOverloaded: boolean;
+  worstVoltageDropPercent: number;
+  worstVoltageDropNodeId: string;
+  worstVoltageVolts: number;
+  lineLossKw: number;
+  transformationLossKw: number;
+  totalPowerLossKw: number;
+  percentPowerLoss: number;
+  annualEnergyLossKwh: number;
+  annualLossCostPkr: number;
+}
+
+export interface BifurcationFourStatementDossier {
+  isActive: boolean;
+  bifurcationNodeId: string;
+  additionalTransformerKva: number;
+  growthRatePercent: number;
+  tariffPerKwh: number;
+  
+  // The 4 Core Statements
+  t1Year0: BifurcationZoneAnalysisStatement;
+  t1Year5: BifurcationZoneAnalysisStatement;
+  t2Year0: BifurcationZoneAnalysisStatement;
+  t2Year5: BifurcationZoneAnalysisStatement;
+  
+  // Combined totals & Comparative Summary
+  combinedYear0: {
+    totalCapacityKva: number;
+    totalDemandKva: number;
+    totalDemandKw: number;
+    totalLineLossKw: number;
+    totalPowerLossKw: number;
+    percentPowerLoss: number;
+    annualEnergyLossKwh: number;
+    annualLossCostPkr: number;
+    worstVoltageVolts: number;
+    worstVoltageDropPercent: number;
+  };
+  combinedYear5: {
+    totalCapacityKva: number;
+    totalDemandKva: number;
+    totalDemandKw: number;
+    totalLineLossKw: number;
+    totalPowerLossKw: number;
+    percentPowerLoss: number;
+    annualEnergyLossKwh: number;
+    annualLossCostPkr: number;
+    worstVoltageVolts: number;
+    worstVoltageDropPercent: number;
+  };
+  // Benefits vs baseline single line
+  reliefBenefits: {
+    t1ReliefKva: number;
+    t1CurrentReliefAmps: number;
+    lossReductionKwYear0: number;
+    lossReductionKwYear5: number;
+    annualEnergySavedKwhYear0: number;
+    annualEnergySavedKwhYear5: number;
+    annualFinancialSavingPkrYear0: number;
+    annualFinancialSavingPkrYear5: number;
+  };
+}
+
 export interface FeederData {
   id: string;
   name: string;

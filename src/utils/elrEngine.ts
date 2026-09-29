@@ -10,7 +10,9 @@ import {
   FeederAnalysisSummary,
   SegmentAnalysisResult,
   ForecastYearResult,
-  BifurcationConfig
+  BifurcationConfig,
+  BifurcationZoneAnalysisStatement,
+  BifurcationFourStatementDossier
 } from '../types/feeder';
 import { getConductor } from '../data/conductors';
 import { getTransformerSpec } from '../data/transformers';
@@ -735,4 +737,246 @@ export function generateTechnicalRecommendations(
   }
 
   return recommendations;
+}
+
+/**
+ * Calculates the complete 4-statement analysis for Line Bifurcation & Additional Transformer (T-2):
+ * 1. Statement 1: Transformer 1 (T-1 Zone) at Year 0 (Present Baseline)
+ * 2. Statement 2: Transformer 1 (T-1 Zone) after 5 Years (Growth Compounded)
+ * 3. Statement 3: Transformer 2 (T-2 Zone) at Year 0 (Installation Year)
+ * 4. Statement 4: Transformer 2 (T-2 Zone) after 5 Years (Growth Compounded)
+ */
+export function calculateBifurcationFourStatements(
+  feeder: FeederData,
+  bifurcationConfig: BifurcationConfig,
+  options?: {
+    customConductors?: Record<string, string>;
+    customCapacitors?: Record<string, number>;
+    t1TransformerOverrideKva?: number;
+    loadFactorOverride?: number;
+    annualGrowthRatePercent?: number;
+  }
+): BifurcationFourStatementDossier {
+  const tariff = feeder.tariffPerKwh || 38.5;
+  const growthRate = (options?.annualGrowthRatePercent !== undefined 
+    ? options.annualGrowthRatePercent 
+    : feeder.annualGrowthRatePercent) / 100;
+  const growthPercent = growthRate * 100;
+
+  const t1CapacityKva = options?.t1TransformerOverrideKva || feeder.existingTransformerKva;
+  const t2CapacityKva = bifurcationConfig.transformerCapacityKva || 100;
+  const bifurcationNodeId = bifurcationConfig.bifurcationNodeId || '3.0';
+
+  // 1. Calculate Bifurcated Summary at Year 0
+  const bifurcatedYear0 = calculateFeederAnalysis(feeder, {
+    customConductors: options?.customConductors,
+    customCapacitors: options?.customCapacitors,
+    transformerOverrideKva: t1CapacityKva,
+    loadFactorOverride: options?.loadFactorOverride,
+    growthYears: 0,
+    annualGrowthRate: growthRate,
+    bifurcation: bifurcationConfig
+  });
+
+  // 2. Calculate Bifurcated Summary at Year 5
+  const bifurcatedYear5 = calculateFeederAnalysis(feeder, {
+    customConductors: options?.customConductors,
+    customCapacitors: options?.customCapacitors,
+    transformerOverrideKva: t1CapacityKva,
+    loadFactorOverride: options?.loadFactorOverride,
+    growthYears: 5,
+    annualGrowthRate: growthRate,
+    bifurcation: bifurcationConfig
+  });
+
+  // 3. Calculate Un-bifurcated Baseline at Year 0 and Year 5 (for Relief Benchmarking)
+  const baselineYear0 = calculateFeederAnalysis(feeder, {
+    customConductors: options?.customConductors,
+    customCapacitors: options?.customCapacitors,
+    transformerOverrideKva: t1CapacityKva,
+    loadFactorOverride: options?.loadFactorOverride,
+    growthYears: 0,
+    annualGrowthRate: growthRate,
+    bifurcation: { ...bifurcationConfig, enabled: false }
+  });
+
+  const baselineYear5 = calculateFeederAnalysis(feeder, {
+    customConductors: options?.customConductors,
+    customCapacitors: options?.customCapacitors,
+    transformerOverrideKva: t1CapacityKva,
+    loadFactorOverride: options?.loadFactorOverride,
+    growthYears: 5,
+    annualGrowthRate: growthRate,
+    bifurcation: { ...bifurcationConfig, enabled: false }
+  });
+
+  const vKv = bifurcatedYear0.baseVoltage / 1000;
+  const powerFactor = bifurcatedYear0.operatingPowerFactor;
+  const loadFactor = bifurcatedYear0.loadFactor;
+  const lossFactorCoeff = bifurcatedYear0.lossLoadFactor;
+
+  // Helper to extract zone specific metrics
+  function extractZoneStatement(
+    summary: FeederAnalysisSummary,
+    transformerId: 'T1' | 'T2',
+    year: 0 | 5
+  ): BifurcationZoneAnalysisStatement {
+    const isT1 = transformerId === 'T1';
+    const capacityKva = isT1 ? t1CapacityKva : t2CapacityKva;
+    const injectionNodeId = isT1 ? '0.0' : bifurcationNodeId;
+    const transformerName = isT1 
+      ? `Main Transformer T-1 (${capacityKva} kVA @ Substation)`
+      : `Additional Transformer T-2 (${capacityKva} kVA @ Node ${bifurcationNodeId})`;
+
+    // Filter segments belonging to this transformer zone
+    const zoneSegments = summary.segmentResults.filter(s => s.fedByTransformer === transformerId);
+    const spansCount = zoneSegments.length;
+    const zoneLengthKm = zoneSegments.reduce((acc, s) => acc + s.lengthKm, 0);
+    const zoneLengthMeters = Math.round(zoneLengthKm * 1000);
+
+    // Filter nodes in this zone
+    const zoneToNodes = new Set(zoneSegments.map(s => s.toNodeId));
+    if (isT1) zoneToNodes.add('0.0');
+    else zoneToNodes.add(bifurcationNodeId);
+
+    const connectedNodes = feeder.nodes.filter(n => zoneToNodes.has(n.id));
+    const connected1PhCust = connectedNodes.reduce((acc, n) => acc + n.singlePhaseCustomers, 0);
+    const connected3PhCust = connectedNodes.reduce((acc, n) => acc + n.threePhaseCustomers, 0);
+    const totalConnectedCust = connected1PhCust + connected3PhCust;
+
+    const demandKva = isT1 ? (summary.transformer1DemandKva || 0) : (summary.transformer2DemandKva || 0);
+    const demandKw = demandKva * powerFactor;
+    const currentAmps = Number((demandKva / (Math.sqrt(3) * vKv)).toFixed(1));
+
+    const loadingPercent = Math.round((demandKva / capacityKva) * 100);
+    const isOverloaded = loadingPercent > 100;
+
+    // Worst voltage drop in this zone
+    let worstDrop = 0;
+    let worstNode = injectionNodeId;
+    zoneSegments.forEach(s => {
+      if (s.percentVoltDrop > worstDrop) {
+        worstDrop = s.percentVoltDrop;
+        worstNode = s.toNodeId;
+      }
+    });
+
+    const worstVoltageVolts = Number((summary.baseVoltage * (1 - worstDrop / 100)).toFixed(1));
+
+    // Zone line loss
+    const lineLossKw = isT1 ? (summary.t1LineLossKw || 0) : (summary.t2LineLossKw || 0);
+
+    // Transformation losses for this specific transformer
+    const trfSpec = getTransformerSpec(capacityKva);
+    const trfRatio = demandKva / capacityKva;
+    const transformationLossKw = Number((trfSpec.ironLossKw + trfSpec.copperLossKw * Math.pow(trfRatio, 2)).toFixed(3));
+    const totalPowerLossKw = Number((lineLossKw + transformationLossKw).toFixed(3));
+
+    const totalInputKw = demandKw + totalPowerLossKw;
+    const percentPowerLoss = totalInputKw > 0 ? Number(((totalPowerLossKw / totalInputKw) * 100).toFixed(1)) : 0;
+
+    const annualEnergyLossKwh = Math.round(totalPowerLossKw * 8760 * lossFactorCoeff);
+    const annualLossCostPkr = Math.round(annualEnergyLossKwh * tariff);
+
+    return {
+      transformerId,
+      transformerName,
+      year,
+      yearLabel: year === 0 ? '0 Year (Current Peak)' : 'After 5 Years (Compounded Growth)',
+      capacityKva,
+      injectionNodeId,
+      connected1PhCust,
+      connected3PhCust,
+      totalConnectedCust,
+      zoneLengthKm: Number(zoneLengthKm.toFixed(3)),
+      zoneLengthMeters,
+      spansCount,
+      demandKva: Number(demandKva.toFixed(1)),
+      demandKw: Number(demandKw.toFixed(1)),
+      currentAmps,
+      powerFactor: Number(powerFactor.toFixed(2)),
+      transformerLoadingPercent: loadingPercent,
+      isOverloaded,
+      worstVoltageDropPercent: Number(worstDrop.toFixed(1)),
+      worstVoltageDropNodeId: worstNode,
+      worstVoltageVolts,
+      lineLossKw: Number(lineLossKw.toFixed(3)),
+      transformationLossKw,
+      totalPowerLossKw,
+      percentPowerLoss,
+      annualEnergyLossKwh,
+      annualLossCostPkr
+    };
+  }
+
+  // Generate the 4 Statements
+  const t1Year0 = extractZoneStatement(bifurcatedYear0, 'T1', 0);
+  const t1Year5 = extractZoneStatement(bifurcatedYear5, 'T1', 5);
+  const t2Year0 = extractZoneStatement(bifurcatedYear0, 'T2', 0);
+  const t2Year5 = extractZoneStatement(bifurcatedYear5, 'T2', 5);
+
+  // Combined Totals Year 0
+  const combinedYear0 = {
+    totalCapacityKva: t1CapacityKva + t2CapacityKva,
+    totalDemandKva: bifurcatedYear0.totalSystemDemandKva,
+    totalDemandKw: bifurcatedYear0.totalSystemDemandKw,
+    totalLineLossKw: bifurcatedYear0.totalLineLossKw,
+    totalPowerLossKw: bifurcatedYear0.totalPowerLossKw,
+    percentPowerLoss: bifurcatedYear0.percentPowerLoss,
+    annualEnergyLossKwh: bifurcatedYear0.annualEnergyLossKwh,
+    annualLossCostPkr: Math.round(bifurcatedYear0.annualEnergyLossKwh * tariff),
+    worstVoltageVolts: bifurcatedYear0.worstVoltageVolts,
+    worstVoltageDropPercent: bifurcatedYear0.worstVoltageDropPercent
+  };
+
+  // Combined Totals Year 5
+  const combinedYear5 = {
+    totalCapacityKva: t1CapacityKva + t2CapacityKva,
+    totalDemandKva: bifurcatedYear5.totalSystemDemandKva,
+    totalDemandKw: bifurcatedYear5.totalSystemDemandKw,
+    totalLineLossKw: bifurcatedYear5.totalLineLossKw,
+    totalPowerLossKw: bifurcatedYear5.totalPowerLossKw,
+    percentPowerLoss: bifurcatedYear5.percentPowerLoss,
+    annualEnergyLossKwh: bifurcatedYear5.annualEnergyLossKwh,
+    annualLossCostPkr: Math.round(bifurcatedYear5.annualEnergyLossKwh * tariff),
+    worstVoltageVolts: bifurcatedYear5.worstVoltageVolts,
+    worstVoltageDropPercent: bifurcatedYear5.worstVoltageDropPercent
+  };
+
+  // Calculate Relief & Savings vs Un-bifurcated baseline
+  const lossReductionKwYear0 = Math.max(0, baselineYear0.totalLineLossKw - bifurcatedYear0.totalLineLossKw);
+  const lossReductionKwYear5 = Math.max(0, baselineYear5.totalLineLossKw - bifurcatedYear5.totalLineLossKw);
+
+  const annualEnergySavedKwhYear0 = Math.max(0, baselineYear0.annualEnergyLossKwh - bifurcatedYear0.annualEnergyLossKwh);
+  const annualEnergySavedKwhYear5 = Math.max(0, baselineYear5.annualEnergyLossKwh - bifurcatedYear5.annualEnergyLossKwh);
+
+  const annualFinancialSavingPkrYear0 = Math.round(annualEnergySavedKwhYear0 * tariff);
+  const annualFinancialSavingPkrYear5 = Math.round(annualEnergySavedKwhYear5 * tariff);
+
+  const t1ReliefKva = Number((baselineYear0.totalSystemDemandKva - t1Year0.demandKva).toFixed(1));
+  const t1CurrentReliefAmps = Number((baselineYear0.totalSourceCurrentAmps - t1Year0.currentAmps).toFixed(1));
+
+  return {
+    isActive: bifurcationConfig.enabled,
+    bifurcationNodeId,
+    additionalTransformerKva: t2CapacityKva,
+    growthRatePercent: growthPercent,
+    tariffPerKwh: tariff,
+    t1Year0,
+    t1Year5,
+    t2Year0,
+    t2Year5,
+    combinedYear0,
+    combinedYear5,
+    reliefBenefits: {
+      t1ReliefKva,
+      t1CurrentReliefAmps,
+      lossReductionKwYear0: Number(lossReductionKwYear0.toFixed(3)),
+      lossReductionKwYear5: Number(lossReductionKwYear5.toFixed(3)),
+      annualEnergySavedKwhYear0,
+      annualEnergySavedKwhYear5,
+      annualFinancialSavingPkrYear0,
+      annualFinancialSavingPkrYear5
+    }
+  };
 }

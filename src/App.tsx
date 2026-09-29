@@ -531,6 +531,7 @@ export default function App() {
         summary={existingSummary}
         proposedSummary={proposedSummary}
         activeTransformerKva={activeTransformerKva}
+        bifurcationConfig={bifurcationConfig}
         selectedJobTitle={selectedJobTitle}
       />
 

@@ -6,7 +6,9 @@
 import React, { useState, useMemo } from 'react';
 import { 
   FeederData, 
-  FeederAnalysisSummary 
+  FeederAnalysisSummary,
+  BifurcationConfig,
+  BifurcationFourStatementDossier
 } from '../types/feeder';
 import { 
   Printer, 
@@ -34,11 +36,16 @@ import {
   Sliders,
   Sparkles,
   FileCode2,
-  Check
+  Check,
+  Activity
 } from 'lucide-react';
-import { generateTechnicalRecommendations } from '../utils/elrEngine';
+import { 
+  generateTechnicalRecommendations,
+  calculateBifurcationFourStatements 
+} from '../utils/elrEngine';
 import { JobTitle, JOB_TITLE_OPTIONS } from '../types/feeder';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
+import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -47,6 +54,7 @@ interface ReportModalProps {
   summary: FeederAnalysisSummary;
   proposedSummary: FeederAnalysisSummary;
   activeTransformerKva?: number;
+  bifurcationConfig?: BifurcationConfig;
   selectedJobTitle?: JobTitle;
   onUpdateJobTitle?: (title: string) => void;
 }
@@ -62,12 +70,29 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   summary,
   proposedSummary,
   activeTransformerKva,
+  bifurcationConfig,
   selectedJobTitle = 'Sub-Divisional Officer (SDO)',
   onUpdateJobTitle
 }) => {
+  const effectiveBifurcationConfig: BifurcationConfig = useMemo(() => {
+    if (bifurcationConfig) return bifurcationConfig;
+    return {
+      enabled: proposedSummary.bifurcationActive || false,
+      bifurcationNodeId: proposedSummary.bifurcationNodeId || '3.0',
+      transformerCapacityKva: proposedSummary.additionalTransformerKva || 100,
+      mode: 'ADDITIONAL_TRANSFORMER'
+    };
+  }, [bifurcationConfig, proposedSummary]);
+
+  const bifurcationDossier: BifurcationFourStatementDossier = useMemo(() => {
+    return calculateBifurcationFourStatements(feeder, effectiveBifurcationConfig, {
+      t1TransformerOverrideKva: activeTransformerKva
+    });
+  }, [feeder, effectiveBifurcationConfig, activeTransformerKva]);
+
   const [displayMode, setDisplayMode] = useState<
-    'full_report' | 'single_line_diagram' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix'
-  >('full_report');
+    'full_report' | 'bifurcation_4_statements' | 'single_line_diagram' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix'
+  >(effectiveBifurcationConfig.enabled ? 'full_report' : 'full_report');
 
   // Per-Page Print Settings State
   const [showPrintSettings, setShowPrintSettings] = useState(false);
@@ -80,6 +105,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   // Per-Page Inclusion Toggles
   const [pagesToPrint, setPagesToPrint] = useState<{
     summarySpecs: boolean;
+    bifurcationStatements: boolean;
     singleLineDiagram: boolean;
     inputFormImage1: boolean;
     outputScheduleImage2: boolean;
@@ -87,6 +113,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     recommendations: boolean;
   }>({
     summarySpecs: true,
+    bifurcationStatements: effectiveBifurcationConfig.enabled,
     singleLineDiagram: true,
     inputFormImage1: true,
     outputScheduleImage2: true,
@@ -95,11 +122,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   });
 
   // Quick Preset Handlers
-  const handleApplyPreset = (preset: 'all' | 'sld_only' | 'forms_only' | 'summary_matrix') => {
+  const handleApplyPreset = (preset: 'all' | 'bifurcation_only' | 'sld_only' | 'forms_only' | 'summary_matrix') => {
     if (preset === 'all') {
       setDisplayMode('full_report');
       setPagesToPrint({
         summarySpecs: true,
+        bifurcationStatements: effectiveBifurcationConfig.enabled,
         singleLineDiagram: true,
         inputFormImage1: true,
         outputScheduleImage2: true,
@@ -107,10 +135,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         recommendations: true
       });
       setPageBreakMode('page_per_section');
+    } else if (preset === 'bifurcation_only') {
+      setDisplayMode('bifurcation_4_statements');
+      setPagesToPrint({
+        summarySpecs: false,
+        bifurcationStatements: true,
+        singleLineDiagram: false,
+        inputFormImage1: false,
+        outputScheduleImage2: false,
+        table1Matrix: false,
+        recommendations: false
+      });
+      setPageBreakMode('compact_flow');
     } else if (preset === 'sld_only') {
       setDisplayMode('single_line_diagram');
       setPagesToPrint({
         summarySpecs: false,
+        bifurcationStatements: false,
         singleLineDiagram: true,
         inputFormImage1: false,
         outputScheduleImage2: false,
@@ -122,6 +163,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setDisplayMode('dual_form');
       setPagesToPrint({
         summarySpecs: false,
+        bifurcationStatements: false,
         singleLineDiagram: false,
         inputFormImage1: true,
         outputScheduleImage2: true,
@@ -133,6 +175,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setDisplayMode('full_report');
       setPagesToPrint({
         summarySpecs: true,
+        bifurcationStatements: false,
         singleLineDiagram: false,
         inputFormImage1: false,
         outputScheduleImage2: false,
@@ -372,14 +415,22 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   onClick={() => handleApplyPreset('all')}
                   className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer font-medium text-[11px]"
                 >
-                  Full 6-Page Dossier
+                  Full Dossier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('bifurcation_only')}
+                  className="px-2.5 py-1 rounded bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-600/80 cursor-pointer font-bold text-[11px] flex items-center gap-1"
+                >
+                  <Split className="w-3 h-3 text-purple-300" />
+                  <span>Bifurcation 4-Statements</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('sld_only')}
                   className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-indigo-800/80 cursor-pointer font-medium text-[11px]"
                 >
-                  SLD Blueprint Only (Landscape)
+                  SLD Blueprint (Landscape)
                 </button>
                 <button
                   type="button"
@@ -505,6 +556,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     type="button"
                     onClick={() => setPagesToPrint({
                       summarySpecs: true,
+                      bifurcationStatements: true,
                       singleLineDiagram: true,
                       inputFormImage1: true,
                       outputScheduleImage2: true,
@@ -520,6 +572,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     type="button"
                     onClick={() => setPagesToPrint({
                       summarySpecs: false,
+                      bifurcationStatements: false,
                       singleLineDiagram: false,
                       inputFormImage1: false,
                       outputScheduleImage2: false,
@@ -533,7 +586,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2 text-xs">
                 {/* Page 1 */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.summarySpecs 
@@ -552,7 +605,25 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   </div>
                 </label>
 
-                {/* Page 2 */}
+                {/* Page 2: Bifurcation 4-Statements */}
+                <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                  pagesToPrint.bifurcationStatements 
+                    ? 'bg-purple-950/40 border-purple-500/60 text-white' 
+                    : 'bg-slate-950 border-slate-800 text-slate-500'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={pagesToPrint.bifurcationStatements}
+                    onChange={(e) => setPagesToPrint(p => ({ ...p, bifurcationStatements: e.target.checked }))}
+                    className="mt-0.5 rounded border-slate-700 text-purple-500 focus:ring-purple-400 cursor-pointer"
+                  />
+                  <div>
+                    <span className="block font-bold text-[11px] text-purple-300">Bifurcation</span>
+                    <span className="text-[10px] text-slate-400">T-1 & T-2 4-Statements</span>
+                  </div>
+                </label>
+
+                {/* Page 3: SLD */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.singleLineDiagram 
                     ? 'bg-indigo-950/40 border-indigo-500/60 text-white' 
@@ -565,12 +636,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     className="mt-0.5 rounded border-slate-700 text-indigo-500 focus:ring-indigo-400 cursor-pointer"
                   />
                   <div>
-                    <span className="block font-bold text-[11px] text-indigo-300">Page 2</span>
-                    <span className="text-[10px] text-slate-400">Single Line Diagram (SLD)</span>
+                    <span className="block font-bold text-[11px] text-indigo-300">SLD Map</span>
+                    <span className="text-[10px] text-slate-400">Single Line Diagram</span>
                   </div>
                 </label>
 
-                {/* Page 3 */}
+                {/* Page 4 */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.inputFormImage1 
                     ? 'bg-blue-950/40 border-blue-500/60 text-white' 
@@ -583,12 +654,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     className="mt-0.5 rounded border-slate-700 text-blue-500 focus:ring-blue-400 cursor-pointer"
                   />
                   <div>
-                    <span className="block font-bold text-[11px] text-blue-300">Page 3</span>
-                    <span className="text-[10px] text-slate-400">Input Form (image1.png)</span>
+                    <span className="block font-bold text-[11px] text-blue-300">Input Form</span>
+                    <span className="text-[10px] text-slate-400">image1.png Spans</span>
                   </div>
                 </label>
 
-                {/* Page 4 */}
+                {/* Page 5 */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.outputScheduleImage2 
                     ? 'bg-emerald-950/40 border-emerald-500/60 text-white' 
@@ -601,12 +672,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     className="mt-0.5 rounded border-slate-700 text-emerald-500 focus:ring-emerald-400 cursor-pointer"
                   />
                   <div>
-                    <span className="block font-bold text-[11px] text-emerald-300">Page 4</span>
-                    <span className="text-[10px] text-slate-400">Output Form (image2.png)</span>
+                    <span className="block font-bold text-[11px] text-emerald-300">Output Form</span>
+                    <span className="text-[10px] text-slate-400">image2.png Loss Flow</span>
                   </div>
                 </label>
 
-                {/* Page 5 */}
+                {/* Page 6 */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.table1Matrix 
                     ? 'bg-amber-950/40 border-amber-500/60 text-white' 
@@ -619,12 +690,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     className="mt-0.5 rounded border-slate-700 text-amber-500 focus:ring-amber-400 cursor-pointer"
                   />
                   <div>
-                    <span className="block font-bold text-[11px] text-amber-300">Page 5</span>
-                    <span className="text-[10px] text-slate-400">Table 1 Upgradation Matrix</span>
+                    <span className="block font-bold text-[11px] text-amber-300">Table 1</span>
+                    <span className="text-[10px] text-slate-400">Upgradation Matrix</span>
                   </div>
                 </label>
 
-                {/* Page 6 */}
+                {/* Page 7 */}
                 <label className={`flex items-start gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
                   pagesToPrint.recommendations 
                     ? 'bg-purple-950/40 border-purple-500/60 text-white' 
@@ -637,8 +708,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     className="mt-0.5 rounded border-slate-700 text-purple-500 focus:ring-purple-400 cursor-pointer"
                   />
                   <div>
-                    <span className="block font-bold text-[11px] text-purple-300">Page 6</span>
-                    <span className="text-[10px] text-slate-400">Directives & Signatures</span>
+                    <span className="block font-bold text-[11px] text-purple-300">Signatures</span>
+                    <span className="text-[10px] text-slate-400">Directives & Seal</span>
                   </div>
                 </label>
               </div>
@@ -661,6 +732,18 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             >
               <FileCheck className="w-3.5 h-3.5" />
               <span>Full Engineering Report</span>
+            </button>
+
+            <button
+              onClick={() => setDisplayMode('bifurcation_4_statements')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                displayMode === 'bifurcation_4_statements'
+                  ? 'bg-purple-600 text-white font-bold shadow-xs'
+                  : 'bg-white text-purple-900 hover:bg-purple-50 border border-purple-300'
+              }`}
+            >
+              <Split className="w-3.5 h-3.5 text-purple-600" />
+              <span>Line Bifurcation & T-2 (4 Statements)</span>
             </button>
 
             <button
@@ -1221,7 +1304,35 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           )}
 
           {/* ========================================================
-              PAGE 3: FORM DISPLAY - INPUT DATA FORM (image1.png)
+              PAGE 3: LINE BIFURCATION & T-2 FOUR-STATEMENT STUDY
+             ======================================================== */}
+          {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
+            <div className="print-page-break print-avoid-break space-y-4">
+              <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Split className="w-4 h-4 text-purple-700" />
+                    <span>3. Line Bifurcation & Additional Transformer (T-2) Dual-Zone 4-Statement Study</span>
+                  </h2>
+                  <p className="text-[11px] text-purple-800 mt-0.5">
+                    Portion of line with Transformer 1 (T-1) at 0 Year & 5 Years, and portion of line with Transformer 2 (T-2) at 0 Year & 5 Years.
+                  </p>
+                </div>
+                <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
+                  Split @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA · Page {pageBreakMode === 'page_per_section' ? '3' : ''}
+                </span>
+              </div>
+
+              <BifurcationStatementsPanel
+                dossier={bifurcationDossier}
+                currencySymbol={feeder.currencySymbol || 'PKR'}
+                isPrintView={true}
+              />
+            </div>
+          )}
+
+          {/* ========================================================
+              PAGE 4: FORM DISPLAY - INPUT DATA FORM (image1.png)
              ======================================================== */}
           {pagesToPrint.inputFormImage1 && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'dual_form') && (
             <div className="print-page-break print-avoid-break">

@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   FeederData, 
   FeederAnalysisSummary,
-  BifurcationConfig
+  BifurcationConfig,
+  BifurcationFourStatementDossier
 } from '../types/feeder';
 import { 
   SlidersHorizontal, 
@@ -18,17 +19,20 @@ import {
   ArrowRight, 
   CheckCircle2, 
   TrendingDown, 
-  ShieldCheck,
+  ShieldCheck, 
   BatteryCharging,
   Gauge,
   Activity,
   GitBranch,
   Split,
   Layers,
-  Flame
+  Flame,
+  Printer
 } from 'lucide-react';
 import { CONDUCTOR_LIST } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
+import { calculateBifurcationFourStatements } from '../utils/elrEngine';
+import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
 
 interface WhatIfWorkbenchProps {
   feeder: FeederData;
@@ -46,6 +50,7 @@ interface WhatIfWorkbenchProps {
   onSetBifurcation: (config: BifurcationConfig) => void;
   onApplyPackage: (pkg: 'standard' | 'max' | 'capacitor_only' | 'bifurcation') => void;
   onReset: () => void;
+  onOpenPrintReport?: () => void;
 }
 
 export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
@@ -63,7 +68,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   bifurcationConfig,
   onSetBifurcation,
   onApplyPackage,
-  onReset
+  onReset,
+  onOpenPrintReport
 }) => {
   const tariff = feeder.tariffPerKwh || 38.5;
   const kwSaved = Math.max(0, existingSummary.totalLineLossKw - proposedSummary.totalLineLossKw);
@@ -71,6 +77,15 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   const moneySaved = Math.round(kwhSaved * tariff);
 
   const currentLf = activeLoadFactor !== undefined ? activeLoadFactor : (feeder.loadFactor || 0.60);
+
+  const bifurcationDossier: BifurcationFourStatementDossier = useMemo(() => {
+    return calculateBifurcationFourStatements(feeder, bifurcationConfig, {
+      customConductors: activeConductors,
+      customCapacitors: activeCapacitors,
+      t1TransformerOverrideKva: activeTransformerKva,
+      loadFactorOverride: activeLoadFactor
+    });
+  }, [feeder, bifurcationConfig, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor]);
 
   const hasChanges = 
     activeTransformerKva !== feeder.existingTransformerKva ||
@@ -538,6 +553,17 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
       </div>
+
+      {/* When Line Bifurcation & T-2 is active, render the dedicated 4-Statement Dual-Zone Analysis */}
+      {bifurcationConfig.enabled && (
+        <div className="space-y-4">
+          <BifurcationStatementsPanel
+            dossier={bifurcationDossier}
+            currencySymbol={feeder.currencySymbol || 'PKR'}
+            onOpenPrintReport={onOpenPrintReport}
+          />
+        </div>
+      )}
 
       {/* Comparison Matrix (Matching Table 1 from Paper + Proposed Benefits) */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
