@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
-import { X, BookOpen, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, BookOpen, Check, Maximize2, Minimize2 } from 'lucide-react';
 import { CONDUCTOR_LIST } from '../data/conductors';
 
 interface ConductorLibraryModalProps {
@@ -16,22 +16,37 @@ export const ConductorLibraryModal: React.FC<ConductorLibraryModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const [isMaximized, setIsMaximized] = useState(false);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-6">
+    <div className={`fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center ${isMaximized ? 'p-0' : 'p-3 sm:p-4'}`}>
+      <div className={`bg-white w-full ${isMaximized ? 'h-full max-w-none rounded-none my-0' : 'max-w-5xl rounded-2xl my-6'} shadow-xl border border-slate-200 overflow-hidden flex flex-col`}>
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-amber-400" />
             <span className="font-bold text-sm">WAPDA & Distribution Standard Conductor Library</span>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title={isMaximized ? "Restore Window View" : "Maximize Full Screen"}
+            >
+              {isMaximized ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="p-6">

@@ -19,7 +19,9 @@ import {
   FileText, 
   AlertTriangle,
   FolderOpen,
-  Plus
+  Plus,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { FeederData, FeederAnalysisSummary } from '../types/feeder';
 import { 
@@ -58,6 +60,7 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
   onRefreshFeeders
 }) => {
   const [activeTab, setActiveTab] = useState<'save_new' | 'snapshots' | 'feeders' | 'backup'>('save_new');
+  const [isMaximized, setIsMaximized] = useState(false);
   const [snapshots, setSnapshots] = useState<SavedAnalysisSnapshot[]>([]);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
@@ -221,8 +224,8 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
+    <div className={`fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center ${isMaximized ? 'p-0' : 'p-3 sm:p-4'}`}>
+      <div className={`bg-white w-full ${isMaximized ? 'h-full max-w-none rounded-none' : 'max-w-5xl rounded-2xl max-h-[92vh]'} shadow-2xl border border-slate-200 overflow-hidden flex flex-col`}>
         {/* Modal Top Bar */}
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -244,12 +247,24 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title={isMaximized ? "Restore Window View" : "Maximize Full Screen"}
+            >
+              {isMaximized ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Tabs Bar */}

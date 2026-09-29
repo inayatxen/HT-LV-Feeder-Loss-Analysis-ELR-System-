@@ -24,7 +24,9 @@ import {
   Split, 
   Table as TableIcon,
   Layers,
-  CheckCircle2
+  CheckCircle2,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { CONDUCTOR_LIST, getConductor } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
@@ -59,6 +61,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
   const [viewMode, setViewMode] = useState<'combined' | 'image1_input' | 'image2_output' | 'dual_side_by_side'>('combined');
   const [showFormulas, setShowFormulas] = useState<boolean>(true);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
 
   // Check if bifurcation is active
   const hasBifurcation = segmentResults.some(r => r.fedByTransformer === 'T2');
@@ -163,7 +166,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className={isFullScreen ? 'fixed inset-0 z-50 bg-slate-50 overflow-y-auto p-3 sm:p-6 lg:p-8 space-y-4 flex flex-col' : 'space-y-4'}>
       {/* Top Banner: Control Panel */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {/* ROW 1: Transformer Rating & Sub-Network Selector */}
@@ -277,6 +280,16 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg shadow-2xs transition-colors cursor-pointer"
+              title={isFullScreen ? "Exit Full Screen" : "Display Table as Full Screen"}
+            >
+              {isFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-amber-400" /> : <Maximize2 className="w-3.5 h-3.5 text-amber-400" />}
+              <span>{isFullScreen ? 'Exit Full Screen' : 'Full Screen'}</span>
             </button>
           </div>
         </div>

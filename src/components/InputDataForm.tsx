@@ -29,7 +29,9 @@ import {
   ChevronUp,
   Layers,
   Sparkles,
-  Database
+  Database,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { CONDUCTOR_LIST, getConductor } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
@@ -67,6 +69,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [annualGrowthRate, setAnnualGrowthRate] = useState(feeder.annualGrowthRatePercent);
   const [proposedTrfKva, setProposedTrfKva] = useState(feeder.proposedTransformerKva);
   const [showFormulas, setShowFormulas] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Segments input table state matching image1.png
   interface InputRow {
@@ -414,7 +417,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const isOverloaded = currentLoadingPercent > 100;
 
   return (
-    <div className="space-y-6">
+    <div className={isFullScreen ? 'fixed inset-0 z-50 bg-slate-100 overflow-y-auto p-3 sm:p-6 lg:p-8 space-y-6 flex flex-col' : 'space-y-6'}>
       {/* ========================================================
           FORM HEADER CARD: TWO CLEAN ROWS (ROW 1: TITLE, ROW 2: ACTIONS)
          ======================================================== */}
@@ -446,6 +449,16 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
             }`}>
               {feeder.category === 'HV' ? '11kV HT Feeder' : '400V LT Feeder'}
             </span>
+
+            <button
+              type="button"
+              onClick={() => setIsFullScreen(!isFullScreen)}
+              className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer border border-slate-700 shadow-xs"
+              title={isFullScreen ? "Exit Full Screen" : "Display Form as Full Screen"}
+            >
+              {isFullScreen ? <Minimize2 className="w-3.5 h-3.5 text-amber-400" /> : <Maximize2 className="w-3.5 h-3.5 text-amber-400" />}
+              <span>{isFullScreen ? 'Exit Full Screen' : 'Full Screen Form'}</span>
+            </button>
           </div>
         </div>
 

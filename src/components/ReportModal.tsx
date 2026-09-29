@@ -305,16 +305,30 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const enabledPagesCount = Object.values(pagesToPrint).filter(Boolean).length;
 
   return (
-    <div className={`fixed inset-0 z-50 overflow-y-auto ${
+    <div className={`fixed inset-0 z-50 ${
       isMaximized 
-        ? 'bg-slate-950 p-0 flex flex-col' 
-        : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4'
+        ? 'bg-slate-950 p-0 flex flex-col overflow-hidden' 
+        : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto'
     } print:p-0 print:bg-white print:static print:overflow-visible print:h-auto print:max-h-none`}>
       
       {/* ========================================================
           DYNAMIC @MEDIA PRINT STYLES WITH PER-PAGE CONTROLS
          ======================================================== */}
       <style>{`
+        #printable-report::-webkit-scrollbar {
+          width: 8px;
+        }
+        #printable-report::-webkit-scrollbar-track {
+          background: #f8fafc;
+        }
+        #printable-report::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        #printable-report::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
         .screen-watermark {
           position: fixed;
           top: 50%;
@@ -984,7 +998,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {/* Printable Report Document Body */}
-        <div className={`relative p-4 sm:p-8 lg:p-10 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-7xl mx-auto' : ''} ${scaleWrapperClass}`} id="printable-report">
+        <div className={`relative p-4 sm:p-8 lg:p-12 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-none' : 'max-w-6xl mx-auto'} ${scaleWrapperClass}`} id="printable-report">
           
           {/* Official PESCO - WAPDA Logo Watermark (repeats on every physical page in print view, and visible on-screen) */}
           {includeWatermark && (

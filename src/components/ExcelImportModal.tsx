@@ -17,7 +17,9 @@ import {
   RotateCcw,
   Sparkles,
   Layers,
-  Table as TableIcon
+  Table as TableIcon,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { 
   ParsedExcelResult, 
@@ -56,6 +58,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [customFeederName, setCustomFeederName] = useState(feeder.name);
   const [customTransformerKva, setCustomTransformerKva] = useState(feeder.existingTransformerKva);
+  const [isMaximized, setIsMaximized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -115,8 +118,8 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-950/70 backdrop-blur-xs overflow-y-auto animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden my-auto">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center ${isMaximized ? 'p-0' : 'p-2 sm:p-4'} bg-slate-950/70 backdrop-blur-xs overflow-y-auto animate-fade-in`}>
+      <div className={`bg-white shadow-2xl border border-slate-200 w-full ${isMaximized ? 'h-full max-w-none rounded-none my-0' : 'max-w-5xl rounded-2xl max-h-[92vh] my-auto'} flex flex-col overflow-hidden`}>
         
         {/* Modal Header */}
         <div className="p-4 sm:px-6 border-b border-slate-200 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex items-center justify-between">
@@ -139,12 +142,24 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsMaximized(!isMaximized)}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              title={isMaximized ? "Restore Window View" : "Maximize Full Screen"}
+            >
+              {isMaximized ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Tabs Bar */}
