@@ -1,0 +1,768 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { 
+  EstimateType, 
+  EstimateLineDetails, 
+  DesignFactorsConfig, 
+  MaterialItem, 
+  EstimateItem, 
+  CalculationStep, 
+  EstimateCharges, 
+  CostEstimateRecord 
+} from '../types/costEstimation';
+import * as XLSX from 'xlsx';
+
+/**
+ * Automatically calculates required line materials, pole counts, insulator counts,
+ * conductor lengths (including sag/wastage allowance), and hardware fittings.
+ */
+export function calculateQuantitiesForLine(
+  type: EstimateType,
+  details: EstimateLineDetails,
+  factors: DesignFactorsConfig,
+  materials: MaterialItem[]
+): {
+  items: EstimateItem[];
+  steps: CalculationStep[];
+  updatedLineDetails: Partial<EstimateLineDetails>;
+} {
+  const steps: CalculationStep[] = [];
+  const itemMap = new Map<string, EstimateItem>();
+
+  const findMat = (code: string) => materials.find(m => m.code === code && m.isActive);
+
+  // 1. HT Pole Calculation
+  const htKm = Number(details.htLengthKm) || 0;
+  let calculatedHtPoles = 0;
+  if (htKm > 0 || type === 'HT_LINE_EXTENSION' || type === 'COMPLETE_HT_FEEDER' || type === 'HT_LINE_TO_DT' || type === 'COMBINED_HT_LT') {
+    const intermediatePoles = Math.ceil((htKm * 1000) / factors.htPoleSpacingMeters);
+    const terminalPoles = factors.terminalPolesPerLine;
+    const crossingPoles = Number(details.roadCrossings || 0) * 1 + Number(details.canalCrossings || 0) * 2;
+    calculatedHtPoles = intermediatePoles + terminalPoles + crossingPoles;
+
+    steps.push({
+      component: 'HT Overhead Poles',
+      parameter: 'PCC Pole 11 Meter',
+      formula: '(Line Length × 1000 / Spacing) + Terminal Poles + Crossings',
+      calculation: `(${htKm.toFixed(2)} km × 1000 / ${factors.htPoleSpacingMeters}m) + ${terminalPoles} term + ${crossingPoles} cross = ${calculatedHtPoles} poles`,
+      resultQuantity: calculatedHtPoles,
+      unit: 'Nos',
+      notes: `Standard 100m span between poles on straight runs.`
+    });
+  }
+
+  // 2. LT Pole Calculation
+  const ltKm = Number(details.ltLengthKm) || 0;
+  let calculatedLtPoles = 0;
+  if (ltKm > 0 || type === 'LT_LINE_EXTENSION' || type === 'LT_LINE_FROM_DT' || type === 'COMBINED_HT_LT') {
+    const intermediatePoles = Math.ceil((ltKm * 1000) / factors.ltPoleSpacingMeters);
+    const terminalPoles = 2;
+    calculatedLtPoles = intermediatePoles + terminalPoles;
+
+    steps.push({
+      component: 'LT Overhead Poles',
+      parameter: 'PCC Pole 9 Meter',
+      formula: '(LT Length × 1000 / Spacing) + Terminal Poles',
+      calculation: `(${ltKm.toFixed(2)} km × 1000 / ${factors.ltPoleSpacingMeters}m) + ${terminalPoles} = ${calculatedLtPoles} poles`,
+      resultQuantity: calculatedLtPoles,
+      unit: 'Nos',
+      notes: `Standard 45m span between LT poles in rural/semi-urban areas.`
+    });
+  }
+
+  // 3. Stay Sets Calculation
+  const calculatedStaySets = Math.ceil(htKm * factors.staySetsPerKm) + 
+    Math.ceil(ltKm * 2) + 
+    factors.terminalStaySets + 
+    (Number(details.roadCrossings || 0) * 2);
+
+  steps.push({
+    component: 'Guy & Stay Sets',
+    parameter: 'Stay Set Complete 7/8 SWG',
+    formula: '(HT km × 3) + (LT km × 2) + 4 Terminal + (Road Crossings × 2)',
+    calculation: `(${htKm.toFixed(2)} × 3) + (${ltKm.toFixed(2)} × 2) + 4 + (${details.roadCrossings || 0} × 2) = ${calculatedStaySets} sets`,
+    resultQuantity: calculatedStaySets,
+    unit: 'Sets',
+    notes: 'Provides mechanical stability at angles, dead-ends, and road crossings.'
+  });
+
+  // Effective poles used (use manual override if user locked it, else calculated)
+  const actualHtPoles = details.autoCalculatedFlags?.htPoles === false ? details.htPoles : calculatedHtPoles;
+  const actualLtPoles = details.autoCalculatedFlags?.ltPoles === false ? details.ltPoles : calculatedLtPoles;
+  const actualStaySets = details.autoCalculatedFlags?.staySets === false ? details.staySets : calculatedStaySets;
+
+  // 4. Conductor Calculation
+  // HT Conductor (3 phases for 3-wire line)
+  if (htKm > 0) {
+    const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
+    const htConductorKm = parseFloat((htKm * 3 * sagMultiplier).toFixed(3));
+    const condCode = details.conductorSize === 'PANTHER' ? 'CND-PANTHER-ACSR' : 
+                     details.conductorSize === 'RABBIT' ? 'CND-RABBIT-ACSR' : 'CND-DOG-ACSR';
+    const mat = findMat(condCode) || findMat('CND-DOG-ACSR');
+
+    steps.push({
+      component: 'HT 11kV Conductor',
+      parameter: mat?.name || 'ACSR Conductor',
+      formula: 'HT Length × 3 Phases × (1 + Sag/Wastage Allowance)',
+      calculation: `${htKm.toFixed(2)} km × 3 × ${sagMultiplier.toFixed(3)} = ${htConductorKm} km`,
+      resultQuantity: htConductorKm,
+      unit: 'Km',
+      notes: `Includes ${factors.conductorSagWastagePercent}% allowance for sag, jumpering, and dead-end binding.`
+    });
+
+    if (mat) {
+      itemMap.set(mat.code, {
+        id: `item-${mat.code}`,
+        materialId: mat.id,
+        materialCode: mat.code,
+        description: mat.name,
+        specification: mat.specification,
+        unit: mat.unit,
+        quantity: htConductorKm,
+        unitRate: mat.materialRate,
+        materialAmount: Math.round(htConductorKm * mat.materialRate),
+        labourRate: mat.labourRate,
+        labourAmount: Math.round(htConductorKm * mat.labourRate),
+        totalAmount: Math.round(htConductorKm * (mat.materialRate + mat.labourRate)),
+        isAutoCalculated: true,
+        calculationNotes: `3-Phase HT line + ${factors.conductorSagWastagePercent}% sag`
+      });
+    }
+  }
+
+  // LT Conductor (ABC Cable or ACSR)
+  if (ltKm > 0) {
+    const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
+    const ltConductorKm = parseFloat((ltKm * sagMultiplier).toFixed(3));
+    const abcMat = findMat('CBL-ABC-70') || findMat('CBL-ABC-50');
+
+    steps.push({
+      component: 'LT Aerial Cable',
+      parameter: abcMat?.name || 'LT ABC Cable',
+      formula: 'LT Length × (1 + Sag Allowance)',
+      calculation: `${ltKm.toFixed(2)} km × ${sagMultiplier.toFixed(3)} = ${ltConductorKm} km`,
+      resultQuantity: ltConductorKm,
+      unit: 'Km',
+      notes: `Anti-theft 4-core Aerial Bundled Cable.`
+    });
+
+    if (abcMat) {
+      itemMap.set(abcMat.code, {
+        id: `item-${abcMat.code}`,
+        materialId: abcMat.id,
+        materialCode: abcMat.code,
+        description: abcMat.name,
+        specification: abcMat.specification,
+        unit: abcMat.unit,
+        quantity: ltConductorKm,
+        unitRate: abcMat.materialRate,
+        materialAmount: Math.round(ltConductorKm * abcMat.materialRate),
+        labourRate: abcMat.labourRate,
+        labourAmount: Math.round(ltConductorKm * abcMat.labourRate),
+        totalAmount: Math.round(ltConductorKm * (abcMat.materialRate + abcMat.labourRate)),
+        isAutoCalculated: true,
+        calculationNotes: `4-Core ABC Cable with suspension runs`
+      });
+    }
+  }
+
+  // 5. Add HT Poles to BOQ
+  if (actualHtPoles > 0) {
+    const mat = findMat('POL-11-PCC');
+    if (mat) {
+      itemMap.set(mat.code, {
+        id: `item-${mat.code}`,
+        materialId: mat.id,
+        materialCode: mat.code,
+        description: mat.name,
+        specification: mat.specification,
+        unit: mat.unit,
+        quantity: actualHtPoles,
+        unitRate: mat.materialRate,
+        materialAmount: actualHtPoles * mat.materialRate,
+        labourRate: mat.labourRate,
+        labourAmount: actualHtPoles * mat.labourRate,
+        totalAmount: actualHtPoles * (mat.materialRate + mat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `${htKm.toFixed(2)} km @ 100m spacing + terminal/crossing poles`
+      });
+    }
+
+    // 6. Cross Arms (1 per HT pole)
+    const caMat = findMat('HW-CA-V5');
+    if (caMat) {
+      itemMap.set(caMat.code, {
+        id: `item-${caMat.code}`,
+        materialId: caMat.id,
+        materialCode: caMat.code,
+        description: caMat.name,
+        specification: caMat.specification,
+        unit: caMat.unit,
+        quantity: actualHtPoles,
+        unitRate: caMat.materialRate,
+        materialAmount: actualHtPoles * caMat.materialRate,
+        labourRate: caMat.labourRate,
+        labourAmount: actualHtPoles * caMat.labourRate,
+        totalAmount: actualHtPoles * (caMat.materialRate + caMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `1 V-Shape cross arm per HT pole`
+      });
+    }
+
+    // 7. Pin Insulators (3 per straight pole)
+    const straightPoles = Math.max(0, actualHtPoles - 2);
+    const pinCount = straightPoles * factors.pinInsulatorsPerHtPole;
+    const pinMat = findMat('INS-PIN-11');
+    if (pinMat && pinCount > 0) {
+      steps.push({
+        component: '11kV Pin Insulators',
+        parameter: 'Pin Insulator with Steel Pin',
+        formula: 'Straight HT Poles × 3 Phases',
+        calculation: `${straightPoles} poles × 3 = ${pinCount} insulators`,
+        resultQuantity: pinCount,
+        unit: 'Nos'
+      });
+
+      itemMap.set(pinMat.code, {
+        id: `item-${pinMat.code}`,
+        materialId: pinMat.id,
+        materialCode: pinMat.code,
+        description: pinMat.name,
+        specification: pinMat.specification,
+        unit: pinMat.unit,
+        quantity: pinCount,
+        unitRate: pinMat.materialRate,
+        materialAmount: pinCount * pinMat.materialRate,
+        labourRate: pinMat.labourRate,
+        labourAmount: pinCount * pinMat.labourRate,
+        totalAmount: pinCount * (pinMat.materialRate + pinMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `3 pin insulators per intermediate HT pole`
+      });
+    }
+
+    // 8. Disc Insulators (at terminal dead-ends)
+    const discCount = Math.max(6, (2 + (Number(details.roadCrossings || 0) * 2)) * 3);
+    const discMat = findMat('INS-DISC-11');
+    if (discMat) {
+      steps.push({
+        component: '11kV Tension Disc Insulators',
+        parameter: 'Disc Insulators 45kN',
+        formula: '(Terminal Poles + Road Crossing Poles) × 3 Strings',
+        calculation: `(2 + ${Number(details.roadCrossings || 0) * 2}) × 3 = ${discCount} discs`,
+        resultQuantity: discCount,
+        unit: 'Nos'
+      });
+
+      itemMap.set(discMat.code, {
+        id: `item-${discMat.code}`,
+        materialId: discMat.id,
+        materialCode: discMat.code,
+        description: discMat.name,
+        specification: discMat.specification,
+        unit: discMat.unit,
+        quantity: discCount,
+        unitRate: discMat.materialRate,
+        materialAmount: discCount * discMat.materialRate,
+        labourRate: discMat.labourRate,
+        labourAmount: discCount * discMat.labourRate,
+        totalAmount: discCount * (discMat.materialRate + discMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `High tension disc strings at line terminations & crossings`
+      });
+    }
+
+    // 9. Danger Plates & Number Plates
+    const dangerMat = findMat('HW-DANGER-PLT');
+    if (dangerMat) {
+      itemMap.set(dangerMat.code, {
+        id: `item-${dangerMat.code}`,
+        materialId: dangerMat.id,
+        materialCode: dangerMat.code,
+        description: dangerMat.name,
+        specification: dangerMat.specification,
+        unit: dangerMat.unit,
+        quantity: actualHtPoles,
+        unitRate: dangerMat.materialRate,
+        materialAmount: actualHtPoles * dangerMat.materialRate,
+        labourRate: dangerMat.labourRate,
+        labourAmount: actualHtPoles * dangerMat.labourRate,
+        totalAmount: actualHtPoles * (dangerMat.materialRate + dangerMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `1 warning plate per HT pole`
+      });
+    }
+
+    // 10. Earthing Sets (every 5th pole)
+    const earthingCount = Math.max(2, Math.ceil(actualHtPoles / factors.earthingIntervalPoles));
+    const earthMat = findMat('HW-EARTH-SET');
+    if (earthMat) {
+      steps.push({
+        component: 'Line Earthing Sets',
+        parameter: 'Pole Earthing Coil & Lead',
+        formula: 'HT Poles / 5 (minimum 2)',
+        calculation: `${actualHtPoles} / 5 = ${earthingCount} sets`,
+        resultQuantity: earthingCount,
+        unit: 'Sets'
+      });
+
+      itemMap.set(earthMat.code, {
+        id: `item-${earthMat.code}`,
+        materialId: earthMat.id,
+        materialCode: earthMat.code,
+        description: earthMat.name,
+        specification: earthMat.specification,
+        unit: earthMat.unit,
+        quantity: earthingCount,
+        unitRate: earthMat.materialRate,
+        materialAmount: earthingCount * earthMat.materialRate,
+        labourRate: earthMat.labourRate,
+        labourAmount: earthingCount * earthMat.labourRate,
+        totalAmount: earthingCount * (earthMat.materialRate + earthMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `System earthing at regular 5-pole intervals`
+      });
+    }
+
+    // 11. Hardware Nuts, Bolts & Binding Wire
+    const nbMat = findMat('HW-NB-ASSORTED');
+    if (nbMat) {
+      const nbKg = Math.round(actualHtPoles * 2.5);
+      itemMap.set(nbMat.code, {
+        id: `item-${nbMat.code}`,
+        materialId: nbMat.id,
+        materialCode: nbMat.code,
+        description: nbMat.name,
+        specification: nbMat.specification,
+        unit: nbMat.unit,
+        quantity: nbKg,
+        unitRate: nbMat.materialRate,
+        materialAmount: nbKg * nbMat.materialRate,
+        labourRate: nbMat.labourRate,
+        labourAmount: nbKg * nbMat.labourRate,
+        totalAmount: nbKg * (nbMat.materialRate + nbMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Galvanized structural fasteners (2.5 kg per pole)`
+      });
+    }
+  }
+
+  // 12. Add LT Poles to BOQ
+  if (actualLtPoles > 0) {
+    const ltMat = findMat('POL-09-PCC');
+    if (ltMat) {
+      itemMap.set(ltMat.code, {
+        id: `item-${ltMat.code}`,
+        materialId: ltMat.id,
+        materialCode: ltMat.code,
+        description: ltMat.name,
+        specification: ltMat.specification,
+        unit: ltMat.unit,
+        quantity: actualLtPoles,
+        unitRate: ltMat.materialRate,
+        materialAmount: actualLtPoles * ltMat.materialRate,
+        labourRate: ltMat.labourRate,
+        labourAmount: actualLtPoles * ltMat.labourRate,
+        totalAmount: actualLtPoles * (ltMat.materialRate + ltMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `${ltKm.toFixed(2)} km @ 45m spacing + terminal poles`
+      });
+    }
+  }
+
+  // 13. Stay Sets in BOQ
+  if (actualStaySets > 0) {
+    const stayMat = findMat('HW-STAY-SET');
+    if (stayMat) {
+      itemMap.set(stayMat.code, {
+        id: `item-${stayMat.code}`,
+        materialId: stayMat.id,
+        materialCode: stayMat.code,
+        description: stayMat.name,
+        specification: stayMat.specification,
+        unit: stayMat.unit,
+        quantity: actualStaySets,
+        unitRate: stayMat.materialRate,
+        materialAmount: actualStaySets * stayMat.materialRate,
+        labourRate: stayMat.labourRate,
+        labourAmount: actualStaySets * stayMat.labourRate,
+        totalAmount: actualStaySets * (stayMat.materialRate + stayMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Terminal, angle, and line guy sets with turnbuckles`
+      });
+    }
+  }
+
+  // 14. Transformer & Sub-station Hardware (if DT included)
+  const trfCount = Number(details.transformerCount || 0);
+  const trfKva = Number(details.transformerCapacityKva || 0);
+  const hasTransformer = trfCount > 0 || type === 'NEW_DISTRIBUTION_TRANSFORMER' || 
+                         type === 'TRANSFORMER_AUGMENTATION' || type === 'HT_LINE_TO_DT' || 
+                         type === 'COMBINED_HT_LT';
+
+  if (hasTransformer) {
+    const targetKva = trfKva > 0 ? trfKva : 100;
+    const trfCode = targetKva === 25 ? 'TRF-25-11KV' :
+                    targetKva === 50 ? 'TRF-50-11KV' :
+                    targetKva === 200 ? 'TRF-200-11KV' :
+                    targetKva === 400 ? 'TRF-400-11KV' :
+                    targetKva === 630 ? 'TRF-630-11KV' : 'TRF-100-11KV';
+    const trfMat = findMat(trfCode);
+    const count = Math.max(1, trfCount);
+
+    if (trfMat) {
+      itemMap.set(trfMat.code, {
+        id: `item-${trfMat.code}`,
+        materialId: trfMat.id,
+        materialCode: trfMat.code,
+        description: trfMat.name,
+        specification: trfMat.specification,
+        unit: trfMat.unit,
+        quantity: count,
+        unitRate: trfMat.materialRate,
+        materialAmount: count * trfMat.materialRate,
+        labourRate: trfMat.labourRate,
+        labourAmount: count * trfMat.labourRate,
+        totalAmount: count * (trfMat.materialRate + trfMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Distribution Transformer (${targetKva} kVA)`
+      });
+    }
+
+    // Transformer Sub-station Protection & Platform
+    const laMat = findMat('SW-LA-11KV');
+    if (laMat) {
+      itemMap.set(laMat.code, {
+        id: `item-${laMat.code}`,
+        materialId: laMat.id,
+        materialCode: laMat.code,
+        description: laMat.name,
+        specification: laMat.specification,
+        unit: laMat.unit,
+        quantity: count,
+        unitRate: laMat.materialRate,
+        materialAmount: count * laMat.materialRate,
+        labourRate: laMat.labourRate,
+        labourAmount: count * laMat.labourRate,
+        totalAmount: count * (laMat.materialRate + laMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `1 set of 3 surge arresters per transformer`
+      });
+    }
+
+    const dofMat = findMat('SW-DOF-11KV');
+    if (dofMat) {
+      itemMap.set(dofMat.code, {
+        id: `item-${dofMat.code}`,
+        materialId: dofMat.id,
+        materialCode: dofMat.code,
+        description: dofMat.name,
+        specification: dofMat.specification,
+        unit: dofMat.unit,
+        quantity: count,
+        unitRate: dofMat.materialRate,
+        materialAmount: count * dofMat.materialRate,
+        labourRate: dofMat.labourRate,
+        labourAmount: count * dofMat.labourRate,
+        totalAmount: count * (dofMat.materialRate + dofMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `1 set of 3 drop-out cutouts for transformer protection`
+      });
+    }
+
+    const platMat = findMat('STR-TRF-PLAT');
+    if (platMat) {
+      itemMap.set(platMat.code, {
+        id: `item-${platMat.code}`,
+        materialId: platMat.id,
+        materialCode: platMat.code,
+        description: platMat.name,
+        specification: platMat.specification,
+        unit: platMat.unit,
+        quantity: count,
+        unitRate: platMat.materialRate,
+        materialAmount: count * platMat.materialRate,
+        labourRate: platMat.labourRate,
+        labourAmount: count * platMat.labourRate,
+        totalAmount: count * (platMat.materialRate + platMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `H-Frame platform structure with clamps`
+      });
+    }
+
+    const distBoxMat = findMat('PNL-LT-DIST');
+    if (distBoxMat) {
+      itemMap.set(distBoxMat.code, {
+        id: `item-${distBoxMat.code}`,
+        materialId: distBoxMat.id,
+        materialCode: distBoxMat.code,
+        description: distBoxMat.name,
+        specification: distBoxMat.specification,
+        unit: distBoxMat.unit,
+        quantity: count,
+        unitRate: distBoxMat.materialRate,
+        materialAmount: count * distBoxMat.materialRate,
+        labourRate: distBoxMat.labourRate,
+        labourAmount: count * distBoxMat.labourRate,
+        totalAmount: count * (distBoxMat.materialRate + distBoxMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `LT distribution box with circuit breakers`
+      });
+    }
+
+    const civilMat = findMat('STR-CIVIL-PAD');
+    if (civilMat) {
+      itemMap.set(civilMat.code, {
+        id: `item-${civilMat.code}`,
+        materialId: civilMat.id,
+        materialCode: civilMat.code,
+        description: civilMat.name,
+        specification: civilMat.specification,
+        unit: civilMat.unit,
+        quantity: count,
+        unitRate: civilMat.materialRate,
+        materialAmount: count * civilMat.materialRate,
+        labourRate: civilMat.labourRate,
+        labourAmount: count * civilMat.labourRate,
+        totalAmount: count * (civilMat.materialRate + civilMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Civil foundation and pole muffling works`
+      });
+    }
+  }
+
+  // 15. Complete Feeder Switchgear
+  if (type === 'COMPLETE_HT_FEEDER') {
+    const abMat = findMat('SW-AB-400A');
+    if (abMat) {
+      const switchCount = Math.max(1, Math.ceil(htKm / 2));
+      itemMap.set(abMat.code, {
+        id: `item-${abMat.code}`,
+        materialId: abMat.id,
+        materialCode: abMat.code,
+        description: abMat.name,
+        specification: abMat.specification,
+        unit: abMat.unit,
+        quantity: switchCount,
+        unitRate: abMat.materialRate,
+        materialAmount: switchCount * abMat.materialRate,
+        labourRate: abMat.labourRate,
+        labourAmount: switchCount * abMat.labourRate,
+        totalAmount: switchCount * (abMat.materialRate + abMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Gang-operated sectionalizing Air Break (AB) switches`
+      });
+    }
+  }
+
+  return {
+    items: Array.from(itemMap.values()),
+    steps,
+    updatedLineDetails: {
+      htPoles: calculatedHtPoles,
+      ltPoles: calculatedLtPoles,
+      staySets: calculatedStaySets
+    }
+  };
+}
+
+/**
+ * Computes all grand totals, overheads, transportation, and cost per km
+ */
+export function computeEstimateCharges(
+  items: EstimateItem[],
+  lineKm: number,
+  transportSettings?: {
+    method: 'FIXED' | 'PER_KM' | 'PERCENT_OF_MATERIAL';
+    distanceKm: number;
+    ratePerKm: number;
+    loadingUnloadingFixed: number;
+  },
+  percentages?: {
+    engineeringPercent: number;
+    contingencyPercent: number;
+    departmentalPercent: number;
+    contractorPercent: number;
+    taxPercent: number;
+    otherChargesFixed?: number;
+  }
+): EstimateCharges {
+  const materialCost = items.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0);
+  const labourCost = items.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0);
+
+  // Transportation Cost calculation
+  let transportationCost = 0;
+  if (transportSettings) {
+    if (transportSettings.method === 'PER_KM') {
+      transportationCost = (transportSettings.distanceKm * transportSettings.ratePerKm) + (transportSettings.loadingUnloadingFixed || 0);
+    } else if (transportSettings.method === 'PERCENT_OF_MATERIAL') {
+      transportationCost = Math.round(materialCost * 0.05); // 5% default
+    } else {
+      transportationCost = transportSettings.loadingUnloadingFixed || 0;
+    }
+  } else {
+    // default 25 km distance @ 180 PKR/km
+    transportationCost = Math.round(25 * 180 + 15000);
+  }
+
+  // Civil works cost
+  const civilWorksCost = items
+    .filter(i => i.materialCode.includes('CIVIL'))
+    .reduce((sum, i) => sum + i.totalAmount, 0);
+
+  const basePrimeCost = materialCost + labourCost + transportationCost;
+
+  const engPercent = percentages?.engineeringPercent ?? 2.0;
+  const contPercent = percentages?.contingencyPercent ?? 3.0;
+  const deptPercent = percentages?.departmentalPercent ?? 5.0;
+  const contOverheadPercent = percentages?.contractorPercent ?? 10.0;
+  const taxPercent = percentages?.taxPercent ?? 0.0;
+  const otherCharges = percentages?.otherChargesFixed ?? 0;
+
+  const engineeringChargesAmount = Math.round(basePrimeCost * (engPercent / 100));
+  const contingencyAmount = Math.round(basePrimeCost * (contPercent / 100));
+  const departmentalOverheadAmount = Math.round(basePrimeCost * (deptPercent / 100));
+  const contractorOverheadAmount = Math.round(basePrimeCost * (contOverheadPercent / 100));
+  const taxGstAmount = Math.round(basePrimeCost * (taxPercent / 100));
+
+  const subTotal = basePrimeCost + engineeringChargesAmount + contingencyAmount;
+  const grandTotal = subTotal + departmentalOverheadAmount + contractorOverheadAmount + taxGstAmount + otherCharges;
+
+  const effectiveKm = Math.max(0.01, lineKm);
+  const costPerKm = Math.round(grandTotal / effectiveKm);
+
+  return {
+    materialCost,
+    labourCost,
+    transportationCost,
+    civilWorksCost,
+    engineeringChargesPercent: engPercent,
+    engineeringChargesAmount,
+    contingencyPercent: contPercent,
+    contingencyAmount,
+    departmentalOverheadPercent: deptPercent,
+    departmentalOverheadAmount,
+    contractorOverheadPercent: contOverheadPercent,
+    contractorOverheadAmount,
+    taxGstPercent: taxPercent,
+    taxGstAmount,
+    otherChargesAmount: otherCharges,
+    subTotal,
+    grandTotal,
+    costPerKm
+  };
+}
+
+/**
+ * Generate formatted official Estimate number
+ */
+export function generateEstimateNumber(divisionCode: string = 'PESH'): string {
+  const year = new Date().getFullYear();
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `EST-${divisionCode.toUpperCase()}-${year}-${rand}`;
+}
+
+/**
+ * Export full estimate workbook to multi-sheet Excel file (.xlsx)
+ */
+export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): void {
+  const wb = XLSX.utils.book_new();
+
+  // 1. Summary Sheet
+  const summaryData = [
+    ['PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA'],
+    ['DETAILED ELECTRICAL LINE ESTIMATE & BOQ SUMMARY'],
+    [],
+    ['Estimate Number:', estimate.projectInfo.estimateNo, 'Revision No:', estimate.projectInfo.revisionNo],
+    ['Date:', estimate.projectInfo.estimateDate, 'Status:', estimate.status],
+    ['Division:', estimate.projectInfo.division, 'Sub-Division:', estimate.projectInfo.subDivision],
+    ['Circle:', estimate.projectInfo.circle, 'District:', estimate.projectInfo.district],
+    ['Feeder Name:', estimate.projectInfo.feederName, 'Feeder Code:', estimate.projectInfo.feederCode],
+    ['Location:', estimate.projectInfo.proposedLocation, 'Village/Locality:', estimate.projectInfo.villageLocality],
+    ['GPS Coordinates:', `${estimate.projectInfo.gpsLatitude}, ${estimate.projectInfo.gpsLongitude}`],
+    ['Applicant / Department:', estimate.projectInfo.applicantDepartment],
+    ['Scheme / Project Name:', estimate.projectInfo.schemeProjectName],
+    ['Purpose of Work:', estimate.projectInfo.purposeOfWork],
+    ['Prepared By:', `${estimate.projectInfo.preparedBy} (${estimate.projectInfo.designation})`],
+    ['Checked By:', estimate.projectInfo.checkedBy || 'SDO / XEN'],
+    ['Approved By:', estimate.projectInfo.approvedBy || 'XEN / SE PESCO'],
+    [],
+    ['TECHNICAL LINE PARAMETERS'],
+    ['HT Line Length (km):', estimate.lineDetails.htLengthKm, 'LT Line Length (km):', estimate.lineDetails.ltLengthKm],
+    ['HT Poles:', estimate.lineDetails.htPoles, 'LT Poles:', estimate.lineDetails.ltPoles],
+    ['Stay Sets:', estimate.lineDetails.staySets, 'Road Crossings:', estimate.lineDetails.roadCrossings],
+    ['Transformer Structures:', estimate.lineDetails.transformerStructures, 'Transformer Capacity:', `${estimate.lineDetails.transformerCapacityKva} kVA`],
+    [],
+    ['ESTIMATE COST BREAKDOWN', 'AMOUNT (PKR)'],
+    ['Material Cost', estimate.charges.materialCost],
+    ['Labour / Erection Cost', estimate.charges.labourCost],
+    ['Transportation & Handling Charges', estimate.charges.transportationCost],
+    ['Civil Works & Foundation Works', estimate.charges.civilWorksCost],
+    [`Engineering Charges (${estimate.charges.engineeringChargesPercent}%)`, estimate.charges.engineeringChargesAmount],
+    [`Contingency Allowance (${estimate.charges.contingencyPercent}%)`, estimate.charges.contingencyAmount],
+    [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}%)`, estimate.charges.departmentalOverheadAmount],
+    [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}%)`, estimate.charges.contractorOverheadAmount],
+    [`Taxes / GST (${estimate.charges.taxGstPercent}%)`, estimate.charges.taxGstAmount],
+    ['Other Applicable Charges', estimate.charges.otherChargesAmount],
+    ['----------------------------------------', '---------------------'],
+    ['GRAND TOTAL ESTIMATE COST (PKR)', estimate.charges.grandTotal],
+    ['Total Project Line Length (km)', (estimate.lineDetails.htLengthKm + estimate.lineDetails.ltLengthKm).toFixed(2)],
+    ['COST PER KILOMETER (PKR / km)', estimate.charges.costPerKm]
+  ];
+  const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Estimate Summary');
+
+  // 2. Detailed BOQ Sheet
+  const boqHeaders = [
+    'Sr No', 'Material Code', 'Description', 'Specification', 'Unit', 
+    'Quantity', 'Material Rate (PKR)', 'Material Amount (PKR)', 
+    'Labour Rate (PKR)', 'Labour Amount (PKR)', 'Total Amount (PKR)', 'Remarks'
+  ];
+  const boqRows = estimate.items.map((item, idx) => [
+    idx + 1,
+    item.materialCode,
+    item.description,
+    item.specification,
+    item.unit,
+    item.quantity,
+    item.unitRate,
+    item.materialAmount,
+    item.labourRate,
+    item.labourAmount,
+    item.totalAmount,
+    item.remarks || item.calculationNotes || ''
+  ]);
+  // Add Total Row
+  boqRows.push([
+    '', 'TOTAL', '', '', '', 
+    '', '', estimate.charges.materialCost, 
+    '', estimate.charges.labourCost, 
+    estimate.charges.materialCost + estimate.charges.labourCost, ''
+  ]);
+  const wsBoq = XLSX.utils.aoa_to_sheet([boqHeaders, ...boqRows]);
+  XLSX.utils.book_append_sheet(wb, wsBoq, 'Detailed BOQ');
+
+  // 3. Calculation Steps Sheet
+  if (estimate.calculationSteps && estimate.calculationSteps.length > 0) {
+    const calcHeaders = ['Sr No', 'Component', 'Material Parameter', 'Engineering Formula', 'Detailed Calculation', 'Calculated Quantity', 'Unit', 'Standard Notes'];
+    const calcRows = estimate.calculationSteps.map((step, idx) => [
+      idx + 1,
+      step.component,
+      step.parameter,
+      step.formula,
+      step.calculation,
+      step.resultQuantity,
+      step.unit,
+      step.notes || ''
+    ]);
+    const wsCalc = XLSX.utils.aoa_to_sheet([calcHeaders, ...calcRows]);
+    XLSX.utils.book_append_sheet(wb, wsCalc, 'Calculation Transparency');
+  }
+
+  // Write file
+  const fileName = `${estimate.projectInfo.estimateNo}_${estimate.projectInfo.revisionNo}_Cost_Estimate.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}

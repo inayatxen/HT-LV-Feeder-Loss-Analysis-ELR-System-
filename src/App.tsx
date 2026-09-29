@@ -33,14 +33,16 @@ import { ConductorLibraryModal } from './components/ConductorLibraryModal';
 import { NodeInspectorModal } from './components/NodeInspectorModal';
 import { LocalDatabaseModal } from './components/LocalDatabaseModal';
 import { NewJobModal } from './components/NewJobModal';
+import { CostEstimationModule } from './components/costEstimation/CostEstimationModule';
 import { 
   initLocalDatabase, 
   saveFeederToLocalDb, 
   SavedAnalysisSnapshot 
 } from './utils/localDatabase';
-import { Zap, GitBranch, Layers, TrendingUp, SlidersHorizontal, FileText, CheckCircle2, ShieldAlert, Database } from 'lucide-react';
+import { Zap, GitBranch, Layers, TrendingUp, SlidersHorizontal, FileText, CheckCircle2, ShieldAlert, Database, Calculator } from 'lucide-react';
 
 export default function App() {
+  const [activeSystemModule, setActiveSystemModule] = useState<'elr_loss_analysis' | 'line_cost_estimation'>('elr_loss_analysis');
   const [activeCategory, setActiveCategory] = useState<FeederCategory>('LV');
   const [selectedFeederId, setSelectedFeederId] = useState<string>('gulbhar-colony-peshawar');
   const [activeTab, setActiveTab] = useState<'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast'>('input_form');
@@ -337,6 +339,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       {/* 2-Row Header with Category Selector */}
       <Header
+        activeSystemModule={activeSystemModule}
+        onSelectSystemModule={setActiveSystemModule}
         activeCategory={activeCategory}
         onSelectCategory={handleSelectCategory}
         activeTab={activeTab}
@@ -368,128 +372,134 @@ export default function App() {
       {/* Main Workspace Viewport (100% Screen Width) */}
       <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 space-y-6">
         
-        {/* Executive KPI Summary Cards */}
-        <SummaryMetrics
-          summary={hasActiveInterventions ? proposedSummary : existingSummary}
-          feeder={activeFeeder}
-          isProposedScenario={hasActiveInterventions}
-        />
-
-        {/* What-If Active Banner */}
-        {hasActiveInterventions && (
-          <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between no-print shadow-xs">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>
-                <strong>What-If Scenario Active:</strong> Viewing upgraded system ({activeTransformerKva} kVA transformer, {Object.keys(activeConductors).length} re-conductored spans, {proposedSummary.totalCapacitorKvar} kVAR capacitors).
-              </span>
-            </div>
-            <button
-              onClick={handleResetInterventions}
-              className="text-emerald-700 hover:text-emerald-900 font-bold underline ml-4 whitespace-nowrap"
-            >
-              Reset to Baseline
-            </button>
-          </div>
-        )}
-
-        {/* Tab Content Display */}
-        {activeTab === 'input_form' && (
-          <div className="space-y-4">
-            <InputDataForm
-              feeder={activeFeeder}
-              summary={hasActiveInterventions ? proposedSummary : existingSummary}
-              onSaveFeeder={handleSaveFeeder}
-              onNavigateToSchedule={() => setActiveTab('table')}
-              activeTransformerKva={activeTransformerKva}
-              onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
-              onOpenDatabase={() => setIsLocalDbOpen(true)}
-            />
-          </div>
-        )}
-
-        {activeTab === 'sld' && (
-          <div className="space-y-4">
-            <SingleLineDiagram
-              feeder={activeFeeder}
-              summary={hasActiveInterventions ? proposedSummary : existingSummary}
-              onSelectNode={(node) => setInspectedNode(node)}
-              onSelectSegment={(segResult) => {
-                setActiveTab('table');
-              }}
-              onQuickReconductor={handleSetConductor}
-              onQuickCapacitor={handleSetCapacitor}
-              activeCapacitors={activeCapacitors}
-              activeConductors={activeConductors}
-              onOpenPrintReport={() => setIsReportOpen(true)}
-            />
-          </div>
-        )}
-
-        {activeTab === 'table' && (
-          <div className="space-y-4">
-            <SegmentTable
-              segmentResults={(hasActiveInterventions ? proposedSummary : existingSummary).segmentResults}
-              feeder={activeFeeder}
-              onReconductor={handleSetConductor}
-              activeConductors={activeConductors}
-              activeCapacitors={activeCapacitors}
-              activeTransformerKva={activeTransformerKva}
-              onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
-              onResetToImage1={() => {
-                setCustomFeeders(prev => ({
-                  ...prev,
-                  [selectedFeederId]: JSON.parse(JSON.stringify(PRESET_FEEDERS.find(f => f.id === selectedFeederId) || GULBHAR_COLONY_LT_FEEDER))
-                }));
-                setActiveTransformerKva(activeFeeder.existingTransformerKva);
-                setActiveConductors({});
-                setActiveCapacitors({});
-              }}
-            />
-          </div>
-        )}
-
-        {activeTab === 'charts' && (
-          <div className="space-y-4">
-            <LossCharts
+        {activeSystemModule === 'line_cost_estimation' ? (
+          <CostEstimationModule currentJobTitle={selectedJobTitle} />
+        ) : (
+          <>
+            {/* Executive KPI Summary Cards */}
+            <SummaryMetrics
               summary={hasActiveInterventions ? proposedSummary : existingSummary}
               feeder={activeFeeder}
-              forecastData={forecastData}
+              isProposedScenario={hasActiveInterventions}
             />
-          </div>
-        )}
 
-        {activeTab === 'whatif' && (
-          <div className="space-y-4">
-            <WhatIfWorkbench
-              feeder={activeFeeder}
-              existingSummary={existingSummary}
-              proposedSummary={proposedSummary}
-              activeTransformerKva={activeTransformerKva}
-              setActiveTransformerKva={setActiveTransformerKva}
-              activeConductors={activeConductors}
-              onSetConductor={handleSetConductor}
-              activeCapacitors={activeCapacitors}
-              onSetCapacitor={handleSetCapacitor}
-              activeLoadFactor={activeLoadFactor}
-              onSetLoadFactor={(lf) => setActiveLoadFactor(lf)}
-              bifurcationConfig={bifurcationConfig}
-              onSetBifurcation={setBifurcationConfig}
-              onApplyPackage={handleApplyPackage}
-              onReset={handleResetInterventions}
-            />
-          </div>
-        )}
+            {/* What-If Active Banner */}
+            {hasActiveInterventions && (
+              <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between no-print shadow-xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>What-If Scenario Active:</strong> Viewing upgraded system ({activeTransformerKva} kVA transformer, {Object.keys(activeConductors).length} re-conductored spans, {proposedSummary.totalCapacitorKvar} kVAR capacitors).
+                  </span>
+                </div>
+                <button
+                  onClick={handleResetInterventions}
+                  className="text-emerald-700 hover:text-emerald-900 font-bold underline ml-4 whitespace-nowrap"
+                >
+                  Reset to Baseline
+                </button>
+              </div>
+            )}
 
-        {activeTab === 'forecast' && (
-          <div className="space-y-4">
-            <ForecastingView
-              feeder={activeFeeder}
-              activeConductors={activeConductors}
-              activeCapacitors={activeCapacitors}
-              bifurcationConfig={bifurcationConfig}
-            />
-          </div>
+            {/* Tab Content Display */}
+            {activeTab === 'input_form' && (
+              <div className="space-y-4">
+                <InputDataForm
+                  feeder={activeFeeder}
+                  summary={hasActiveInterventions ? proposedSummary : existingSummary}
+                  onSaveFeeder={handleSaveFeeder}
+                  onNavigateToSchedule={() => setActiveTab('table')}
+                  activeTransformerKva={activeTransformerKva}
+                  onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
+                  onOpenDatabase={() => setIsLocalDbOpen(true)}
+                />
+              </div>
+            )}
+
+            {activeTab === 'sld' && (
+              <div className="space-y-4">
+                <SingleLineDiagram
+                  feeder={activeFeeder}
+                  summary={hasActiveInterventions ? proposedSummary : existingSummary}
+                  onSelectNode={(node) => setInspectedNode(node)}
+                  onSelectSegment={(segResult) => {
+                    setActiveTab('table');
+                  }}
+                  onQuickReconductor={handleSetConductor}
+                  onQuickCapacitor={handleSetCapacitor}
+                  activeCapacitors={activeCapacitors}
+                  activeConductors={activeConductors}
+                  onOpenPrintReport={() => setIsReportOpen(true)}
+                />
+              </div>
+            )}
+
+            {activeTab === 'table' && (
+              <div className="space-y-4">
+                <SegmentTable
+                  segmentResults={(hasActiveInterventions ? proposedSummary : existingSummary).segmentResults}
+                  feeder={activeFeeder}
+                  onReconductor={handleSetConductor}
+                  activeConductors={activeConductors}
+                  activeCapacitors={activeCapacitors}
+                  activeTransformerKva={activeTransformerKva}
+                  onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
+                  onResetToImage1={() => {
+                    setCustomFeeders(prev => ({
+                      ...prev,
+                      [selectedFeederId]: JSON.parse(JSON.stringify(PRESET_FEEDERS.find(f => f.id === selectedFeederId) || GULBHAR_COLONY_LT_FEEDER))
+                    }));
+                    setActiveTransformerKva(activeFeeder.existingTransformerKva);
+                    setActiveConductors({});
+                    setActiveCapacitors({});
+                  }}
+                />
+              </div>
+            )}
+
+            {activeTab === 'charts' && (
+              <div className="space-y-4">
+                <LossCharts
+                  summary={hasActiveInterventions ? proposedSummary : existingSummary}
+                  feeder={activeFeeder}
+                  forecastData={forecastData}
+                />
+              </div>
+            )}
+
+            {activeTab === 'whatif' && (
+              <div className="space-y-4">
+                <WhatIfWorkbench
+                  feeder={activeFeeder}
+                  existingSummary={existingSummary}
+                  proposedSummary={proposedSummary}
+                  activeTransformerKva={activeTransformerKva}
+                  setActiveTransformerKva={setActiveTransformerKva}
+                  activeConductors={activeConductors}
+                  onSetConductor={handleSetConductor}
+                  activeCapacitors={activeCapacitors}
+                  onSetCapacitor={handleSetCapacitor}
+                  activeLoadFactor={activeLoadFactor}
+                  onSetLoadFactor={(lf) => setActiveLoadFactor(lf)}
+                  bifurcationConfig={bifurcationConfig}
+                  onSetBifurcation={setBifurcationConfig}
+                  onApplyPackage={handleApplyPackage}
+                  onReset={handleResetInterventions}
+                />
+              </div>
+            )}
+
+            {activeTab === 'forecast' && (
+              <div className="space-y-4">
+                <ForecastingView
+                  feeder={activeFeeder}
+                  activeConductors={activeConductors}
+                  activeCapacitors={activeCapacitors}
+                  bifurcationConfig={bifurcationConfig}
+                />
+              </div>
+            )}
+          </>
         )}
       </main>
 
@@ -497,9 +507,18 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto no-print w-full">
         <div className="w-full px-3 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <div>
-            HT LV Feeder Loss Analysis System · Based on WAPDA ELR Methodology (Mohsin Iqbal, 2016)
+            PESCO Distribution Suite · WAPDA ELR Feeder Loss & CSR-2026 Line Cost Estimation
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setActiveSystemModule(prev => prev === 'line_cost_estimation' ? 'elr_loss_analysis' : 'line_cost_estimation')}
+              className={`hover:text-slate-800 transition-colors font-bold flex items-center gap-1 cursor-pointer ${
+                activeSystemModule === 'line_cost_estimation' ? 'text-amber-600' : 'text-blue-600'
+              }`}
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>{activeSystemModule === 'line_cost_estimation' ? 'Switch to Feeder Loss Analysis' : 'Line Extension Cost Estimation'}</span>
+            </button>
             <button
               onClick={() => setIsLocalDbOpen(true)}
               className="hover:text-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
