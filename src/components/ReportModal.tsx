@@ -309,7 +309,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       isMaximized 
         ? 'bg-slate-950 p-0 flex flex-col' 
         : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4'
-    } print:p-0 print:bg-white print:static`}>
+    } print:p-0 print:bg-white print:static print:overflow-visible print:h-auto print:max-h-none`}>
       
       {/* ========================================================
           DYNAMIC @MEDIA PRINT STYLES WITH PER-PAGE CONTROLS
@@ -338,11 +338,44 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             size: ${pageOrientation === 'landscape' ? 'landscape' : 'portrait'};
             margin: ${printScale === 'compact' ? '8mm' : '12mm'};
           }
-          body {
+          /* Complete eradication of all scrollbars, slide bars, and tracks on print pages */
+          *, *::before, *::after {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+          *::-webkit-scrollbar, ::-webkit-scrollbar, div::-webkit-scrollbar {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            background: transparent !important;
+            opacity: 0 !important;
+          }
+          html, body {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            height: auto !important;
+            min-height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
             background: white !important;
             color: #0f172a !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
+          }
+          .overflow-x-auto,
+          .overflow-y-auto,
+          .overflow-auto,
+          .overflow-hidden,
+          [class*="overflow-"] {
+            overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
+            max-height: none !important;
+            height: auto !important;
           }
           .no-print {
             display: none !important;
@@ -384,10 +417,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             border: none !important;
             box-shadow: none !important;
             position: relative !important;
+            overflow: visible !important;
+            height: auto !important;
+            max-height: none !important;
           }
           table {
             page-break-inside: auto;
             position: relative !important;
+            overflow: visible !important;
           }
           tr {
             page-break-inside: avoid;
@@ -406,7 +443,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         isMaximized 
           ? 'min-h-screen rounded-none my-0 max-w-none shadow-none border-none flex-1 flex flex-col' 
           : 'max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 max-h-[94vh] flex flex-col'
-      } print:m-0 print:shadow-none print:border-none print:rounded-none print:max-h-none print-container`}>
+      } print:m-0 print:shadow-none print:border-none print:rounded-none print:max-h-none print:h-auto print:overflow-visible print-container`}>
         
         {/* Top Action Bar (hidden when printing) */}
         <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 no-print border-b border-slate-800 shrink-0">
@@ -1209,7 +1246,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 As recorded in WAPDA field survey for Gulbhar Colony Feeder (Ref. image1.png):
               </p>
               
-              <div className="overflow-x-auto border border-slate-300 rounded-lg">
+              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
@@ -1291,7 +1328,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 Calculated using WAPDA ELR radial distribution algorithm (Ref. image2.png):
               </p>
 
-              <div className="overflow-x-auto border border-slate-300 rounded-lg">
+              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
@@ -1400,7 +1437,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: PKR 38.5 / kWh · Page {pageBreakMode === 'page_per_section' ? '5' : ''}</span>
               </h2>
 
-              <div className="overflow-x-auto border border-slate-300 rounded-lg">
+              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">

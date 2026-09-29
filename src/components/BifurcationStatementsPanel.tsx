@@ -221,7 +221,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
         </div>
 
         {/* Node-by-Node Load Flow Schedule */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto print:overflow-visible">
           <table className="w-full text-left text-xs border-collapse font-mono tabular-nums">
             <thead>
               <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300 text-[11px]">

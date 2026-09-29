@@ -189,7 +189,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
         )}
 
         {/* SVG Canvas */}
-        <div className={`p-4 overflow-x-auto flex items-center justify-center ${isDark ? 'bg-slate-950' : 'bg-slate-50/60'}`}>
+        <div className={`p-4 overflow-x-auto print:overflow-visible flex items-center justify-center ${isDark ? 'bg-slate-950' : 'bg-slate-50/60'}`}>
           <svg
             width={layout.width}
             height={layout.height}
