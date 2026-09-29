@@ -21,6 +21,7 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   FileSpreadsheet, 
+  FileText,
   ArrowRight,
   Calculator,
   Copy,
@@ -33,6 +34,9 @@ import {
 import { CONDUCTOR_LIST, getConductor } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
 import { GULBHAR_COLONY_LT_FEEDER } from '../data/presetFeeders';
+import { ExcelImportModal } from './ExcelImportModal';
+import { downloadExcelTemplate, exportFullFeederToExcel } from '../utils/excelImport';
+import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 
 interface InputDataFormProps {
   feeder: FeederData;
@@ -94,8 +98,44 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
 
   const [saveSuccessMessage, setSaveSuccessMessage] = useState(false);
   const [showCsvImport, setShowCsvImport] = useState(false);
+  const [showExcelModal, setShowExcelModal] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [importError, setImportError] = useState('');
+
+  // Handle applied rows from Excel import modal
+  const handleApplyImportedRows = (
+    importedRows: {
+      fromNode: string;
+      toNode: string;
+      lengthKm: number;
+      lengthMeters: number;
+      threePhaseCust: number;
+      singlePhaseCust: number;
+      conductorCode: string;
+    }[],
+    overrides?: { name?: string; transformerKva?: number }
+  ) => {
+    setRows(importedRows.map((r, idx) => ({
+      id: `span-imp-${idx}-${Date.now()}`,
+      fromNode: r.fromNode,
+      toNode: r.toNode,
+      lengthKm: r.lengthKm,
+      lengthMeters: r.lengthMeters,
+      threePhaseCust: r.threePhaseCust,
+      singlePhaseCust: r.singlePhaseCust,
+      conductorCode: r.conductorCode
+    })));
+
+    if (overrides?.name) {
+      setFeederName(overrides.name);
+    }
+    if (overrides?.transformerKva) {
+      onUpdateTransformerKva(overrides.transformerKva);
+    }
+
+    setSaveSuccessMessage(true);
+    setTimeout(() => setSaveSuccessMessage(false), 3500);
+  };
 
   // Handle cell edit
   const handleUpdateRow = (index: number, field: keyof InputRow, value: any) => {
@@ -258,7 +298,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       });
     });
 
-    const updatedFeeder: FeederData = {
+    const rawFeeder: FeederData = {
       ...feeder,
       name: feederName,
       substationName,
@@ -271,6 +311,12 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       proposedTransformerKva: proposedTrfKva,
       nodes: Array.from(nodeMap.values()),
       segments
+    };
+
+    const layoutResult = calculateNonOverlappingSLDLayout(rawFeeder);
+    const updatedFeeder: FeederData = {
+      ...rawFeeder,
+      nodes: layoutResult.nodes
     };
 
     onSaveFeeder(updatedFeeder);
@@ -423,20 +469,34 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
               <span>Add Span Row</span>
             </button>
 
+            {/* Excel Import Button */}
             <button
-              onClick={() => setShowCsvImport(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+              onClick={() => setShowExcelModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-emerald-950 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg shadow-2xs transition-all cursor-pointer"
+              title="Import spans from an Excel sheet (.xlsx, .xls) or paste from clipboard"
             >
-              <Upload className="w-3.5 h-3.5 text-slate-500" />
-              <span>Import CSV</span>
+              <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Import from Excel (.xlsx)</span>
             </button>
 
+            {/* Excel Export Button */}
             <button
-              onClick={handleExportInputCsv}
+              onClick={() => exportFullFeederToExcel(feeder, summary)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+              title="Export complete calculation model to Excel workbook"
             >
-              <Download className="w-3.5 h-3.5 text-slate-500" />
-              <span>Export CSV</span>
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Export Excel (.xlsx)</span>
+            </button>
+
+            {/* Excel Template Button */}
+            <button
+              onClick={() => downloadExcelTemplate(feeder)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+              title="Download clean Excel template matching image1.png columns"
+            >
+              <FileText className="w-3.5 h-3.5 text-amber-600" />
+              <span>Template (.xlsx)</span>
             </button>
 
             <button
@@ -693,10 +753,12 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
             <select
               value={nominalVoltage}
               onChange={(e) => setNominalVoltage(Number(e.target.value))}
-              className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900"
+              className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900 focus:ring-1 focus:ring-amber-500 cursor-pointer"
             >
-              <option value={400}>400 V (Low Tension 3-Phase)</option>
-              <option value={380}>380 V (Low Tension Alternative)</option>
+              <option value={400}>400 V (Low Tension 3-Phase Standard)</option>
+              <option value={390}>390 V (Low Tension 390V Feeder)</option>
+              <option value={380}>380 V (Low Tension 380V Alternative)</option>
+              <option value={415}>415 V (Low Tension 415V IEC/UK Standard)</option>
               <option value={11000}>11,000 V (High Tension 11kV Feeder)</option>
             </select>
           </div>
@@ -1095,6 +1157,13 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
           </div>
         </div>
       )}
+      {/* Excel Import Modal (.xlsx / .xls / .csv / clipboard) */}
+      <ExcelImportModal
+        isOpen={showExcelModal}
+        onClose={() => setShowExcelModal(false)}
+        onApplyImportedData={handleApplyImportedRows}
+        feeder={feeder}
+      />
     </div>
   );
 };

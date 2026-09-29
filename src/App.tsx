@@ -13,7 +13,8 @@ import {
   FeederNode, 
   SegmentAnalysisResult,
   FeederCategory,
-  JobTitle 
+  JobTitle,
+  BifurcationConfig
 } from './types/feeder';
 import { 
   calculateFeederAnalysis, 
@@ -84,6 +85,12 @@ export default function App() {
   const [activeConductors, setActiveConductors] = useState<Record<string, string>>({});
   const [activeCapacitors, setActiveCapacitors] = useState<Record<string, number>>({});
   const [activeLoadFactor, setActiveLoadFactor] = useState<number | undefined>(undefined);
+  const [bifurcationConfig, setBifurcationConfig] = useState<BifurcationConfig>({
+    enabled: false,
+    bifurcationNodeId: '3.0',
+    transformerCapacityKva: 100,
+    mode: 'ADDITIONAL_TRANSFORMER'
+  });
 
   // Category switch handler (LV vs HV)
   const handleSelectCategory = (category: FeederCategory) => {
@@ -100,6 +107,12 @@ export default function App() {
       setActiveConductors({});
       setActiveCapacitors({});
       setActiveLoadFactor(undefined);
+      setBifurcationConfig({
+        enabled: false,
+        bifurcationNodeId: target.nodes[2]?.id || '3.0',
+        transformerCapacityKva: target.category === 'HV' ? 2500 : 100,
+        mode: 'ADDITIONAL_TRANSFORMER'
+      });
     }
   };
 
@@ -113,6 +126,12 @@ export default function App() {
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
+    setBifurcationConfig({
+      enabled: false,
+      bifurcationNodeId: target.nodes[2]?.id || '3.0',
+      transformerCapacityKva: target.category === 'HV' ? 2500 : 100,
+      mode: 'ADDITIONAL_TRANSFORMER'
+    });
   };
 
   // Modals state
@@ -170,23 +189,26 @@ export default function App() {
       customConductors: activeConductors,
       customCapacitors: activeCapacitors,
       transformerOverrideKva: activeTransformerKva,
-      loadFactorOverride: activeLoadFactor
+      loadFactorOverride: activeLoadFactor,
+      bifurcation: bifurcationConfig
     });
-  }, [activeFeeder, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor]);
+  }, [activeFeeder, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor, bifurcationConfig]);
 
   // Forecast data (5-Year)
   const forecastData = useMemo(() => {
     return generateGrowthForecast(activeFeeder, 5, activeFeeder.annualGrowthRatePercent, {
       customConductors: activeConductors,
-      customCapacitors: activeCapacitors
+      customCapacitors: activeCapacitors,
+      bifurcation: bifurcationConfig
     });
-  }, [activeFeeder, activeConductors, activeCapacitors]);
+  }, [activeFeeder, activeConductors, activeCapacitors, bifurcationConfig]);
 
   const hasActiveInterventions = 
     activeTransformerKva !== activeFeeder.existingTransformerKva ||
     Object.keys(activeConductors).length > 0 ||
     Object.keys(activeCapacitors).length > 0 ||
-    (activeLoadFactor !== undefined && activeLoadFactor !== activeFeeder.loadFactor);
+    (activeLoadFactor !== undefined && activeLoadFactor !== activeFeeder.loadFactor) ||
+    bifurcationConfig.enabled;
 
   // Handlers for What-If
   const handleSetConductor = (segmentId: string, conductorCode: string) => {
@@ -213,18 +235,37 @@ export default function App() {
     });
   };
 
-  const handleApplyPackage = (pkg: 'standard' | 'max' | 'capacitor_only') => {
-    if (pkg === 'standard') {
+  const handleApplyPackage = (pkg: 'standard' | 'max' | 'capacitor_only' | 'bifurcation') => {
+    if (pkg === 'bifurcation') {
+      setActiveTransformerKva(activeFeeder.existingTransformerKva);
+      setBifurcationConfig({
+        enabled: true,
+        bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+        transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
+        mode: 'ADDITIONAL_TRANSFORMER'
+      });
+      setActiveCapacitors({ '6.0': 20 });
+      setActiveConductors({});
+      setActiveLoadFactor(undefined);
+    } else if (pkg === 'standard') {
       setActiveTransformerKva(activeFeeder.proposedTransformerKva);
+      setBifurcationConfig(prev => ({ ...prev, enabled: false }));
       setActiveCapacitors({ '6.0': 20 });
       setActiveConductors({});
       setActiveLoadFactor(undefined);
     } else if (pkg === 'max') {
       setActiveTransformerKva(activeFeeder.proposedTransformerKva);
+      setBifurcationConfig({
+        enabled: true,
+        bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+        transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
+        mode: 'ADDITIONAL_TRANSFORMER'
+      });
       setActiveCapacitors({ '6.0': 20, '12.0': 20 });
       setActiveConductors({ 's-1-2': 'DOG', 's-2-3': 'DOG' });
       setActiveLoadFactor(undefined);
     } else if (pkg === 'capacitor_only') {
+      setBifurcationConfig(prev => ({ ...prev, enabled: false }));
       setActiveCapacitors({ '6.0': 20, '12.0': 15 });
       setActiveLoadFactor(undefined);
     }
@@ -235,6 +276,12 @@ export default function App() {
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
+    setBifurcationConfig({
+      enabled: false,
+      bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+      transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
+      mode: 'ADDITIONAL_TRANSFORMER'
+    });
   };
 
   // Node Inspector update
@@ -425,6 +472,8 @@ export default function App() {
               onSetCapacitor={handleSetCapacitor}
               activeLoadFactor={activeLoadFactor}
               onSetLoadFactor={(lf) => setActiveLoadFactor(lf)}
+              bifurcationConfig={bifurcationConfig}
+              onSetBifurcation={setBifurcationConfig}
               onApplyPackage={handleApplyPackage}
               onReset={handleResetInterventions}
             />
@@ -437,6 +486,7 @@ export default function App() {
               feeder={activeFeeder}
               activeConductors={activeConductors}
               activeCapacitors={activeCapacitors}
+              bifurcationConfig={bifurcationConfig}
             />
           </div>
         )}

@@ -20,8 +20,11 @@ import {
   Flame, 
   Sliders, 
   BatteryCharging,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Split,
+  Move
 } from 'lucide-react';
+import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 
 interface SingleLineDiagramProps {
   feeder: FeederData;
@@ -49,7 +52,12 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [hoveredSegmentId, setHoveredSegmentId] = useState<string | null>(null);
 
-  // Map segments results by "from->to"
+  // Compute non-overlapping layout
+  const layout = useMemo(() => {
+    return calculateNonOverlappingSLDLayout(feeder);
+  }, [feeder]);
+
+  // Map segments results by "from->to" and segment ID
   const segmentResultMap = useMemo(() => {
     const map = new Map<string, SegmentAnalysisResult>();
     summary.segmentResults.forEach(r => {
@@ -59,11 +67,22 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
     return map;
   }, [summary]);
 
-  const selectedNode = feeder.nodes.find(n => n.id === selectedNodeId);
+  const selectedNode = layout.nodes.find(n => n.id === selectedNodeId) || feeder.nodes.find(n => n.id === selectedNodeId);
 
   // Determine line color based on view mode
   const getSegmentStroke = (segResult?: SegmentAnalysisResult) => {
     if (!segResult) return '#64748b'; // slate-500
+
+    // If bifurcated / fed by T2
+    if (segResult.fedByTransformer === 'T2') {
+      if (viewMode === 'voltage') {
+        const drop = segResult.percentVoltDrop;
+        if (drop > 9.0) return '#e11d48';
+        if (drop > 5.0) return '#f59e0b';
+        return '#a855f7'; // purple-500
+      }
+      return '#8b5cf6'; // violet-500
+    }
 
     if (viewMode === 'voltage') {
       const drop = segResult.percentVoltDrop;
@@ -87,9 +106,10 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
 
   const getSegmentWidth = (segResult?: SegmentAnalysisResult) => {
     if (!segResult) return 3;
+    if (segResult.currentAmps === 0 && segResult.isBifurcated) return 2;
     // Thicker for higher current
-    if (segResult.currentAmps > 140) return 6;
-    if (segResult.currentAmps > 70) return 4.5;
+    if (segResult.currentAmps > 140) return 5.5;
+    if (segResult.currentAmps > 70) return 4;
     return 3;
   };
 
@@ -100,7 +120,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1.5 text-xs text-slate-700 font-semibold">
             <Layers className="w-4 h-4 text-amber-500" />
-            <span>Single Line Topology</span>
+            <span>Single Line Topology (Non-Overlapping)</span>
           </div>
 
           <div className="h-4 w-px bg-slate-300 mx-1 hidden sm:block" />
@@ -109,7 +129,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
           <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-xs">
             <button
               onClick={() => setViewMode('standard')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 viewMode === 'standard'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -119,7 +139,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
             </button>
             <button
               onClick={() => setViewMode('voltage')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 viewMode === 'voltage'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -130,7 +150,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
             </button>
             <button
               onClick={() => setViewMode('losses')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-colors ${
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 viewMode === 'losses'
                   ? 'bg-white text-slate-900 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -140,13 +160,20 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
               Loss Heatmap
             </button>
           </div>
+
+          {summary.bifurcationActive && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md border border-purple-300 animate-pulse">
+              <Split className="w-3 h-3" />
+              Bifurcated (T-1 + T-2 Active)
+            </span>
+          )}
         </div>
 
         {/* Zoom Controls */}
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setZoom(prev => Math.max(0.6, prev - 0.15))}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors"
+            onClick={() => setZoom(prev => Math.max(0.5, Number((prev - 0.15).toFixed(2))))}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
             title="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
@@ -155,15 +182,15 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
             {Math.round(zoom * 100)}%
           </span>
           <button
-            onClick={() => setZoom(prev => Math.min(1.8, prev + 0.15))}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors"
+            onClick={() => setZoom(prev => Math.min(2.0, Number((prev + 0.15).toFixed(2))))}
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
             title="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             onClick={() => setZoom(1)}
-            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors"
+            className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-md transition-colors cursor-pointer"
             title="Reset Zoom"
           >
             <Maximize2 className="w-4 h-4" />
@@ -172,7 +199,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
       </div>
 
       {/* SVG Canvas Container */}
-      <div className="relative w-full overflow-x-auto overflow-y-hidden bg-slate-950 p-6 min-h-[420px] flex items-center justify-center">
+      <div className="relative w-full overflow-x-auto bg-slate-950 p-6 min-h-[440px] flex items-center justify-center">
         {/* Subtle engineering grid background */}
         <div 
           className="absolute inset-0 opacity-15 pointer-events-none"
@@ -184,9 +211,9 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
 
         <div style={{ transform: `scale(${zoom})`, transformOrigin: 'center center', transition: 'transform 0.2s ease-out' }}>
           <svg
-            width="1100"
-            height="380"
-            viewBox="0 0 1100 380"
+            width={layout.width}
+            height={layout.height}
+            viewBox={layout.viewBox}
             className="overflow-visible select-none"
           >
             <defs>
@@ -207,23 +234,20 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
               </linearGradient>
             </defs>
 
-            {/* Render Segments (Lines) */}
-            {feeder.segments.map(seg => {
-              const fromNode = feeder.nodes.find(n => n.id === seg.fromNodeId);
-              const toNode = feeder.nodes.find(n => n.id === seg.toNodeId);
-              if (!fromNode || !toNode) return null;
-
-              const x1 = fromNode.x || 100;
-              const y1 = fromNode.y || 160;
-              const x2 = toNode.x || 200;
-              const y2 = toNode.y || 160;
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
-
+            {/* Render Segments (Connection Lines & Branch Spans) */}
+            {layout.segments.map(seg => {
               const segResult = segmentResultMap.get(`${seg.fromNodeId}->${seg.toNodeId}`);
               const strokeColor = getSegmentStroke(segResult);
               const strokeWidth = getSegmentWidth(segResult);
               const isHovered = hoveredSegmentId === seg.id;
+              const isCutSegment = summary.bifurcationActive && seg.toNodeId === summary.bifurcationNodeId;
+
+              const x1 = seg.x1;
+              const y1 = seg.y1;
+              const x2 = seg.x2;
+              const y2 = seg.y2;
+              const midX = seg.midX;
+              const midY = seg.midY;
 
               return (
                 <g 
@@ -233,14 +257,14 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                   onMouseLeave={() => setHoveredSegmentId(null)}
                   onClick={() => segResult && onSelectSegment?.(segResult)}
                 >
-                  {/* Invisible wide hit target */}
+                  {/* Invisible wide hit target for easy clicking */}
                   <line
                     x1={x1}
                     y1={y1}
                     x2={x2}
                     y2={y2}
                     stroke="transparent"
-                    strokeWidth="20"
+                    strokeWidth="24"
                   />
 
                   {/* Flow connection line */}
@@ -250,34 +274,37 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                     x2={x2}
                     y2={y2}
                     stroke={strokeColor}
-                    strokeWidth={isHovered ? strokeWidth + 2 : strokeWidth}
+                    strokeWidth={isHovered ? strokeWidth + 2.5 : strokeWidth}
                     strokeLinecap="round"
+                    strokeDasharray={isCutSegment ? "6 6" : undefined}
                     className="transition-all"
                   />
 
-                  {/* Segment Details Box (matches paper Fig. 1 callouts) */}
+                  {/* Segment Details Box (Calculated Current & Line Loss) */}
                   <g transform={`translate(${midX}, ${midY - 14})`}>
                     <rect
-                      x="-38"
+                      x="-42"
                       y="-12"
-                      width="76"
+                      width="84"
                       height="24"
                       rx="4"
                       fill="#0f172a"
-                      stroke={isHovered ? '#f59e0b' : '#334155'}
-                      strokeWidth="1"
+                      stroke={isHovered ? '#f59e0b' : (segResult?.fedByTransformer === 'T2' ? '#a855f7' : '#334155')}
+                      strokeWidth={isHovered || segResult?.fedByTransformer === 'T2' ? "1.5" : "1"}
                       className="filter drop-shadow-md"
                     />
                     <text
                       x="0"
                       y="-1"
                       textAnchor="middle"
-                      fill="#f8fafc"
+                      fill={segResult?.fedByTransformer === 'T2' ? '#e9d5ff' : '#f8fafc'}
                       fontSize="9"
                       fontFamily="monospace"
                       fontWeight="600"
                     >
-                      {segResult ? `${segResult.currentAmps}A` : seg.conductorCode}
+                      {isCutSegment 
+                        ? 'TIE OPEN' 
+                        : (segResult ? `${segResult.currentAmps}A (${segResult.fedByTransformer || 'T1'})` : 'Span')}
                     </text>
                     <text
                       x="0"
@@ -287,34 +314,46 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                       fontSize="8"
                       fontFamily="monospace"
                     >
-                      {segResult ? `${segResult.lineLossKw} kW` : `${Math.round(seg.lengthKm * 1000)}m`}
+                      {isCutSegment ? 'Bifurcated' : (segResult ? `${segResult.lineLossKw} kW` : '')}
                     </text>
                   </g>
 
-                  {/* Extra conductor code badge */}
-                  <g transform={`translate(${midX}, ${midY + 16})`}>
-                    <text
-                      x="0"
-                      y="0"
-                      textAnchor="middle"
-                      fill="#64748b"
-                      fontSize="8"
-                      fontFamily="monospace"
-                    >
-                      {seg.conductorCode} · {Math.round(seg.lengthKm * 1000)}m
-                    </text>
-                  </g>
+                  {/* Conductor Code and Span Distance Badge */}
+                  {segResult && (
+                    <g transform={`translate(${midX}, ${midY + 16})`}>
+                      <rect
+                        x="-32"
+                        y="-7"
+                        width="64"
+                        height="14"
+                        rx="3"
+                        fill="#020617"
+                        stroke="#1e293b"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="0"
+                        y="3.5"
+                        textAnchor="middle"
+                        fill="#94a3b8"
+                        fontSize="7.5"
+                        fontFamily="monospace"
+                      >
+                        {segResult.conductor.code} · {Math.round(segResult.lengthKm * 1000)}m
+                      </text>
+                    </g>
+                  )}
                 </g>
               );
             })}
 
-            {/* Render Nodes (Poles & Transformer) */}
-            {feeder.nodes.map(node => {
-              const x = node.x || 100;
-              const y = node.y || 160;
+            {/* Render Nodes (Poles & Substations) */}
+            {layout.nodes.map(node => {
+              const x = node.x;
+              const y = node.y;
               const isSelected = selectedNodeId === node.id;
               const hasCapacitor = (node.capacitorKvar || 0) > 0 || (activeCapacitors?.[node.id] || 0) > 0;
-              const capVal = (activeCapacitors?.[node.id] || node.capacitorKvar || 0);
+              const isBifurcationInjectionNode = summary.bifurcationActive && node.id === summary.bifurcationNodeId;
 
               // Find segment leading into this node to get voltage drop
               const incomingSegResult = summary.segmentResults.find(r => r.toNodeId === node.id);
@@ -329,30 +368,82 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                     onSelectNode?.(node);
                   }}
                 >
+                  {/* Additional Transformer (T-2) Substation Badge at Bifurcation Node */}
+                  {isBifurcationInjectionNode && (
+                    <g transform="translate(0, -44)">
+                      <rect
+                        x="-36"
+                        y="-16"
+                        width="72"
+                        height="32"
+                        rx="6"
+                        fill="#3b0764"
+                        stroke="#c084fc"
+                        strokeWidth="2"
+                        className="filter drop-shadow-lg"
+                      />
+                      <Zap className="w-3.5 h-3.5 text-amber-300" x="-30" y="-12" />
+                      <text
+                        x="6"
+                        y="-3"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize="8.5"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        T-2 Added
+                      </text>
+                      <text
+                        x="0"
+                        y="9"
+                        textAnchor="middle"
+                        fill="#e9d5ff"
+                        fontSize="8"
+                        fontWeight="bold"
+                        fontFamily="monospace"
+                      >
+                        {summary.additionalTransformerKva}kVA ({summary.transformer2LoadingPercent}%)
+                      </text>
+                      {/* Connecting indicator line */}
+                      <line x1="0" y1="16" x2="0" y2="32" stroke="#c084fc" strokeWidth="2" strokeDasharray="2 2" />
+                    </g>
+                  )}
+
                   {/* Transformer Node representation */}
                   {node.isTransformerNode ? (
                     <g>
                       <rect
-                        x="-24"
-                        y="-24"
-                        width="48"
-                        height="48"
+                        x="-26"
+                        y="-26"
+                        width="52"
+                        height="52"
                         rx="8"
                         fill={summary.isTransformerOverloaded ? '#450a0a' : '#064e3b'}
                         stroke={summary.isTransformerOverloaded ? '#f87171' : '#34d399'}
                         strokeWidth="2"
                       />
-                      <Zap className="w-5 h-5 text-amber-400" x="-10" y="-12" />
+                      <Zap className="w-5 h-5 text-amber-400" x="-10" y="-14" />
                       <text
                         x="0"
-                        y="16"
+                        y="12"
                         textAnchor="middle"
                         fill="#ffffff"
-                        fontSize="9"
+                        fontSize="8.5"
                         fontWeight="700"
                         fontFamily="monospace"
                       >
-                        {summary.existingTransformerKva}kVA
+                        T-1: {summary.existingTransformerKva}kVA
+                      </text>
+                      <text
+                        x="0"
+                        y="21"
+                        textAnchor="middle"
+                        fill={summary.isTransformer1Overloaded ? '#fca5a5' : '#a7f3d0'}
+                        fontSize="7"
+                        fontFamily="monospace"
+                      >
+                        {summary.transformer1LoadingPercent || summary.existingTransformerLoadingPercent}%
                       </text>
                     </g>
                   ) : (
@@ -373,13 +464,15 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                       {/* Pole circle */}
                       <circle
                         r="12"
-                        fill="#1e293b"
+                        fill={isBifurcationInjectionNode ? '#581c87' : '#1e293b'}
                         stroke={
-                          incomingSegResult && incomingSegResult.percentVoltDrop > 9.0
-                            ? '#f59e0b'
-                            : '#64748b'
+                          isBifurcationInjectionNode
+                            ? '#c084fc'
+                            : (incomingSegResult && incomingSegResult.percentVoltDrop > 9.0
+                                ? '#f59e0b'
+                                : '#64748b')
                         }
-                        strokeWidth="2"
+                        strokeWidth={isBifurcationInjectionNode ? "2.5" : "2"}
                       />
 
                       {/* Pole Number text */}
@@ -440,7 +533,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
                     fontSize="9"
                     fontWeight="500"
                   >
-                    Node {node.id}
+                    Node {node.id.replace('.0', '')}
                   </text>
 
                   {/* Customers count */}
@@ -486,7 +579,14 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
             <div className="w-3.5 h-3.5 rounded bg-emerald-900 border border-emerald-500 flex items-center justify-center">
               <Zap className="w-2.5 h-2.5 text-amber-400" />
             </div>
-            <span>Transformer (Node 0)</span>
+            <span>Main Transformer (T-1)</span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <div className="w-3.5 h-3.5 rounded bg-purple-900 border border-purple-400 flex items-center justify-center">
+              <Zap className="w-2.5 h-2.5 text-amber-300" />
+            </div>
+            <span>Additional Transformer (T-2)</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -510,7 +610,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
 
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-1 bg-rose-500 rounded" />
-            <span>High Drop (&gt;9%) / High Loss</span>
+            <span>High Drop (&gt;9%) / Loss</span>
           </div>
         </div>
 
@@ -518,7 +618,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         {selectedNode && (
           <div className="flex items-center gap-3 bg-white px-3 py-1.5 rounded-lg border border-slate-300 shadow-xs">
             <span className="font-semibold text-slate-800">
-              Pole {selectedNode.id} ({selectedNode.label})
+              Pole {selectedNode.id.replace('.0', '')} ({selectedNode.label})
             </span>
             <span aria-hidden="true">·</span>
             <span>1-Ph: {selectedNode.singlePhaseCustomers}</span>
@@ -526,7 +626,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
             {onQuickCapacitor && !selectedNode.isTransformerNode && (
               <button
                 onClick={() => onQuickCapacitor(selectedNode.id, (selectedNode.capacitorKvar ? 0 : 20))}
-                className="ml-2 px-2 py-0.5 text-[11px] font-semibold rounded bg-sky-100 text-sky-800 hover:bg-sky-200 transition-colors"
+                className="ml-2 px-2 py-0.5 text-[11px] font-semibold rounded bg-sky-100 text-sky-800 hover:bg-sky-200 transition-colors cursor-pointer"
               >
                 {selectedNode.capacitorKvar ? 'Remove Cap' : '+20 kVAR Cap'}
               </button>

@@ -134,6 +134,14 @@ export interface FeederSegment {
   proposedConductorCode?: string; // For what-if reconductoring
 }
 
+export interface BifurcationConfig {
+  enabled: boolean;
+  bifurcationNodeId: string;           // The node where bifurcation / additional transformer is placed
+  transformerCapacityKva: number;      // Rating of newly installed transformer (e.g. 50, 100, 200 kVA)
+  mode: 'ADDITIONAL_TRANSFORMER' | 'EXPRESS_FEEDER';
+  name?: string;
+}
+
 export interface SegmentAnalysisResult {
   segment: FeederSegment;
   fromNodeId: string;
@@ -156,6 +164,8 @@ export interface SegmentAnalysisResult {
   downstreamKvar: number;
   isHighLoss: boolean;
   isHighDrop: boolean;
+  isBifurcated?: boolean;  // Belongs to the bifurcated / additional transformer sub-network
+  fedByTransformer?: 'T1' | 'T2';
 }
 
 export interface FeederAnalysisSummary {
@@ -185,6 +195,20 @@ export interface FeederAnalysisSummary {
   existingTransformerLoadingPercent: number;
   proposedTransformerLoadingPercent: number;
   isTransformerOverloaded: boolean;
+
+  // Bifurcation & Additional Transformer Details
+  bifurcationActive?: boolean;
+  bifurcationNodeId?: string;
+  additionalTransformerKva?: number;
+  transformer1DemandKva?: number;
+  transformer2DemandKva?: number;
+  transformer1LoadingPercent?: number;
+  transformer2LoadingPercent?: number;
+  isTransformer1Overloaded?: boolean;
+  isTransformer2Overloaded?: boolean;
+  bifurcationReliefKva?: number;
+  t1LineLossKw?: number;
+  t2LineLossKw?: number;
   
   // Losses
   totalLineLossKw: number;
@@ -215,6 +239,17 @@ export interface ForecastYearResult {
   annualEnergyLossKwh: number;
   percentPowerLoss: number;
   percentEnergyLoss: number;
+
+  // Bifurcation T1 and T2 multi-year metrics
+  bifurcationActive?: boolean;
+  t1DemandKva?: number;
+  t2DemandKva?: number;
+  t1LoadingPercent?: number;
+  t2LoadingPercent?: number;
+  t1CurrentAmps?: number;
+  t2CurrentAmps?: number;
+  t1LineLossKw?: number;
+  t2LineLossKw?: number;
 }
 
 export interface FeederData {

@@ -94,21 +94,46 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
             <span>Transformer Loading</span>
             <Zap className={`w-4 h-4 ${isOverloaded ? 'text-rose-500' : 'text-slate-400'}`} />
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-2xl font-bold font-mono tabular-nums ${
-              isOverloaded ? 'text-rose-700' : 'text-slate-900'
-            }`}>
-              {summary.existingTransformerLoadingPercent}%
-            </span>
-            <span className="text-xs text-slate-500">
-              ({summary.totalSystemDemandKva} / {summary.existingTransformerKva} kVA)
-            </span>
-          </div>
+          {/* Transformer Loading or Dual Substation Loading */}
+          {summary.bifurcationActive ? (
+            <div className="flex items-baseline gap-2">
+              <span className={`text-xl font-bold font-mono tabular-nums ${
+                summary.isTransformer1Overloaded ? 'text-rose-700' : 'text-emerald-700'
+              }`}>
+                T1: {summary.transformer1LoadingPercent}%
+              </span>
+              <span className="text-xs font-mono font-bold text-purple-700">
+                T2: {summary.transformer2LoadingPercent}%
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className={`text-2xl font-bold font-mono tabular-nums ${
+                isOverloaded ? 'text-rose-700' : 'text-slate-900'
+              }`}>
+                {summary.existingTransformerLoadingPercent}%
+              </span>
+              <span className="text-xs text-slate-500">
+                ({summary.totalSystemDemandKva} / {summary.existingTransformerKva} kVA)
+              </span>
+            </div>
+          )}
           <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>Proposed ({summary.proposedTransformerKva} kVA):</span>
-            <span className="font-mono font-semibold text-emerald-600">
-              {summary.proposedTransformerLoadingPercent}%
-            </span>
+            {summary.bifurcationActive ? (
+              <>
+                <span className="text-purple-900 font-semibold">T2 Added @ Node {summary.bifurcationNodeId}:</span>
+                <span className="font-mono font-semibold text-purple-700">
+                  {summary.additionalTransformerKva} kVA
+                </span>
+              </>
+            ) : (
+              <>
+                <span>Proposed ({summary.proposedTransformerKva} kVA):</span>
+                <span className="font-mono font-semibold text-emerald-600">
+                  {summary.proposedTransformerLoadingPercent}%
+                </span>
+              </>
+            )}
           </div>
         </div>
 

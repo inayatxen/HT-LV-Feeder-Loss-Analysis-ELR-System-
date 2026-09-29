@@ -271,8 +271,8 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
             </div>
           </div>
 
-          {/* Grid Substation & Initial Transformer Capacity */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Grid Substation, Initial Transformer Capacity & System Voltage */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                 Grid Substation
@@ -288,7 +288,7 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Transformer Capacity ({category === 'LV' ? 'kVA' : 'kVA / MVA'})
+                Transformer ({category === 'LV' ? 'kVA' : 'kVA / MVA'})
               </label>
               <select
                 value={transformerKva}
@@ -310,6 +310,31 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
                     <option value={5000}>5,000 kVA (5 MVA - WAPDA Standard)</option>
                     <option value={10000}>10,000 kVA (10 MVA)</option>
                     <option value={20000}>20,000 kVA (20 MVA)</option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                Nominal Voltage
+              </label>
+              <select
+                value={baseVoltage}
+                onChange={(e) => setBaseVoltage(Number(e.target.value))}
+                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 font-mono font-bold cursor-pointer"
+              >
+                {category === 'LV' ? (
+                  <>
+                    <option value={400}>400 V (Standard LT)</option>
+                    <option value={390}>390 V (390V Feeder)</option>
+                    <option value={380}>380 V (380V Alt)</option>
+                    <option value={415}>415 V (415V IEC)</option>
+                  </>
+                ) : (
+                  <>
+                    <option value={11000}>11,000 V (11 kV HT)</option>
+                    <option value={33000}>33,000 V (33 kV HT)</option>
                   </>
                 )}
               </select>

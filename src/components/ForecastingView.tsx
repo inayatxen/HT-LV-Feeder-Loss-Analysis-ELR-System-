@@ -4,32 +4,47 @@
  */
 
 import React, { useState } from 'react';
-import { FeederData, ForecastYearResult } from '../types/feeder';
+import { FeederData, ForecastYearResult, BifurcationConfig } from '../types/feeder';
 import { generateGrowthForecast } from '../utils/elrEngine';
-import { TrendingUp, AlertTriangle, ShieldCheck, ArrowRight, Calendar, Info } from 'lucide-react';
+import { 
+  TrendingUp, 
+  AlertTriangle, 
+  ShieldCheck, 
+  ArrowRight, 
+  Calendar, 
+  Info, 
+  Split, 
+  Zap, 
+  Layers 
+} from 'lucide-react';
 
 interface ForecastingViewProps {
   feeder: FeederData;
   activeConductors?: Record<string, string>;
   activeCapacitors?: Record<string, number>;
+  bifurcationConfig?: BifurcationConfig;
 }
 
 export const ForecastingView: React.FC<ForecastingViewProps> = ({
   feeder,
   activeConductors,
-  activeCapacitors
+  activeCapacitors,
+  bifurcationConfig
 }) => {
   const [growthRatePercent, setGrowthRatePercent] = useState<number>(feeder.annualGrowthRatePercent || 5.0);
   const [forecastHorizon, setForecastHorizon] = useState<number>(5);
+  const [activeSubNetworkView, setActiveSubNetworkView] = useState<'ALL' | 'T1' | 'T2'>('ALL');
 
   const forecast = generateGrowthForecast(feeder, forecastHorizon, growthRatePercent, {
     customConductors: activeConductors,
-    customCapacitors: activeCapacitors
+    customCapacitors: activeCapacitors,
+    bifurcation: bifurcationConfig
   });
 
   const year0 = forecast[0];
   const year5 = forecast[Math.min(5, forecast.length - 1)];
   const tariff = feeder.tariffPerKwh || 38.5;
+  const isBifurcated = Boolean(bifurcationConfig?.enabled);
 
   return (
     <div className="space-y-6">
@@ -38,17 +53,17 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-sky-600 mb-1">
             <TrendingUp className="w-4 h-4" />
-            <span>WAPDA 5-YEAR PLANNING MODULE</span>
+            <span>WAPDA 5-YEAR PLANNING & BIFURCATION FORECAST MODULE</span>
           </div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight">
             Distribution Feeder Multi-Year Load Growth Projection
           </h2>
           <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-            Simulates annual consumer demand compound growth and its quadratic impact on line losses and transformer thermal loading.
+            Simulates annual consumer demand compound growth and quadratic impact on line losses, with dual-transformer (T-1 & T-2) loading trajectory analysis.
           </p>
         </div>
 
-        {/* Sliders Box */}
+        {/* Controls Box */}
         <div className="flex flex-wrap items-center gap-6 bg-slate-50 p-4 rounded-xl border border-slate-200 w-full md:w-auto">
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
@@ -76,7 +91,7 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
                 <button
                   key={yr}
                   onClick={() => setForecastHorizon(yr)}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors ${
+                  className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
                     forecastHorizon === yr
                       ? 'bg-slate-900 text-white shadow-xs'
                       : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'
@@ -89,6 +104,54 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Sub-Network View Selector for Dual Substation */}
+      {isBifurcated && (
+        <div className="bg-purple-50/70 p-4 rounded-xl border border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Split className="w-4 h-4 text-purple-600" />
+            <span className="text-xs font-bold text-purple-950">
+              Bifurcated Dual-Transformer Forecast Mode Active:
+            </span>
+            <span className="text-xs text-purple-800">
+              (T-1: {feeder.existingTransformerKva} kVA · T-2: {bifurcationConfig?.transformerCapacityKva} kVA @ Node {bifurcationConfig?.bifurcationNodeId})
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-purple-200 text-xs">
+            <button
+              onClick={() => setActiveSubNetworkView('ALL')}
+              className={`px-3 py-1 rounded font-semibold cursor-pointer ${
+                activeSubNetworkView === 'ALL'
+                  ? 'bg-purple-600 text-white shadow-xs font-bold'
+                  : 'text-purple-900 hover:bg-purple-50'
+              }`}
+            >
+              Combined System Total
+            </button>
+            <button
+              onClick={() => setActiveSubNetworkView('T1')}
+              className={`px-3 py-1 rounded font-semibold cursor-pointer ${
+                activeSubNetworkView === 'T1'
+                  ? 'bg-blue-600 text-white shadow-xs font-bold'
+                  : 'text-blue-900 hover:bg-blue-50'
+              }`}
+            >
+              T-1 Main Substation
+            </button>
+            <button
+              onClick={() => setActiveSubNetworkView('T2')}
+              className={`px-3 py-1 rounded font-semibold cursor-pointer ${
+                activeSubNetworkView === 'T2'
+                  ? 'bg-purple-800 text-white shadow-xs font-bold'
+                  : 'text-purple-900 hover:bg-purple-50'
+              }`}
+            >
+              T-2 Added Substation
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* High-Level Comparison Callout (Now vs Year 5) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -107,33 +170,49 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
           </span>
         </div>
 
-        {/* Card 2: Existing 100 kVA Transformer Loading */}
-        <div className="bg-rose-50/60 p-4 rounded-xl border border-rose-200 shadow-xs">
-          <span className="text-xs font-semibold text-rose-800 uppercase tracking-wider block mb-1">
-            100 kVA Transformer Loading
+        {/* Card 2: Main Transformer T-1 Loading */}
+        <div className={`p-4 rounded-xl border shadow-xs ${
+          (year5.t1LoadingPercent || year5.existingLoadingPercent) > 100
+            ? 'bg-rose-50/60 border-rose-200'
+            : 'bg-emerald-50/60 border-emerald-200'
+        }`}>
+          <span className="text-xs font-semibold text-slate-800 uppercase tracking-wider block mb-1">
+            {isBifurcated ? `T-1 (${feeder.existingTransformerKva} kVA) Loading` : `${feeder.existingTransformerKva} kVA Trf Loading`}
           </span>
           <div className="flex items-baseline gap-2 font-mono">
-            <span className="text-xl font-bold text-rose-700">{year0.existingLoadingPercent}%</span>
-            <ArrowRight className="w-4 h-4 text-rose-400" />
-            <span className="text-2xl font-bold text-rose-800">{year5.existingLoadingPercent}%</span>
+            <span className="text-xl font-bold text-slate-900">
+              {isBifurcated ? year0.t1LoadingPercent : year0.existingLoadingPercent}%
+            </span>
+            <ArrowRight className="w-4 h-4 text-slate-400" />
+            <span className={`text-2xl font-bold ${
+              (year5.t1LoadingPercent || year5.existingLoadingPercent) > 100 ? 'text-rose-700' : 'text-emerald-700'
+            }`}>
+              {isBifurcated ? year5.t1LoadingPercent : year5.existingLoadingPercent}%
+            </span>
           </div>
-          <span className="text-xs text-rose-700 font-semibold mt-1 block">
-            Severe thermal breakdown risk without upgrade
+          <span className="text-xs text-slate-600 font-semibold mt-1 block">
+            {isBifurcated 
+              ? (year5.t1LoadingPercent && year5.t1LoadingPercent <= 100 ? '✓ Relieved & Safe at Year 5' : 'Approaching threshold')
+              : (year5.existingLoadingPercent > 100 ? 'Severe thermal overload without bifurcation' : 'Safe')}
           </span>
         </div>
 
-        {/* Card 3: Proposed 200 kVA Transformer Loading */}
-        <div className="bg-emerald-50/60 p-4 rounded-xl border border-emerald-200 shadow-xs">
-          <span className="text-xs font-semibold text-emerald-800 uppercase tracking-wider block mb-1">
-            Proposed 200 kVA Loading
+        {/* Card 3: Additional Transformer T-2 Loading (or Proposed Upgrade) */}
+        <div className="bg-purple-50/60 p-4 rounded-xl border border-purple-200 shadow-xs">
+          <span className="text-xs font-semibold text-purple-900 uppercase tracking-wider block mb-1">
+            {isBifurcated ? `T-2 (${bifurcationConfig?.transformerCapacityKva} kVA) Loading` : 'Proposed 200 kVA Loading'}
           </span>
           <div className="flex items-baseline gap-2 font-mono">
-            <span className="text-xl font-bold text-emerald-700">{year0.proposedLoadingPercent}%</span>
-            <ArrowRight className="w-4 h-4 text-emerald-400" />
-            <span className="text-2xl font-bold text-emerald-800">{year5.proposedLoadingPercent}%</span>
+            <span className="text-xl font-bold text-purple-900">
+              {isBifurcated ? year0.t2LoadingPercent : year0.proposedLoadingPercent}%
+            </span>
+            <ArrowRight className="w-4 h-4 text-purple-400" />
+            <span className="text-2xl font-bold text-purple-950">
+              {isBifurcated ? year5.t2LoadingPercent : year5.proposedLoadingPercent}%
+            </span>
           </div>
-          <span className="text-xs text-emerald-700 font-semibold mt-1 block">
-            Comfortably within safe 80% boundary
+          <span className="text-xs text-purple-800 font-semibold mt-1 block">
+            {isBifurcated ? 'Optimal load center supply at Node ' + (bifurcationConfig?.bifurcationNodeId || '3.0') : 'WAPDA standard upgrade'}
           </span>
         </div>
 
@@ -148,7 +227,7 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
             <span className="text-2xl font-bold text-slate-900">{year5.annualEnergyLossKwh.toLocaleString()} kWh</span>
           </div>
           <span className="text-xs text-slate-500 mt-1 block">
-            +{(year5.annualEnergyLossKwh - year0.annualEnergyLossKwh).toLocaleString()} kWh/yr dissipation increase
+            +{(year5.annualEnergyLossKwh - year0.annualEnergyLossKwh).toLocaleString()} kWh/yr dissipation
           </span>
         </div>
       </div>
@@ -158,7 +237,7 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-amber-500" />
-            <span>Year-by-Year Energy Loss & Loading Trajectory</span>
+            <span>Multi-Year Load Growth & Transformer Loading Schedule</span>
           </h3>
           <span className="text-xs text-slate-500 font-mono">
             Growth Rate: {growthRatePercent}% compounded annually
@@ -166,23 +245,41 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 font-sans">
                 <th className="py-2.5 px-4">Timeline</th>
-                <th className="py-2.5 px-4 text-right">Feeder Demand (kVA)</th>
-                <th className="py-2.5 px-4 text-right">Feeder Current (A)</th>
-                <th className="py-2.5 px-4 text-right">100 kVA Loading (%)</th>
-                <th className="py-2.5 px-4 text-right">200 kVA Loading (%)</th>
-                <th className="py-2.5 px-4 text-right">Peak Line Loss (kW)</th>
-                <th className="py-2.5 px-4 text-right">Annual Energy Loss (kWh)</th>
-                <th className="py-2.5 px-4 text-right">Power Loss Ratio</th>
+                <th className="py-2.5 px-3 text-right">System Demand (kVA)</th>
+                <th className="py-2.5 px-3 text-right">Source Current (A)</th>
+                {isBifurcated ? (
+                  <>
+                    <th className="py-2.5 px-3 text-right bg-blue-50/70 text-blue-950 font-bold">
+                      T-1 Load (kVA / %)
+                    </th>
+                    <th className="py-2.5 px-3 text-right bg-purple-50/70 text-purple-950 font-bold">
+                      T-2 Load (kVA / %)
+                    </th>
+                    <th className="py-2.5 px-3 text-right bg-blue-50/70 text-blue-950">
+                      T-1 Line Loss (kW)
+                    </th>
+                    <th className="py-2.5 px-3 text-right bg-purple-50/70 text-purple-950">
+                      T-2 Line Loss (kW)
+                    </th>
+                  </>
+                ) : (
+                  <>
+                    <th className="py-2.5 px-3 text-right">100 kVA Loading (%)</th>
+                    <th className="py-2.5 px-3 text-right">200 kVA Loading (%)</th>
+                  </>
+                )}
+                <th className="py-2.5 px-3 text-right">Peak Power Loss (kW)</th>
+                <th className="py-2.5 px-3 text-right">Annual Energy (kWh)</th>
                 <th className="py-2.5 px-4 text-right">Annual Financial Cost</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
               {forecast.map((row) => {
-                const isOver = row.existingLoadingPercent > 100;
+                const isOver = (row.t1LoadingPercent || row.existingLoadingPercent) > 100;
                 return (
                   <tr 
                     key={row.year} 
@@ -194,32 +291,50 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
                       <span>{row.year === 0 ? 'Current Baseline' : `Year +${row.year}`}</span>
                       {row.year === 5 && (
                         <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 font-semibold">
-                          Paper Benchmark
+                          5-Year Horizon
                         </span>
                       )}
                     </td>
-                    <td className="py-2.5 px-4 text-right text-slate-900 font-bold">
+                    <td className="py-2.5 px-3 text-right text-slate-900 font-bold">
                       {row.demandKva}
                     </td>
-                    <td className="py-2.5 px-4 text-right text-slate-700">
+                    <td className="py-2.5 px-3 text-right text-slate-700">
                       {row.currentAmps.toFixed(1)} A
                     </td>
-                    <td className="py-2.5 px-4 text-right">
-                      <span className={`font-bold ${isOver ? 'text-rose-600' : 'text-slate-700'}`}>
-                        {row.existingLoadingPercent}%
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-semibold text-emerald-700">
-                      {row.proposedLoadingPercent}%
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-bold text-amber-600">
+
+                    {isBifurcated ? (
+                      <>
+                        <td className="py-2.5 px-3 text-right bg-blue-50/30 font-bold text-blue-950">
+                          {row.t1DemandKva} kVA ({row.t1LoadingPercent}%)
+                        </td>
+                        <td className="py-2.5 px-3 text-right bg-purple-50/30 font-bold text-purple-950">
+                          {row.t2DemandKva} kVA ({row.t2LoadingPercent}%)
+                        </td>
+                        <td className="py-2.5 px-3 text-right bg-blue-50/30 text-blue-900 font-semibold">
+                          {row.t1LineLossKw?.toFixed(3)} kW
+                        </td>
+                        <td className="py-2.5 px-3 text-right bg-purple-50/30 text-purple-900 font-semibold">
+                          {row.t2LineLossKw?.toFixed(3)} kW
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="py-2.5 px-3 text-right">
+                          <span className={`font-bold ${isOver ? 'text-rose-600' : 'text-slate-700'}`}>
+                            {row.existingLoadingPercent}%
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
+                          {row.proposedLoadingPercent}%
+                        </td>
+                      </>
+                    )}
+
+                    <td className="py-2.5 px-3 text-right font-bold text-amber-600">
                       {row.lineLossesKw.toFixed(3)} kW
                     </td>
-                    <td className="py-2.5 px-4 text-right font-bold text-slate-900">
+                    <td className="py-2.5 px-3 text-right font-bold text-slate-900">
                       {row.annualEnergyLossKwh.toLocaleString()}
-                    </td>
-                    <td className="py-2.5 px-4 text-right text-slate-600">
-                      {row.percentPowerLoss}%
                     </td>
                     <td className="py-2.5 px-4 text-right text-slate-800">
                       {feeder.currencySymbol} {Math.round(row.annualEnergyLossKwh * tariff).toLocaleString()}
@@ -236,17 +351,17 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
       <div className="bg-slate-900 text-white p-6 rounded-xl border border-slate-800">
         <h4 className="text-sm font-bold text-amber-400 flex items-center gap-2">
           <Info className="w-4 h-4" />
-          <span>Engineering Loss Acceleration Principle</span>
+          <span>Bifurcation & Quadratic Loss Reduction Principle</span>
         </h4>
         <div className="mt-3 text-xs text-slate-300 space-y-2 leading-relaxed">
           <p>
-            As demonstrated in Table 1 of the WAPDA study, while demand grows by 28% over 5 years (from 118 kVA to 151 kVA), feeder line losses do not grow linearly—they escalate by over <strong>63%</strong> (from 7.7 kW to 12.555 kW) and energy losses jump from 18,693 kWh to 30,445 kWh.
+            When a feeder is bifurcated and an additional transformer is installed at a load center, downstream current is removed from the primary backbone trunk:
           </p>
-          <p className="font-mono bg-slate-950 p-2.5 rounded border border-slate-800 text-amber-300">
-            P_loss(t) = 3 · [I(0) · (1 + g)^t]² · R = P_loss(0) · (1 + g)^(2t)
-          </p>
+          <div className="font-mono bg-slate-950 p-2.5 rounded border border-slate-800 text-amber-300">
+            P_loss,trunk = 3 · (I_trunk - I_bifurcated)² · R · L
+          </div>
           <p>
-            This quadratic growth makes proactive transformer replacement and conductor augmentation in Year 1 or 2 far more economical than delaying until post-overload burnout.
+            Because ohmic losses decrease with the <strong>square</strong> of the current, halving the current in upstream backbone spans reduces their line losses by up to <strong>75%</strong>, ensuring sustainable capacity through the entire 5-year growth window.
           </p>
         </div>
       </div>

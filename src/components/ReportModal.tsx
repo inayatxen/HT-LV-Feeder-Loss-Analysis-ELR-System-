@@ -334,7 +334,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
-                      <th className="py-2 px-2.5 text-center w-10">#</th>
+                      <th className="py-2 px-2 text-center w-8">#</th>
+                      <th className="py-2 px-2.5 text-center">Zone</th>
                       <th className="py-2 px-3 text-center">From Node</th>
                       <th className="py-2 px-3 text-center">To Node</th>
                       <th className="py-2 px-3 text-right">Length (km)</th>
@@ -347,7 +348,18 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
                     {summary.segmentResults.map((seg, idx) => (
                       <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                        <td className="py-1.5 px-2.5 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                        <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                        <td className="py-1.5 px-2.5 text-center font-sans">
+                          {seg.fedByTransformer === 'T2' ? (
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
+                              T-2 Added
+                            </span>
+                          ) : (
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
+                              T-1 Main
+                            </span>
+                          )}
+                        </td>
                         <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
                         <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
                         <td className="py-1.5 px-3 text-right font-medium">{seg.lengthKm.toFixed(3)}</td>
@@ -360,7 +372,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   </tbody>
                   <tfoot>
                     <tr className="bg-slate-900 text-white font-bold font-mono">
-                      <td colSpan={3} className="py-2 px-3 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
+                      <td colSpan={4} className="py-2 px-3 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
                         TOTALS
                       </td>
                       <td className="py-2 px-3 text-right text-amber-300">
@@ -403,6 +415,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   <thead>
                     <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
                       <th className="py-2 px-2 text-center w-8">#</th>
+                      <th className="py-2 px-2 text-center">Zone</th>
                       <th className="py-2 px-2 text-center">From</th>
                       <th className="py-2 px-2 text-center">To</th>
                       <th className="py-2 px-2 text-right">Length (km)</th>
@@ -420,6 +433,17 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     {summary.segmentResults.map((seg, idx) => (
                       <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
                         <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                        <td className="py-1.5 px-2 text-center font-sans">
+                          {seg.fedByTransformer === 'T2' ? (
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
+                              T-2 Added
+                            </span>
+                          ) : (
+                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
+                              T-1 Main
+                            </span>
+                          )}
+                        </td>
                         <td className="py-1.5 px-2 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
                         <td className="py-1.5 px-2 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
                         <td className="py-1.5 px-2 text-right">{seg.lengthKm.toFixed(3)}</td>
@@ -450,7 +474,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   </tbody>
                   <tfoot>
                     <tr className="bg-slate-900 text-white font-bold font-mono">
-                      <td colSpan={3} className="py-2.5 px-2 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
+                      <td colSpan={4} className="py-2.5 px-2 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
                         TOTALS & PEAKS
                       </td>
                       <td className="py-2.5 px-2 text-right text-amber-300">
@@ -505,20 +529,48 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
+                    {proposedSummary.bifurcationActive && (
+                      <tr className="bg-purple-50/40">
+                        <td className="p-2 font-sans font-semibold text-purple-900">Line Bifurcation & T-2 Substation</td>
+                        <td className="p-2 text-right text-slate-500">None (Single Radial)</td>
+                        <td className="p-2 text-right bg-purple-100/70 text-purple-950 font-bold">
+                          Split @ Node {proposedSummary.bifurcationNodeId} (+{proposedSummary.additionalTransformerKva} kVA T-2)
+                        </td>
+                        <td className="p-2 text-right font-bold text-purple-800">
+                          Relieved {proposedSummary.bifurcationReliefKva} kVA Load
+                        </td>
+                        <td className="p-2 text-right text-slate-400">N/A</td>
+                      </tr>
+                    )}
                     <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Transformer Capacity</td>
+                      <td className="p-2 font-sans font-semibold text-slate-800">Transformer Capacity (T-1)</td>
                       <td className="p-2 text-right">{currentTrfKva} kVA</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{summary.proposedTransformerKva} kVA</td>
-                      <td className="p-2 text-right font-sans text-emerald-700">Augmented +100 kVA</td>
+                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.existingTransformerKva} kVA</td>
+                      <td className="p-2 text-right font-sans text-emerald-700">
+                        {proposedSummary.bifurcationActive ? 'T-1 Relieved by T-2 Substation' : 'Augmented to Match Load'}
+                      </td>
                       <td className="p-2 text-right">{currentTrfKva} kVA</td>
                     </tr>
                     <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Transformer Loading</td>
+                      <td className="p-2 font-sans font-semibold text-slate-800">Main Transformer (T-1) Loading</td>
                       <td className="p-2 text-right font-bold text-rose-700">{currentTrfLoading}%</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{summary.proposedTransformerLoadingPercent}%</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">-{currentTrfLoading - summary.proposedTransformerLoadingPercent}% Overload Relieved</td>
+                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%</td>
+                      <td className="p-2 text-right font-bold text-emerald-700">
+                        -{currentTrfLoading - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)}% Overload Relieved
+                      </td>
                       <td className="p-2 text-right font-bold text-rose-800">151%</td>
                     </tr>
+                    {proposedSummary.bifurcationActive && (
+                      <tr className="bg-purple-50/20">
+                        <td className="p-2 font-sans font-semibold text-purple-900">Additional Transformer (T-2) Loading</td>
+                        <td className="p-2 text-right text-slate-400">Not Installed</td>
+                        <td className="p-2 text-right bg-purple-100/50 text-purple-950 font-bold">{proposedSummary.transformer2LoadingPercent}%</td>
+                        <td className="p-2 text-right font-bold text-purple-800">
+                          {proposedSummary.transformer2DemandKva} kVA on T-2 ({proposedSummary.additionalTransformerKva} kVA)
+                        </td>
+                        <td className="p-2 text-right text-slate-400">N/A</td>
+                      </tr>
+                    )}
                     <tr>
                       <td className="p-2 font-sans font-semibold text-slate-800">Peak Feeder Line Losses</td>
                       <td className="p-2 text-right">{summary.totalLineLossKw.toFixed(2)} kW</td>
