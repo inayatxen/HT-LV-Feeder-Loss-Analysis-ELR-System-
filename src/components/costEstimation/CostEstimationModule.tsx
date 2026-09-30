@@ -23,7 +23,7 @@ import { CostEstimationDashboard } from './CostEstimationDashboard';
 import { EstimateFormView } from './EstimateFormView';
 import { MaterialMasterView } from './MaterialMasterView';
 import { DesignFactorsView } from './DesignFactorsView';
-import { EstimatePrintReportModal } from './EstimatePrintReportModal';
+import { PrintAndPdfExportModal } from './print/PrintAndPdfExportModal';
 import { 
   Calculator, 
   Layers, 
@@ -54,6 +54,12 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
   
   // Printable modal state
   const [printEstimate, setPrintEstimate] = useState<CostEstimateRecord | null>(null);
+  const [printMode, setPrintMode] = useState<'preview' | 'print' | 'pdf'>('preview');
+
+  const handleOpenPrint = (est: CostEstimateRecord, mode: 'preview' | 'print' | 'pdf' = 'preview') => {
+    setPrintEstimate(est);
+    setPrintMode(mode);
+  };
 
   // User Role & Officer Name
   const [userRole, setUserRole] = useState<UserRole>(() => {
@@ -302,7 +308,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           onDeleteEstimate={handleDeleteEstimate}
           onDuplicateEstimate={handleDuplicateEstimate}
           onReviseEstimate={handleReviseEstimate}
-          onPrintEstimate={(est) => setPrintEstimate(est)}
+          onPrintEstimate={handleOpenPrint}
           userRole={userRole}
           userName={userName}
         />
@@ -321,7 +327,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
             setSelectedEstimate(null);
             setActiveTab('dashboard');
           }}
-          onPrintEstimate={(est) => setPrintEstimate(est)}
+          onPrintEstimate={handleOpenPrint}
         />
       )}
 
@@ -341,11 +347,12 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
         />
       )}
 
-      {/* Official Printable Report Modal */}
-      <EstimatePrintReportModal
+      {/* Official Print & PDF Export Center Modal */}
+      <PrintAndPdfExportModal
         isOpen={!!printEstimate}
         onClose={() => setPrintEstimate(null)}
         estimate={printEstimate}
+        initialMode={printMode}
       />
     </div>
   );

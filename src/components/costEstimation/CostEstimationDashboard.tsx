@@ -39,7 +39,7 @@ interface CostEstimationDashboardProps {
   onDeleteEstimate: (id: string) => void;
   onDuplicateEstimate: (estimate: CostEstimateRecord) => void;
   onReviseEstimate: (estimate: CostEstimateRecord) => void;
-  onPrintEstimate: (estimate: CostEstimateRecord) => void;
+  onPrintEstimate: (estimate: CostEstimateRecord, mode?: 'preview' | 'print' | 'pdf') => void;
   userRole: UserRole;
   userName: string;
 }
@@ -331,11 +331,29 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
 
                           <button
                             type="button"
-                            onClick={() => onPrintEstimate(est)}
+                            onClick={() => onPrintEstimate(est, 'preview')}
+                            className="p-1.5 text-slate-700 hover:text-slate-950 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                            title="Print Preview & Page Setup"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onPrintEstimate(est, 'print')}
                             className="p-1.5 text-amber-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                            title="Print Official BOQ Report"
+                            title="Print Document (System Print Dialog)"
                           >
                             <Printer className="w-3.5 h-3.5" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => onPrintEstimate(est, 'pdf')}
+                            className="p-1.5 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                            title="Save as PDF Document"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
                           </button>
 
                           <button

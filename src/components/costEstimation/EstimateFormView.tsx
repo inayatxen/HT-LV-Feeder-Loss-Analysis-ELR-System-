@@ -43,7 +43,9 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Check
+  Check,
+  Eye,
+  FileText
 } from 'lucide-react';
 
 interface EstimateFormViewProps {
@@ -55,7 +57,7 @@ interface EstimateFormViewProps {
   userName: string;
   onSaveEstimate: (estimate: CostEstimateRecord) => void;
   onCancel: () => void;
-  onPrintEstimate: (estimate: CostEstimateRecord) => void;
+  onPrintEstimate: (estimate: CostEstimateRecord, mode?: 'preview' | 'print' | 'pdf') => void;
 }
 
 export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
@@ -505,6 +507,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               <span>Save Draft</span>
             </button>
 
+            {/* Excel Export */}
             <button
               type="button"
               onClick={() => {
@@ -518,7 +521,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   charges: computedCharges,
                   calculationSteps,
                   auditTrail: [],
-                  createdAt: new Date().toISOString(),
+                  createdAt: initialEstimate?.createdAt || new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 };
                 exportEstimateToExcelWorkbook(currentRecord);
@@ -530,6 +533,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               <span>Export Excel</span>
             </button>
 
+            {/* 1. Print Preview Button */}
             <button
               type="button"
               onClick={() => {
@@ -543,15 +547,68 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   charges: computedCharges,
                   calculationSteps,
                   auditTrail: [],
-                  createdAt: new Date().toISOString(),
+                  createdAt: initialEstimate?.createdAt || new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 };
-                onPrintEstimate(currentRecord);
+                onPrintEstimate(currentRecord, 'preview');
               }}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+              title="Open Interactive Print Preview"
+            >
+              <Eye className="w-3.5 h-3.5 text-slate-600" />
+              <span>Print Preview</span>
+            </button>
+
+            {/* 2. Save as PDF Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const currentRecord: CostEstimateRecord = {
+                  id: initialEstimate?.id || 'preview',
+                  projectInfo,
+                  type: estimateType,
+                  status,
+                  lineDetails,
+                  items,
+                  charges: computedCharges,
+                  calculationSteps,
+                  auditTrail: [],
+                  createdAt: initialEstimate?.createdAt || new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+                onPrintEstimate(currentRecord, 'pdf');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-xs transition-colors cursor-pointer"
+              title="Generate and Save Formatted PDF Document"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Save as PDF</span>
+            </button>
+
+            {/* 3. Physical Print Document Button */}
+            <button
+              type="button"
+              onClick={() => {
+                const currentRecord: CostEstimateRecord = {
+                  id: initialEstimate?.id || 'preview',
+                  projectInfo,
+                  type: estimateType,
+                  status,
+                  lineDetails,
+                  items,
+                  charges: computedCharges,
+                  calculationSteps,
+                  auditTrail: [],
+                  createdAt: initialEstimate?.createdAt || new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                };
+                onPrintEstimate(currentRecord, 'print');
+              }}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-xs transition-colors cursor-pointer"
+              title="Open System Print Dialog (Windows/Network/USB Printers)"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Official Printable BOQ</span>
+              <span>Print</span>
             </button>
 
             {status === 'DRAFT' && (
@@ -1135,8 +1192,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </span>
               </div>
 
-              {/* Add Material Select Dropdown */}
-              <div className="flex items-center gap-2">
+              {/* Add Material Select Dropdown & Quick Export */}
+              <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={selectedMaterialToAdd}
                   onChange={(e) => {
@@ -1151,6 +1208,57 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     </option>
                   ))}
                 </select>
+
+                <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentRecord: CostEstimateRecord = {
+                        id: initialEstimate?.id || 'preview',
+                        projectInfo,
+                        type: estimateType,
+                        status,
+                        lineDetails,
+                        items,
+                        charges: computedCharges,
+                        calculationSteps,
+                        auditTrail: [],
+                        createdAt: initialEstimate?.createdAt || new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      };
+                      onPrintEstimate(currentRecord, 'print');
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                    title="Print Document"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-slate-600" />
+                    <span className="hidden sm:inline">Print</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const currentRecord: CostEstimateRecord = {
+                        id: initialEstimate?.id || 'preview',
+                        projectInfo,
+                        type: estimateType,
+                        status,
+                        lineDetails,
+                        items,
+                        charges: computedCharges,
+                        calculationSteps,
+                        auditTrail: [],
+                        createdAt: initialEstimate?.createdAt || new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      };
+                      onPrintEstimate(currentRecord, 'pdf');
+                    }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                    title="Save as PDF"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">PDF</span>
+                  </button>
+                </div>
               </div>
             </div>
 
