@@ -32,20 +32,34 @@ export function calculateQuantitiesForLine(
   const steps: CalculationStep[] = [];
   const itemMap = new Map<string, EstimateItem>();
 
-  const findMat = (code: string) => materials.find(m => {
-    if (!m.isActive) return false;
-    const cleanCode = code.replace(/^0+/, '').toUpperCase();
-    const cleanMatCode = m.code.replace(/^0+/, '').toUpperCase();
-    const cleanId = m.id.toUpperCase();
-    const query = code.toUpperCase();
-    return m.code === code || 
-           cleanMatCode === cleanCode || 
-           m.id === code || 
-           cleanId === query ||
-           cleanId.includes(query) ||
-           (cleanCode.length >= 4 && cleanMatCode.includes(cleanCode)) ||
-           (cleanMatCode.length >= 4 && cleanCode.includes(cleanMatCode));
-  });
+  const findMat = (code: string) => {
+    const query = code.trim().toUpperCase();
+    const cleanQuery = query.replace(/^0+/, '');
+    
+    // 1. Try exact code match (with or without leading zeros)
+    const exact = materials.find(m => {
+      if (!m.isActive) return false;
+      const mCode = m.code.trim().toUpperCase();
+      const cleanMCode = mCode.replace(/^0+/, '');
+      return mCode === query || cleanMCode === cleanQuery;
+    });
+    if (exact) return exact;
+
+    // 2. Try exact ID match
+    const byId = materials.find(m => {
+      if (!m.isActive) return false;
+      return m.id.toUpperCase() === query;
+    });
+    if (byId) return byId;
+
+    // 3. Fallback to name/spec search if query is text
+    return materials.find(m => {
+      if (!m.isActive) return false;
+      const name = (m.name || '').toUpperCase();
+      const spec = (m.specification || '').toUpperCase();
+      return name.includes(query) || spec.includes(query);
+    });
+  };
 
   // 1. HT Pole Calculation
   const htKm = Number(details.htLengthKm) || 0;
@@ -293,13 +307,13 @@ export function calculateQuantitiesForLine(
     }
 
     // -------------------------------------------------------------
-    // BOQ ITEM 5: 11 kv PIN Insulators = 9 (3 Intermediate Poles × 3 Phases)
+    // BOQ ITEM 5: 11KV Insulator Normal = 9 (3 Intermediate Poles × 3 Phases)
     // -------------------------------------------------------------
     const pinMat = findMat('05210') || findMat('5210') || findMat('INS-PIN-11');
     if (pinMat && pinCount > 0) {
       steps.push({
-        component: '11 kv PIN Insulators',
-        parameter: 'Porcelain Pin Insulator 11kV',
+        component: '11KV Insulator Normal',
+        parameter: '11KV Insulator Normal (Porcelain)',
         formula: isFourSpansLine ? '4 Spans HT Line = 9 Pin Insulators (3 Intermediate Poles × 3 Phases)' : 'Straight HT Poles × 3 Phases',
         calculation: isFourSpansLine ? `3 intermediate poles × 3 phases = 9 insulators` : `${Math.max(1, actualHtPoles - 2)} poles × 3 = ${pinCount} insulators`,
         resultQuantity: pinCount,
