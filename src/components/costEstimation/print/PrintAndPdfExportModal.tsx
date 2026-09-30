@@ -47,6 +47,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
   const [showWatermark, setShowWatermark] = useState(true);
   const [showAuditSteps, setShowAuditSteps] = useState(true);
   const [showSignatures, setShowSignatures] = useState(true);
+  const [sldScheme, setSldScheme] = useState<string>('All Combined');
 
   // Zoom & View State
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -350,6 +351,22 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
                 </select>
               </div>
 
+              {/* SLD Scheme Scope Selector */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-amber-300">SLD Scheme:</span>
+                <select
+                  value={sldScheme}
+                  onChange={(e) => setSldScheme(e.target.value)}
+                  className="bg-slate-900 border border-amber-500/80 rounded px-2.5 py-1 text-amber-300 font-bold focus:outline-none focus:ring-1 focus:ring-amber-400"
+                >
+                  <option value="All Combined">All Combined</option>
+                  <option value="Exist (Baseline Radial Feeder)">Exist (Baseline Radial Feeder)</option>
+                  <option value="Proposed-1 (T-1 Line Portion)">Proposed-1 (T-1 Line Portion)</option>
+                  <option value="Proposed-2 (T-2 Line Portion)">Proposed-2 (T-2 Line Portion)</option>
+                  <option value="3-Scheme Comparison (Exist vs P-1 vs P-2)">3-Scheme Comparison (Exist vs P-1 vs P-2)</option>
+                </select>
+              </div>
+
               {/* Margins */}
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-slate-300">Margins:</span>
@@ -457,6 +474,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
                 showWatermark={showWatermark}
                 showAuditSteps={showAuditSteps}
                 showSignatures={showSignatures}
+                sldScheme={sldScheme}
               />
             </div>
           </div>

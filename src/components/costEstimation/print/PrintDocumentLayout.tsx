@@ -14,6 +14,7 @@ export interface PrintDocumentLayoutProps {
   showWatermark?: boolean;
   showAuditSteps?: boolean;
   showSignatures?: boolean;
+  sldScheme?: string;
   id?: string;
 }
 
@@ -25,6 +26,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
   showWatermark = true,
   showAuditSteps = true,
   showSignatures = true,
+  sldScheme = 'All Combined',
   id = 'printable-estimate-content'
 }) => {
   const totalKm = (estimate.lineDetails.htLengthKm || 0) + (estimate.lineDetails.ltLengthKm || 0);
@@ -101,6 +103,17 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
             <span>Division: <strong>{estimate.projectInfo.division}</strong></span>
             <span>Sub-Div: <strong>{estimate.projectInfo.subDivision}</strong></span>
             <span>Status: <strong className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[11px]">{estimate.status}</strong></span>
+          </div>
+
+          {/* SLD Scheme Scope Banner */}
+          <div className="mt-2 flex items-center justify-between text-xs bg-amber-50 border border-amber-300 text-amber-900 px-3 py-1.5 rounded-md font-sans">
+            <span className="font-bold flex items-center gap-1.5">
+              <span>⚡ SLD Scheme Scope Variant:</span>
+              <span className="font-mono bg-amber-200/70 text-amber-950 px-2 py-0.5 rounded font-black">{sldScheme}</span>
+            </span>
+            <span className="text-[11px] text-amber-800 italic">
+              {sldScheme.includes('Comparison') ? 'Comparative multi-scheme technical evaluation' : 'Single scheme configuration layout'}
+            </span>
           </div>
         </header>
 
