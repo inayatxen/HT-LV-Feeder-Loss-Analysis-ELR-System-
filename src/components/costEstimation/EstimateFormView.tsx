@@ -500,6 +500,16 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
+              onClick={() => handleSave(status)}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-black text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-colors cursor-pointer"
+              title="Save project details, quantities, and BOQ to database"
+            >
+              <Save className="w-4 h-4" />
+              <span>Save Project</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleSave('DRAFT')}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
             >
