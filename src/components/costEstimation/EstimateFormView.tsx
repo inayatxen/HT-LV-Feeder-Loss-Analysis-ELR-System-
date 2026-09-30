@@ -171,8 +171,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       conductorSize: 'DOG',
       poleType: 'STEEL_STRUCTURE',
       poleHeightMeters: 11,
-      htPoles: 6,
-      staySets: 4,
+      htPoles: 4,
+      staySets: 2,
       schemeName: '4 Spans HT Line (ACSR Dog Conductor on 34.8ft Steel Structure Poles)'
     },
     {
@@ -197,8 +197,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       conductorSize: 'OSPREY',
       poleType: 'STEEL_STRUCTURE_45FT',
       poleHeightMeters: 13.7,
-      htPoles: 6,
-      staySets: 4,
+      htPoles: 4,
+      staySets: 2,
       schemeName: '4 Spans Heavy Span HT Line (Osprey Conductor on 45ft Steel Structure Towers)'
     },
     {
@@ -223,8 +223,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       conductorSize: 'RABBIT',
       poleType: 'SPUN_45FT',
       poleHeightMeters: 13.7,
-      htPoles: 6,
-      staySets: 4,
+      htPoles: 4,
+      staySets: 2,
       schemeName: '4 Spans 11kV HT Line (ACSR Rabbit Conductor on 45ft Spun PCC Poles)'
     },
     {
@@ -1189,6 +1189,11 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                         </td>
                         <td className="py-2 px-3 font-sans max-w-xs">
                           <span className="font-bold text-slate-900 block leading-tight">{item.description}</span>
+                          {item.calculationNotes && (
+                            <span className="text-[10px] text-blue-700 font-medium block mt-0.5 leading-tight">
+                              {item.calculationNotes}
+                            </span>
+                          )}
                           {item.manualOverride && (
                             <span className="text-[10px] text-amber-700 font-mono font-bold block mt-0.5">
                               [Manually Adjusted]

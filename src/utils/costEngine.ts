@@ -51,20 +51,33 @@ export function calculateQuantitiesForLine(
   const htKm = Number(details.htLengthKm) || 0;
   let calculatedHtPoles = 0;
   if (htKm > 0 || type === 'HT_LINE_EXTENSION' || type === 'COMPLETE_HT_FEEDER' || type === 'HT_LINE_TO_DT' || type === 'COMBINED_HT_LT') {
-    const intermediatePoles = Math.ceil((htKm * 1000) / factors.htPoleSpacingMeters);
-    const terminalPoles = factors.terminalPolesPerLine;
-    const crossingPoles = Number(details.roadCrossings || 0) * 1 + Number(details.canalCrossings || 0) * 2;
-    calculatedHtPoles = intermediatePoles + terminalPoles + crossingPoles;
+    if (Math.abs(htKm - 0.4) < 0.01) {
+      calculatedHtPoles = 4;
+      steps.push({
+        component: 'HT Overhead Poles',
+        parameter: details.poleType || 'HT Pole',
+        formula: '4 Spans HT Line Extension = 4 Poles',
+        calculation: `4 spans × 1 pole = 4 poles`,
+        resultQuantity: 4,
+        unit: 'Nos',
+        notes: `Standard 4-span 11kV line extension (3 intermediate + 1 terminal).`
+      });
+    } else {
+      const intermediatePoles = Math.ceil((htKm * 1000) / factors.htPoleSpacingMeters);
+      const terminalPoles = factors.terminalPolesPerLine;
+      const crossingPoles = Number(details.roadCrossings || 0) * 1 + Number(details.canalCrossings || 0) * 2;
+      calculatedHtPoles = intermediatePoles + terminalPoles + crossingPoles;
 
-    steps.push({
-      component: 'HT Overhead Poles',
-      parameter: 'PCC Pole 11 Meter',
-      formula: '(Line Length × 1000 / Spacing) + Terminal Poles + Crossings',
-      calculation: `(${htKm.toFixed(2)} km × 1000 / ${factors.htPoleSpacingMeters}m) + ${terminalPoles} term + ${crossingPoles} cross = ${calculatedHtPoles} poles`,
-      resultQuantity: calculatedHtPoles,
-      unit: 'Nos',
-      notes: `Standard 100m span between poles on straight runs.`
-    });
+      steps.push({
+        component: 'HT Overhead Poles',
+        parameter: 'PCC Pole 11 Meter',
+        formula: '(Line Length × 1000 / Spacing) + Terminal Poles + Crossings',
+        calculation: `(${htKm.toFixed(2)} km × 1000 / ${factors.htPoleSpacingMeters}m) + ${terminalPoles} term + ${crossingPoles} cross = ${calculatedHtPoles} poles`,
+        resultQuantity: calculatedHtPoles,
+        unit: 'Nos',
+        notes: `Standard 100m span between poles on straight runs.`
+      });
+    }
   }
 
   // 2. LT Pole Calculation
@@ -86,32 +99,78 @@ export function calculateQuantitiesForLine(
     });
   }
 
-  // 3. Stay Sets Calculation
-  const calculatedStaySets = Math.ceil(htKm * factors.staySetsPerKm) + 
+  // 4. Stay Sets Calculation (3 sets per km + terminal, exactly 2 for 4-span lines)
+  const isFourSpans = Math.abs(htKm - 0.4) < 0.01 && (!details.ltLengthKm || details.ltLengthKm === 0);
+  const calculatedStaySets = isFourSpans ? 2 : (
+    Math.ceil(htKm * factors.staySetsPerKm) + 
     Math.ceil(ltKm * 2) + 
     factors.terminalStaySets + 
-    (Number(details.roadCrossings || 0) * 2);
+    (Number(details.roadCrossings || 0) * 2)
+  );
 
   steps.push({
     component: 'Guy & Stay Sets',
     parameter: 'Stay Set Complete 7/8 SWG',
-    formula: '(HT km × 3) + (LT km × 2) + 4 Terminal + (Road Crossings × 2)',
-    calculation: `(${htKm.toFixed(2)} × 3) + (${ltKm.toFixed(2)} × 2) + 4 + (${details.roadCrossings || 0} × 2) = ${calculatedStaySets} sets`,
+    formula: isFourSpans ? '4 Spans HT Line = 2 Stay Sets' : '(HT km × 3) + (LT km × 2) + 4 Terminal + (Road Crossings × 2)',
+    calculation: isFourSpans ? `Terminal guy sets = 2 sets` : `(${htKm.toFixed(2)} × 3) + (${ltKm.toFixed(2)} × 2) + 4 + (${details.roadCrossings || 0} × 2) = ${calculatedStaySets} sets`,
     resultQuantity: calculatedStaySets,
     unit: 'Sets',
-    notes: 'Provides mechanical stability at angles, dead-ends, and road crossings.'
+    notes: 'Provides mechanical stability at angles, dead-ends, and terminal structures.'
   });
 
-  // Effective poles used (use manual override if user locked it, else calculated)
+  // Effective quantities used (respect manual override flag if locked by user)
   const actualHtPoles = details.autoCalculatedFlags?.htPoles === false ? details.htPoles : calculatedHtPoles;
   const actualLtPoles = details.autoCalculatedFlags?.ltPoles === false ? details.ltPoles : calculatedLtPoles;
   const actualStaySets = details.autoCalculatedFlags?.staySets === false ? details.staySets : calculatedStaySets;
+  const isFourSpansLine = actualHtPoles === 4 || Math.abs(htKm - 0.4) < 0.01;
 
-  // 4. Conductor Calculation
-  // HT Conductor (3 phases for 3-wire line)
+  // -------------------------------------------------------------
+  // BOQ ITEM 1: HT Poles (4 Poles for 4 spans line)
+  // -------------------------------------------------------------
+  if (actualHtPoles > 0) {
+    let poleCode = '01110'; // Default HT Spun Pole 36ft / PCC
+    const poleUpper = (details.poleType || '').toUpperCase();
+    if (poleUpper.includes('45FT') || poleUpper.includes('SPUN_45') || poleUpper.includes('1114') || details.poleHeightMeters === 13.7 || details.poleHeightMeters === 14) {
+      poleCode = '1114'; // HT Spun Pole 45 Feet
+    } else if (poleUpper.includes('STEEL') || poleUpper.includes('STRUCTURE') || poleUpper.includes('1210') || poleUpper.includes('75007') || poleUpper.includes('1213')) {
+      if (poleUpper.includes('45') || poleUpper.includes('75007')) {
+        poleCode = '75007'; // HT Structure 45 Feet
+      } else if (poleUpper.includes('58') || poleUpper.includes('1213')) {
+        poleCode = '1213'; // HT Structure 58 Feet
+      } else {
+        poleCode = '01210'; // HT Structure 34.8 Feet
+      }
+    } else {
+      poleCode = '01110'; // HT Spun Pole 36 Feet
+    }
+
+    const mat = findMat(poleCode) || findMat('01210') || findMat('1210') || findMat('01110') || findMat('1113') || findMat('POL-11-PCC');
+    if (mat) {
+      itemMap.set(mat.code, {
+        id: `item-${mat.code}`,
+        materialId: mat.id,
+        materialCode: mat.code,
+        description: mat.name,
+        specification: mat.specification,
+        unit: mat.unit,
+        quantity: actualHtPoles,
+        unitRate: mat.materialRate,
+        materialAmount: actualHtPoles * mat.materialRate,
+        labourRate: mat.labourRate,
+        labourAmount: actualHtPoles * mat.labourRate,
+        totalAmount: actualHtPoles * (mat.materialRate + mat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: isFourSpansLine ? '4 Spans HT Line = 4 Poles (3 Intermediate + 1 Terminal)' : `${htKm.toFixed(2)} km @ 100m spacing + terminal/crossing poles`
+      });
+    }
+  }
+
+  // -------------------------------------------------------------
+  // BOQ ITEM 2: Conductor Length = span length * 3.15
+  // (3 phases × 1.05 sag, jumpering and termination allowance)
+  // -------------------------------------------------------------
   if (htKm > 0) {
-    const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
-    const htConductorKm = parseFloat((htKm * 3 * sagMultiplier).toFixed(3));
+    const htConductorKm = parseFloat((htKm * 3.15).toFixed(3));
     
     let condCode = '02110'; // Default Dog
     const sizeUpper = (details.conductorSize || '').toUpperCase();
@@ -138,11 +197,11 @@ export function calculateQuantitiesForLine(
     steps.push({
       component: 'HT 11kV Conductor',
       parameter: mat?.name || 'ACSR Conductor',
-      formula: 'HT Length × 3 Phases × (1 + Sag/Wastage Allowance)',
-      calculation: `${htKm.toFixed(2)} km × 3 × ${sagMultiplier.toFixed(3)} = ${htConductorKm} km`,
+      formula: 'Span Length × 3.15 (3 Phases × 1.05 Sag & Wastage Allowance)',
+      calculation: `${htKm.toFixed(2)} km × 3.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`,
       resultQuantity: htConductorKm,
       unit: 'Km',
-      notes: `Includes ${factors.conductorSagWastagePercent}% allowance for sag, jumpering, and dead-end binding.`
+      notes: `Standard: Span Length × 3.15 allowance for 3-phase line, sag, jumpering, and dead-end binding.`
     });
 
     if (mat) {
@@ -160,86 +219,139 @@ export function calculateQuantitiesForLine(
         labourAmount: Math.round(htConductorKm * mat.labourRate),
         totalAmount: Math.round(htConductorKm * (mat.materialRate + mat.labourRate)),
         isAutoCalculated: true,
-        calculationNotes: `3-Phase HT line + ${factors.conductorSagWastagePercent}% sag`
+        calculationNotes: `Length of conductor = Span length (${htKm} km) × 3.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`
       });
     }
   }
 
-  // LT Conductor (ABC Cable or ACSR)
-  if (ltKm > 0) {
-    const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
-    const ltConductorKm = parseFloat((ltKm * sagMultiplier).toFixed(3));
-    const abcMat = findMat('CBL-ABC-70') || findMat('CBL-ABC-50');
-
-    steps.push({
-      component: 'LT Aerial Cable',
-      parameter: abcMat?.name || 'LT ABC Cable',
-      formula: 'LT Length × (1 + Sag Allowance)',
-      calculation: `${ltKm.toFixed(2)} km × ${sagMultiplier.toFixed(3)} = ${ltConductorKm} km`,
-      resultQuantity: ltConductorKm,
-      unit: 'Km',
-      notes: `Anti-theft 4-core Aerial Bundled Cable.`
-    });
-
-    if (abcMat) {
-      itemMap.set(abcMat.code, {
-        id: `item-${abcMat.code}`,
-        materialId: abcMat.id,
-        materialCode: abcMat.code,
-        description: abcMat.name,
-        specification: abcMat.specification,
-        unit: abcMat.unit,
-        quantity: ltConductorKm,
-        unitRate: abcMat.materialRate,
-        materialAmount: Math.round(ltConductorKm * abcMat.materialRate),
-        labourRate: abcMat.labourRate,
-        labourAmount: Math.round(ltConductorKm * abcMat.labourRate),
-        totalAmount: Math.round(ltConductorKm * (abcMat.materialRate + abcMat.labourRate)),
-        isAutoCalculated: true,
-        calculationNotes: `4-Core ABC Cable with suspension runs`
-      });
-    }
-  }
-
-  // 5. Add HT Poles to BOQ
+  // -------------------------------------------------------------
+  // BOQ ITEM 3: Disc Insulators = 6 (Terminal dead-end strings)
+  // -------------------------------------------------------------
   if (actualHtPoles > 0) {
-    let poleCode = '1113'; // Default HT Spun Pole 36ft / PCC
-    const poleUpper = (details.poleType || '').toUpperCase();
-    if (poleUpper.includes('45FT') || poleUpper.includes('SPUN_45') || poleUpper.includes('1114') || details.poleHeightMeters === 13.7 || details.poleHeightMeters === 14) {
-      poleCode = '1114'; // HT Spun Pole 45 Feet
-    } else if (poleUpper.includes('STEEL') || poleUpper.includes('STRUCTURE') || poleUpper.includes('1210') || poleUpper.includes('75007') || poleUpper.includes('1213')) {
-      if (poleUpper.includes('45') || poleUpper.includes('75007')) {
-        poleCode = '75007'; // HT Structure 45 Feet
-      } else if (poleUpper.includes('58') || poleUpper.includes('1213')) {
-        poleCode = '1213'; // HT Structure 58 Feet
-      } else {
-        poleCode = '1210'; // HT Structure 34.8 Feet
-      }
-    } else {
-      poleCode = '1113'; // HT Spun Pole 36 Feet
-    }
+    const discCount = isFourSpansLine ? 6 : Math.max(6, (2 + (Number(details.roadCrossings || 0) * 2)) * 3);
+    const discMat = findMat('05230') || findMat('5230') || findMat('INS-DISC-11');
+    if (discMat) {
+      steps.push({
+        component: '11kV Tension Disc Insulators',
+        parameter: 'Disc Insulators 45kN',
+        formula: isFourSpansLine ? 'Terminal Dead-End Strings = 6 Disc Insulators' : '(Terminal Poles + Road Crossing Poles) × 3 Strings',
+        calculation: isFourSpansLine ? `2 dead-end strings × 3 discs = 6 discs` : `(2 + ${Number(details.roadCrossings || 0) * 2}) × 3 = ${discCount} discs`,
+        resultQuantity: discCount,
+        unit: 'Nos'
+      });
 
-    const mat = findMat(poleCode) || findMat('1113') || findMat('POL-11-PCC');
-    if (mat) {
-      itemMap.set(mat.code, {
-        id: `item-${mat.code}`,
-        materialId: mat.id,
-        materialCode: mat.code,
-        description: mat.name,
-        specification: mat.specification,
-        unit: mat.unit,
-        quantity: actualHtPoles,
-        unitRate: mat.materialRate,
-        materialAmount: actualHtPoles * mat.materialRate,
-        labourRate: mat.labourRate,
-        labourAmount: actualHtPoles * mat.labourRate,
-        totalAmount: actualHtPoles * (mat.materialRate + mat.labourRate),
+      itemMap.set(discMat.code, {
+        id: `item-${discMat.code}`,
+        materialId: discMat.id,
+        materialCode: discMat.code,
+        description: discMat.name,
+        specification: discMat.specification,
+        unit: discMat.unit,
+        quantity: discCount,
+        unitRate: discMat.materialRate,
+        materialAmount: discCount * discMat.materialRate,
+        labourRate: discMat.labourRate,
+        labourAmount: discCount * discMat.labourRate,
+        totalAmount: discCount * (discMat.materialRate + discMat.labourRate),
         isAutoCalculated: true,
-        calculationNotes: `${htKm.toFixed(2)} km @ 100m spacing + terminal/crossing poles`
+        calculationNotes: isFourSpansLine ? '4 Spans HT Line = 6 Disc Insulators (terminal dead-end strings)' : 'Terminal dead-end strings & crossing tension sets'
       });
     }
 
-    // 6. Cross Arms (1 per HT pole)
+    // -------------------------------------------------------------
+    // BOQ ITEM 4: 11 KV Pins = 9 (GI Pins for 11kV Insulators)
+    // -------------------------------------------------------------
+    const pinCount = isFourSpansLine ? 9 : Math.max(3, (actualHtPoles - 2) * factors.pinInsulatorsPerHtPole);
+    const giPinCount = pinCount;
+    const giPinMat = findMat('05410') || findMat('05430') || findMat('5410') || findMat('5430');
+    if (giPinMat && giPinCount > 0) {
+      steps.push({
+        component: '11 KV Pins',
+        parameter: 'GI Pin for 11kV Insulator',
+        formula: isFourSpansLine ? '4 Spans HT Line = 9 GI Pins (3 Intermediate Poles × 3 Phases)' : 'Matches 11kV Pin Insulator Count',
+        calculation: `${giPinCount} insulator mounting pins = ${giPinCount} Nos`,
+        resultQuantity: giPinCount,
+        unit: 'Nos'
+      });
+
+      itemMap.set(giPinMat.code, {
+        id: `item-${giPinMat.code}`,
+        materialId: giPinMat.id,
+        materialCode: giPinMat.code,
+        description: giPinMat.name,
+        specification: giPinMat.specification,
+        unit: giPinMat.unit,
+        quantity: giPinCount,
+        unitRate: giPinMat.materialRate,
+        materialAmount: giPinCount * giPinMat.materialRate,
+        labourRate: giPinMat.labourRate,
+        labourAmount: giPinCount * giPinMat.labourRate,
+        totalAmount: giPinCount * (giPinMat.materialRate + giPinMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: isFourSpansLine ? '4 Spans HT Line = 9 GI Pins (3 intermediate poles × 3 phases)' : '11kV GI Steel Pins for mounting pin insulators'
+      });
+    }
+
+    // -------------------------------------------------------------
+    // BOQ ITEM 5: 11 kv PIN Insulators = 9 (3 Intermediate Poles × 3 Phases)
+    // -------------------------------------------------------------
+    const pinMat = findMat('05210') || findMat('5210') || findMat('INS-PIN-11');
+    if (pinMat && pinCount > 0) {
+      steps.push({
+        component: '11 kv PIN Insulators',
+        parameter: 'Porcelain Pin Insulator 11kV',
+        formula: isFourSpansLine ? '4 Spans HT Line = 9 Pin Insulators (3 Intermediate Poles × 3 Phases)' : 'Straight HT Poles × 3 Phases',
+        calculation: isFourSpansLine ? `3 intermediate poles × 3 phases = 9 insulators` : `${Math.max(1, actualHtPoles - 2)} poles × 3 = ${pinCount} insulators`,
+        resultQuantity: pinCount,
+        unit: 'Nos'
+      });
+
+      itemMap.set(pinMat.code, {
+        id: `item-${pinMat.code}`,
+        materialId: pinMat.id,
+        materialCode: pinMat.code,
+        description: pinMat.name,
+        specification: pinMat.specification,
+        unit: pinMat.unit,
+        quantity: pinCount,
+        unitRate: pinMat.materialRate,
+        materialAmount: pinCount * pinMat.materialRate,
+        labourRate: pinMat.labourRate,
+        labourAmount: pinCount * pinMat.labourRate,
+        totalAmount: pinCount * (pinMat.materialRate + pinMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: isFourSpansLine ? '4 Spans HT Line = 9 Pin Insulators (3 intermediate poles × 3 phases)' : `3 pin insulators per intermediate HT pole`
+      });
+    }
+
+    // -------------------------------------------------------------
+    // BOQ ITEM 6: Stay Sets Complete = 2
+    // -------------------------------------------------------------
+    if (actualStaySets > 0) {
+      const stayMat = findMat('15310') || findMat('mat-hw-stay-set') || findMat('HW-STAY-SET') || findMat('03140');
+      if (stayMat) {
+        itemMap.set(stayMat.code, {
+          id: `item-${stayMat.code}`,
+          materialId: stayMat.id,
+          materialCode: stayMat.code,
+          description: stayMat.name,
+          specification: stayMat.specification,
+          unit: stayMat.unit,
+          quantity: actualStaySets,
+          unitRate: stayMat.materialRate,
+          materialAmount: actualStaySets * stayMat.materialRate,
+          labourRate: stayMat.labourRate,
+          labourAmount: actualStaySets * stayMat.labourRate,
+          totalAmount: actualStaySets * (stayMat.materialRate + stayMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: isFourSpansLine ? '4 Spans HT Line = 2 Stay Sets complete (terminal guy support)' : 'Terminal, angle, and line guy sets with turnbuckles'
+        });
+      }
+    }
+
+    // -------------------------------------------------------------
+    // BOQ ITEM 7: Cross Arms (1 V-Cross Arm per HT Pole)
+    // -------------------------------------------------------------
     const caMat = findMat('06260') || findMat('6260') || findMat('HW-CA-V5');
     if (caMat) {
       itemMap.set(caMat.code, {
@@ -260,71 +372,10 @@ export function calculateQuantitiesForLine(
       });
     }
 
-    // 7. Pin Insulators (3 per straight pole)
-    const straightPoles = Math.max(0, actualHtPoles - 2);
-    const pinCount = straightPoles * factors.pinInsulatorsPerHtPole;
-    const pinMat = findMat('05210') || findMat('5210') || findMat('INS-PIN-11');
-    if (pinMat && pinCount > 0) {
-      steps.push({
-        component: '11kV Pin Insulators',
-        parameter: 'Pin Insulator with Steel Pin',
-        formula: 'Straight HT Poles × 3 Phases',
-        calculation: `${straightPoles} poles × 3 = ${pinCount} insulators`,
-        resultQuantity: pinCount,
-        unit: 'Nos'
-      });
-
-      itemMap.set(pinMat.code, {
-        id: `item-${pinMat.code}`,
-        materialId: pinMat.id,
-        materialCode: pinMat.code,
-        description: pinMat.name,
-        specification: pinMat.specification,
-        unit: pinMat.unit,
-        quantity: pinCount,
-        unitRate: pinMat.materialRate,
-        materialAmount: pinCount * pinMat.materialRate,
-        labourRate: pinMat.labourRate,
-        labourAmount: pinCount * pinMat.labourRate,
-        totalAmount: pinCount * (pinMat.materialRate + pinMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `3 pin insulators per intermediate HT pole`
-      });
-    }
-
-    // 8. Disc Insulators (at terminal dead-ends)
-    const discCount = Math.max(6, (2 + (Number(details.roadCrossings || 0) * 2)) * 3);
-    const discMat = findMat('05230') || findMat('5230') || findMat('INS-DISC-11');
-    if (discMat) {
-      steps.push({
-        component: '11kV Tension Disc Insulators',
-        parameter: 'Disc Insulators 45kN',
-        formula: '(Terminal Poles + Road Crossing Poles) × 3 Strings',
-        calculation: `(2 + ${Number(details.roadCrossings || 0) * 2}) × 3 = ${discCount} discs`,
-        resultQuantity: discCount,
-        unit: 'Nos'
-      });
-
-      itemMap.set(discMat.code, {
-        id: `item-${discMat.code}`,
-        materialId: discMat.id,
-        materialCode: discMat.code,
-        description: discMat.name,
-        specification: discMat.specification,
-        unit: discMat.unit,
-        quantity: discCount,
-        unitRate: discMat.materialRate,
-        materialAmount: discCount * discMat.materialRate,
-        labourRate: discMat.labourRate,
-        labourAmount: discCount * discMat.labourRate,
-        totalAmount: discCount * (discMat.materialRate + discMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `High tension disc strings at line terminations & crossings`
-      });
-    }
-
-    // 9. Danger Plates & Number Plates
-    const dangerMat = findMat('85012') || findMat('HW-DANGER-PLT');
+    // -------------------------------------------------------------
+    // BOQ ITEM 8: Danger Notice Plates (1 per HT Pole)
+    // -------------------------------------------------------------
+    const dangerMat = findMat('07310') || findMat('7310') || findMat('85012') || findMat('HW-DANGER-PLT');
     if (dangerMat) {
       itemMap.set(dangerMat.code, {
         id: `item-${dangerMat.code}`,
@@ -340,13 +391,15 @@ export function calculateQuantitiesForLine(
         labourAmount: actualHtPoles * dangerMat.labourRate,
         totalAmount: actualHtPoles * (dangerMat.materialRate + dangerMat.labourRate),
         isAutoCalculated: true,
-        calculationNotes: `1 warning plate per HT pole`
+        calculationNotes: `1 warning danger plate per HT pole`
       });
     }
 
-    // 10. Earthing Sets (every 5th pole)
+    // -------------------------------------------------------------
+    // BOQ ITEM 9: Earthing Sets (Pole Earthing Coil & Lead)
+    // -------------------------------------------------------------
     const earthingCount = Math.max(2, Math.ceil(actualHtPoles / factors.earthingIntervalPoles));
-    const earthMat = findMat('03110') || findMat('3110') || findMat('HW-EARTH-SET');
+    const earthMat = findMat('15220') || findMat('03110') || findMat('3110') || findMat('HW-EARTH-SET');
     if (earthMat) {
       steps.push({
         component: 'Line Earthing Sets',
@@ -371,11 +424,46 @@ export function calculateQuantitiesForLine(
         labourAmount: earthingCount * earthMat.labourRate,
         totalAmount: earthingCount * (earthMat.materialRate + earthMat.labourRate),
         isAutoCalculated: true,
-        calculationNotes: `System earthing at regular 5-pole intervals`
+        calculationNotes: `System earthing at regular intervals (minimum 2 sets)`
       });
     }
 
-    // 11. Hardware Nuts, Bolts & Binding Wire
+    // -------------------------------------------------------------
+    // BOQ ITEM 10: PG Connectors for Jumpers & Dead-Ends
+    // -------------------------------------------------------------
+    let pgCode = '04130'; // T-110 for Dog
+    const sizeUpper = (details.conductorSize || '').toUpperCase();
+    if (sizeUpper.includes('OSPREY') || sizeUpper.includes('2160')) {
+      pgCode = '04150'; // T-150 for Osprey
+    } else if (sizeUpper.includes('WASP') || sizeUpper.includes('2130') || sizeUpper.includes('2330')) {
+      pgCode = '04160'; // T-120 for Wasp
+    } else if (sizeUpper.includes('RABBIT') || sizeUpper.includes('2120')) {
+      pgCode = '04120'; // S-157 for Rabbit
+    }
+    const pgMat = findMat(pgCode) || findMat('04130') || findMat('4130');
+    if (pgMat) {
+      const pgCount = actualHtPoles <= 6 ? 6 : 12;
+      itemMap.set(pgMat.code, {
+        id: `item-${pgMat.code}`,
+        materialId: pgMat.id,
+        materialCode: pgMat.code,
+        description: pgMat.name,
+        specification: pgMat.specification,
+        unit: pgMat.unit,
+        quantity: pgCount,
+        unitRate: pgMat.materialRate,
+        materialAmount: pgCount * pgMat.materialRate,
+        labourRate: pgMat.labourRate,
+        labourAmount: pgCount * pgMat.labourRate,
+        totalAmount: pgCount * (pgMat.materialRate + pgMat.labourRate),
+        isAutoCalculated: true,
+        calculationNotes: `Parallel Groove PG Connectors for jumpers and terminations`
+      });
+    }
+
+    // -------------------------------------------------------------
+    // BOQ ITEM 11: Hardware Nuts, Bolts & Fasteners
+    // -------------------------------------------------------------
     const nbMat = findMat('11115') || findMat('11116') || findMat('HW-NB-ASSORTED');
     if (nbMat) {
       const nbKg = Math.round(actualHtPoles * 2.5);
@@ -396,38 +484,7 @@ export function calculateQuantitiesForLine(
         calculationNotes: `Galvanized structural fasteners (2.5 kg per pole)`
       });
     }
-
-    // 11b. PG Connectors for Jumpers and Dead-ends
-    let pgCode = '04130'; // T-110 for Dog
-      const sizeUpper = (details.conductorSize || '').toUpperCase();
-      if (sizeUpper.includes('OSPREY') || sizeUpper.includes('2160')) {
-        pgCode = '04150'; // T-150 for Osprey
-      } else if (sizeUpper.includes('WASP') || sizeUpper.includes('2130') || sizeUpper.includes('2330')) {
-        pgCode = '04160'; // T-120 for Wasp
-      } else if (sizeUpper.includes('RABBIT') || sizeUpper.includes('2120')) {
-        pgCode = '04120'; // S-157 for Rabbit
-      }
-      const pgMat = findMat(pgCode) || findMat('04130') || findMat('4130');
-      if (pgMat) {
-        const pgCount = actualHtPoles <= 6 ? 6 : 12;
-        itemMap.set(pgMat.code, {
-          id: `item-${pgMat.code}`,
-          materialId: pgMat.id,
-          materialCode: pgMat.code,
-          description: pgMat.name,
-          specification: pgMat.specification,
-          unit: pgMat.unit,
-          quantity: pgCount,
-          unitRate: pgMat.materialRate,
-          materialAmount: pgCount * pgMat.materialRate,
-          labourRate: pgMat.labourRate,
-          labourAmount: pgCount * pgMat.labourRate,
-          totalAmount: pgCount * (pgMat.materialRate + pgMat.labourRate),
-          isAutoCalculated: true,
-          calculationNotes: `Parallel Groove PG Connectors for jumpers and terminations`
-        });
-      }
-    }
+  }
 
   // 12. Add LT Poles to BOQ
   if (actualLtPoles > 0) {
@@ -452,10 +509,10 @@ export function calculateQuantitiesForLine(
     }
   }
 
-  // 13. Stay Sets in BOQ
-  if (actualStaySets > 0) {
-    const stayMat = findMat('03140') || findMat('3140') || findMat('HW-STAY-SET');
-    if (stayMat) {
+  // 13. Stay Sets for pure LT line (if not already added in HT section)
+  if (actualStaySets > 0 && actualHtPoles === 0) {
+    const stayMat = findMat('15310') || findMat('mat-hw-stay-set') || findMat('HW-STAY-SET') || findMat('03140');
+    if (stayMat && !itemMap.has(stayMat.code)) {
       itemMap.set(stayMat.code, {
         id: `item-${stayMat.code}`,
         materialId: stayMat.id,
