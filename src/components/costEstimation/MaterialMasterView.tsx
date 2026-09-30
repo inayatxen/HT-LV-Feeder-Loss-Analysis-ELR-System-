@@ -23,8 +23,10 @@ import {
   Calendar,
   AlertCircle,
   Copy,
-  Check
+  Check,
+  FileSpreadsheet
 } from 'lucide-react';
+import { WAPDA_SCHEDULE_RAW, lookupWapdaScheduleItem } from '../../data/wapdaScheduleRates';
 
 interface MaterialMasterViewProps {
   materials: MaterialItem[];
@@ -44,6 +46,8 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
   const [viewingHistoryMaterial, setViewingHistoryMaterial] = useState<MaterialItem | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleSearch, setScheduleSearch] = useState('');
 
   // Edit material state
   const [editCode, setEditCode] = useState<string>('');
@@ -206,7 +210,17 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowScheduleModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg shadow-2xs transition-colors cursor-pointer"
+            title="Browse official WAPDA Approved Schedule of Rates (Price List)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Official Price List (AUP)</span>
+          </button>
+
           <button
             type="button"
             onClick={onResetFactoryRates}
@@ -869,6 +883,132 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                   Close
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Official WAPDA Schedule Modal */}
+      {showScheduleModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-4 bg-emerald-950 text-white flex items-center justify-between border-b border-emerald-900">
+              <div className="flex items-center gap-2.5">
+                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-sm">Official WAPDA / DISCO Approved Schedule of Rates (AUP)</h3>
+                  <p className="text-[11px] text-emerald-300 font-mono">Store Master Schedule (400+ Standard Line Items)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowScheduleModal(false)}
+                className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-emerald-900 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={scheduleSearch}
+                  onChange={(e) => setScheduleSearch(e.target.value)}
+                  placeholder="Filter official schedule by store code (e.g. 02110, 01110) or description (e.g. Dog, Wasp, Pole)..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="text-xs text-slate-500 font-mono">
+                {WAPDA_SCHEDULE_RAW.filter(([sc, desc]) => 
+                  !scheduleSearch || sc.toLowerCase().includes(scheduleSearch.toLowerCase()) || desc.toLowerCase().includes(scheduleSearch.toLowerCase())
+                ).length} of {WAPDA_SCHEDULE_RAW.length} Items Listed
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0">
+                    <th className="py-2.5 px-3 w-12 text-center">Sr.</th>
+                    <th className="py-2.5 px-3 w-28">Store Code</th>
+                    <th className="py-2.5 px-4">Standard WAPDA Description</th>
+                    <th className="py-2.5 px-3 text-center w-20">Unit</th>
+                    <th className="py-2.5 px-4 text-right w-36">Approved Unit Price (PKR)</th>
+                    <th className="py-2.5 px-3 text-center w-28">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono">
+                  {WAPDA_SCHEDULE_RAW.filter(([sc, desc]) => 
+                    !scheduleSearch || sc.toLowerCase().includes(scheduleSearch.toLowerCase()) || desc.toLowerCase().includes(scheduleSearch.toLowerCase())
+                  ).map(([sc, desc, um, aup], idx) => {
+                    const isExisting = materials.some(m => m.code === sc || m.code.replace(/^0+/, '') === sc.replace(/^0+/, ''));
+                    return (
+                      <tr key={sc} className="hover:bg-emerald-50/50 transition-colors">
+                        <td className="py-2 px-3 text-center text-slate-400 text-[11px] font-sans">{idx + 1}</td>
+                        <td className="py-2 px-3">
+                          <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-xs font-bold text-slate-900">
+                            {sc}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 font-sans font-medium text-slate-800">
+                          {desc}
+                        </td>
+                        <td className="py-2 px-3 text-center text-slate-600 font-sans font-semibold">
+                          {um || '-'}
+                        </td>
+                        <td className="py-2 px-4 text-right font-bold text-emerald-800">
+                          {aup > 0 ? `Rs. ${aup.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}` : 'N/A'}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          {isExisting ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 font-sans font-semibold">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              Active
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewMaterialForm({
+                                  code: sc,
+                                  name: desc,
+                                  category: sc.startsWith('01') ? 'POLES' : sc.startsWith('02') || sc.startsWith('14') ? 'CONDUCTORS' : sc.startsWith('05') ? 'INSULATORS' : sc.startsWith('08') ? 'TRANSFORMERS' : 'HARDWARE',
+                                  unit: um || 'EA',
+                                  specification: `Official WAPDA Store Code ${sc} - ${desc}`,
+                                  voltageApplicability: 'HT',
+                                  defaultQtyFactor: 1,
+                                  materialRate: aup,
+                                  labourRate: Math.round(aup * 0.15),
+                                  installationRate: Math.round(aup * 0.08),
+                                  transportationRate: Math.round(aup * 0.04),
+                                  effectiveFrom: new Date().toISOString().split('T')[0]
+                                });
+                                setShowScheduleModal(false);
+                                setIsAddingNew(true);
+                              }}
+                              className="px-2 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded transition-colors cursor-pointer"
+                            >
+                              + Add to Master
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowScheduleModal(false)}
+                className="px-4 py-1.5 text-xs font-bold text-slate-800 bg-white hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              >
+                Close Price List
+              </button>
             </div>
           </div>
         </div>

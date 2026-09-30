@@ -69,13 +69,23 @@ export async function initCostDatabase(): Promise<{
       existingMap.set(initial.id, initial);
     } else {
       const existing = existingMap.get(initial.id)!;
-      if (existing.code !== initial.code || existing.name !== initial.name || existing.category !== initial.category) {
-        const updated = {
+      if (
+        existing.code !== initial.code || 
+        existing.materialRate !== initial.materialRate ||
+        existing.name !== initial.name || 
+        existing.category !== initial.category ||
+        existing.specification !== initial.specification
+      ) {
+        const updated: MaterialItem = {
           ...existing,
           code: initial.code,
           name: initial.name,
           category: initial.category,
           unit: initial.unit || existing.unit,
+          materialRate: initial.materialRate,
+          labourRate: initial.labourRate ?? existing.labourRate,
+          installationRate: initial.installationRate ?? existing.installationRate,
+          transportationRate: initial.transportationRate ?? existing.transportationRate,
           specification: initial.specification || existing.specification,
           voltageApplicability: initial.voltageApplicability || existing.voltageApplicability
         };

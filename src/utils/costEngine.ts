@@ -32,7 +32,20 @@ export function calculateQuantitiesForLine(
   const steps: CalculationStep[] = [];
   const itemMap = new Map<string, EstimateItem>();
 
-  const findMat = (code: string) => materials.find(m => (m.code === code || m.id === code || m.code.includes(code) || code.includes(m.code)) && m.isActive);
+  const findMat = (code: string) => materials.find(m => {
+    if (!m.isActive) return false;
+    const cleanCode = code.replace(/^0+/, '').toUpperCase();
+    const cleanMatCode = m.code.replace(/^0+/, '').toUpperCase();
+    const cleanId = m.id.toUpperCase();
+    const query = code.toUpperCase();
+    return m.code === code || 
+           cleanMatCode === cleanCode || 
+           m.id === code || 
+           cleanId === query ||
+           cleanId.includes(query) ||
+           (cleanCode.length >= 4 && cleanMatCode.includes(cleanCode)) ||
+           (cleanMatCode.length >= 4 && cleanCode.includes(cleanMatCode));
+  });
 
   // 1. HT Pole Calculation
   const htKm = Number(details.htLengthKm) || 0;
@@ -100,25 +113,27 @@ export function calculateQuantitiesForLine(
     const sagMultiplier = 1 + (factors.conductorSagWastagePercent / 100);
     const htConductorKm = parseFloat((htKm * 3 * sagMultiplier).toFixed(3));
     
-    let condCode = '2110'; // Default Dog
+    let condCode = '02110'; // Default Dog
     const sizeUpper = (details.conductorSize || '').toUpperCase();
-    if (sizeUpper.includes('OSPREY') || sizeUpper.includes('OSPRAY') || sizeUpper === '2160') {
-      condCode = '2160';
-    } else if (sizeUpper.includes('WASP') || sizeUpper === '2130') {
-      condCode = '2130';
-    } else if (sizeUpper.includes('PANTHER')) {
-      condCode = '2160';
-    } else if (sizeUpper.includes('RABBIT') || sizeUpper === '2120') {
-      condCode = '2120';
-    } else if (sizeUpper.includes('ANT') || sizeUpper === '2340') {
-      condCode = '2340';
+    if (sizeUpper.includes('OSPREY') || sizeUpper.includes('OSPRAY') || sizeUpper === '2160' || sizeUpper === '02160') {
+      condCode = '02160';
+    } else if (sizeUpper.includes('WASP') || sizeUpper === '2130' || sizeUpper === '02330' || sizeUpper === '2330') {
+      condCode = '02330';
+    } else if (sizeUpper.includes('PANTHER') || sizeUpper === '02150' || sizeUpper === '2150') {
+      condCode = '02150';
+    } else if (sizeUpper.includes('RABBIT') || sizeUpper === '2120' || sizeUpper === '02120') {
+      condCode = '02120';
+    } else if (sizeUpper.includes('ANT') || sizeUpper === '2340' || sizeUpper === '02340') {
+      condCode = '02340';
+    } else if (sizeUpper.includes('GOPHER') || sizeUpper === '02130') {
+      condCode = '02130';
     } else if (sizeUpper.includes('INSULATED') || sizeUpper === '2361') {
       condCode = '2361';
     } else {
-      condCode = '2110';
+      condCode = '02110';
     }
     
-    const mat = findMat(condCode) || findMat('2110') || findMat('CND-DOG-ACSR');
+    const mat = findMat(condCode) || findMat('02110') || findMat('2110') || findMat('CND-DOG-ACSR');
 
     steps.push({
       component: 'HT 11kV Conductor',
@@ -225,7 +240,7 @@ export function calculateQuantitiesForLine(
     }
 
     // 6. Cross Arms (1 per HT pole)
-    const caMat = findMat('HW-CA-V5');
+    const caMat = findMat('06260') || findMat('6260') || findMat('HW-CA-V5');
     if (caMat) {
       itemMap.set(caMat.code, {
         id: `item-${caMat.code}`,
@@ -248,7 +263,7 @@ export function calculateQuantitiesForLine(
     // 7. Pin Insulators (3 per straight pole)
     const straightPoles = Math.max(0, actualHtPoles - 2);
     const pinCount = straightPoles * factors.pinInsulatorsPerHtPole;
-    const pinMat = findMat('INS-PIN-11');
+    const pinMat = findMat('05210') || findMat('5210') || findMat('INS-PIN-11');
     if (pinMat && pinCount > 0) {
       steps.push({
         component: '11kV Pin Insulators',
@@ -279,7 +294,7 @@ export function calculateQuantitiesForLine(
 
     // 8. Disc Insulators (at terminal dead-ends)
     const discCount = Math.max(6, (2 + (Number(details.roadCrossings || 0) * 2)) * 3);
-    const discMat = findMat('INS-DISC-11');
+    const discMat = findMat('05230') || findMat('5230') || findMat('INS-DISC-11');
     if (discMat) {
       steps.push({
         component: '11kV Tension Disc Insulators',
@@ -309,7 +324,7 @@ export function calculateQuantitiesForLine(
     }
 
     // 9. Danger Plates & Number Plates
-    const dangerMat = findMat('HW-DANGER-PLT');
+    const dangerMat = findMat('85012') || findMat('HW-DANGER-PLT');
     if (dangerMat) {
       itemMap.set(dangerMat.code, {
         id: `item-${dangerMat.code}`,
@@ -331,7 +346,7 @@ export function calculateQuantitiesForLine(
 
     // 10. Earthing Sets (every 5th pole)
     const earthingCount = Math.max(2, Math.ceil(actualHtPoles / factors.earthingIntervalPoles));
-    const earthMat = findMat('HW-EARTH-SET');
+    const earthMat = findMat('03110') || findMat('3110') || findMat('HW-EARTH-SET');
     if (earthMat) {
       steps.push({
         component: 'Line Earthing Sets',
@@ -361,7 +376,7 @@ export function calculateQuantitiesForLine(
     }
 
     // 11. Hardware Nuts, Bolts & Binding Wire
-    const nbMat = findMat('HW-NB-ASSORTED');
+    const nbMat = findMat('11115') || findMat('11116') || findMat('HW-NB-ASSORTED');
     if (nbMat) {
       const nbKg = Math.round(actualHtPoles * 2.5);
       itemMap.set(nbMat.code, {
@@ -385,7 +400,7 @@ export function calculateQuantitiesForLine(
 
   // 12. Add LT Poles to BOQ
   if (actualLtPoles > 0) {
-    const ltMat = findMat('POL-09-PCC');
+    const ltMat = findMat('01120') || findMat('1120') || findMat('POL-09-PCC');
     if (ltMat) {
       itemMap.set(ltMat.code, {
         id: `item-${ltMat.code}`,
@@ -408,7 +423,7 @@ export function calculateQuantitiesForLine(
 
   // 13. Stay Sets in BOQ
   if (actualStaySets > 0) {
-    const stayMat = findMat('HW-STAY-SET');
+    const stayMat = findMat('03140') || findMat('3140') || findMat('HW-STAY-SET');
     if (stayMat) {
       itemMap.set(stayMat.code, {
         id: `item-${stayMat.code}`,
@@ -438,12 +453,12 @@ export function calculateQuantitiesForLine(
 
   if (hasTransformer) {
     const targetKva = trfKva > 0 ? trfKva : 100;
-    const trfCode = targetKva === 25 ? 'TRF-25-11KV' :
-                    targetKva === 50 ? 'TRF-50-11KV' :
-                    targetKva === 200 ? 'TRF-200-11KV' :
-                    targetKva === 400 ? 'TRF-400-11KV' :
-                    targetKva === 630 ? 'TRF-630-11KV' : 'TRF-100-11KV';
-    const trfMat = findMat(trfCode);
+    const trfCode = targetKva === 25 ? '08110' :
+                    targetKva === 50 ? '08120' :
+                    targetKva === 200 ? '08140' :
+                    targetKva === 400 ? '08150' :
+                    targetKva === 630 ? '08160' : '08130';
+    const trfMat = findMat(trfCode) || findMat(`TRF-${targetKva}-11KV`);
     const count = Math.max(1, trfCount);
 
     if (trfMat) {
@@ -466,7 +481,7 @@ export function calculateQuantitiesForLine(
     }
 
     // Transformer Sub-station Protection & Platform
-    const laMat = findMat('SW-LA-11KV');
+    const laMat = findMat('07110') || findMat('7110') || findMat('SW-LA-11KV');
     if (laMat) {
       itemMap.set(laMat.code, {
         id: `item-${laMat.code}`,
@@ -486,7 +501,7 @@ export function calculateQuantitiesForLine(
       });
     }
 
-    const dofMat = findMat('SW-DOF-11KV');
+    const dofMat = findMat('13311') || findMat('10740') || findMat('SW-DOF-11KV');
     if (dofMat) {
       itemMap.set(dofMat.code, {
         id: `item-${dofMat.code}`,
@@ -506,7 +521,7 @@ export function calculateQuantitiesForLine(
       });
     }
 
-    const platMat = findMat('STR-TRF-PLAT');
+    const platMat = findMat('10720') || findMat('10710') || findMat('STR-TRF-PLAT');
     if (platMat) {
       itemMap.set(platMat.code, {
         id: `item-${platMat.code}`,
