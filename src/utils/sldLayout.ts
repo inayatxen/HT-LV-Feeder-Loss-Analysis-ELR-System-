@@ -181,6 +181,13 @@ export function calculateNonOverlappingSLDLayout(
 
   assignPositions(rootId, 0);
 
+  // Anchor the main transformer / root node at a fixed vertical center position so it never moves when cut-off points change
+  const fixedTransformerY = Y_START + 2 * LANE_HEIGHT;
+  if (nodeCoordinates.has(rootId)) {
+    const rootCoord = nodeCoordinates.get(rootId)!;
+    nodeCoordinates.set(rootId, { ...rootCoord, y: fixedTransformerY });
+  }
+
   // Handle any nodes not connected to root
   feeder.nodes.forEach(n => {
     if (!nodeCoordinates.has(n.id)) {
