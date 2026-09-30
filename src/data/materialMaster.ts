@@ -189,6 +189,22 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
     isActive: true
   },
   {
+    id: 'mat-cond-wasp',
+    code: '2130',
+    name: 'ACSR Wasp Conductor 7/0.170',
+    category: 'CONDUCTORS',
+    unit: 'Km',
+    specification: 'ACSR Wasp Conductor 80mm² (6 Al + 1 Steel Strands 7/0.170), WAPDA DDS-10:84',
+    voltageApplicability: 'HT',
+    defaultQtyFactor: 3.1,
+    materialRate: 285000,
+    labourRate: 25000,
+    installationRate: 10000,
+    transportationRate: 4000,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
     id: 'mat-cond-rabbit',
     code: '2120',
     name: 'ACSR Rabbit Conductor 7/0.132',

@@ -804,6 +804,26 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 >
                   ⚡ 4 Spans HT + Rabbit + Spun Poles 45ft
                 </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...lineDetails,
+                      htLengthKm: 1.0,
+                      conductorSize: 'WASP',
+                      poleType: 'PCC',
+                      poleHeightMeters: 11
+                    };
+                    setLineDetails(updated);
+                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
+                    setItems(res.items);
+                    setCalculationSteps(res.steps);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-teal-900 bg-teal-300 hover:bg-teal-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                >
+                  ⚡ 1.0 KM HT + WASP Conductor (Code 2130) + Spun Poles 36ft
+                </button>
               </div>
             </div>
 
@@ -836,6 +856,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-full px-3 py-1.5 bg-white border border-blue-200 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="DOG">ACSR Dog 7/0.186 (100 mm² - Code 2110)</option>
+                  <option value="WASP">ACSR Wasp 7/0.170 (80 mm² - Code 2130)</option>
                   <option value="OSPREY">Osprey Conductor (200 mm² - Code 2160)</option>
                   <option value="RABBIT">ACSR Rabbit 7/0.132 (50 mm² - Code 2120)</option>
                   <option value="INSULATED_DOG">Insulated DOG Conductor (11kV - Code 2361)</option>

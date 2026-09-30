@@ -104,6 +104,8 @@ export function calculateQuantitiesForLine(
     const sizeUpper = (details.conductorSize || '').toUpperCase();
     if (sizeUpper.includes('OSPREY') || sizeUpper.includes('OSPRAY') || sizeUpper === '2160') {
       condCode = '2160';
+    } else if (sizeUpper.includes('WASP') || sizeUpper === '2130') {
+      condCode = '2130';
     } else if (sizeUpper.includes('PANTHER')) {
       condCode = '2160';
     } else if (sizeUpper.includes('RABBIT') || sizeUpper === '2120') {
