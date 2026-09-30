@@ -62,13 +62,24 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
     summary.bifurcationActive ? 'combined' : 'exist'
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [manualCutOffActive, setManualCutOffActive] = useState<boolean>(summary.bifurcationActive || false);
+  const [manualCutOffNodeId, setManualCutOffNodeId] = useState<string>(summary.bifurcationNodeId || '3.0');
+
+  // Adjusted summary incorporating manual cut-off point
+  const adjustedSummary = useMemo(() => {
+    return {
+      ...summary,
+      bifurcationActive: manualCutOffActive,
+      bifurcationNodeId: manualCutOffNodeId
+    };
+  }, [summary, manualCutOffActive, manualCutOffNodeId]);
 
   // Compute non-overlapping layout
   const layout = useMemo(() => {
     return calculateNonOverlappingSLDLayout(feeder);
   }, [feeder]);
 
-  const effectiveSummary = selectedScheme === 'exist' && existingSummary ? existingSummary : summary;
+  const effectiveSummary = selectedScheme === 'exist' && existingSummary ? existingSummary : adjustedSummary;
 
   // Map segments results by "from->to" and segment ID
   const segmentResultMap = useMemo(() => {
@@ -218,11 +229,46 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         </div>
       </div>
 
+      {/* Manual Cut-Off Point & Bifurcation Control Bar */}
+      <div className="bg-amber-50 border border-amber-300 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950">
+            <input
+              type="checkbox"
+              checked={manualCutOffActive}
+              onChange={(e) => setManualCutOffActive(e.target.checked)}
+              className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+            />
+            <span>Enable Manual Cut-Off Point / Bifurcation T-Junction on SLD</span>
+          </label>
+        </div>
+
+        {manualCutOffActive && (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-amber-900">Select Cut-Off Node:</span>
+            <select
+              value={manualCutOffNodeId}
+              onChange={(e) => setManualCutOffNodeId(e.target.value)}
+              className="bg-white border border-amber-400 rounded-lg px-2.5 py-1 text-slate-900 font-mono font-bold text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+            >
+              {feeder.nodes.map(node => (
+                <option key={node.id} value={node.id}>
+                  Node {node.id} ({node.label})
+                </option>
+              ))}
+            </select>
+            <span className="text-[10px] font-mono text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded font-bold">
+              Active T-2 Split Point
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* Render SLD Viewer */}
       <div style={{ transform: zoom !== 1 ? `scale(${zoom})` : undefined, transformOrigin: 'top center', transition: 'transform 0.2s ease-out' }}>
         <FeederSLDViewer
           feeder={feeder}
-          summary={summary}
+          summary={adjustedSummary}
           existingSummary={existingSummary}
           scheme={selectedScheme}
           theme="light"

@@ -1111,54 +1111,112 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
 
               {lineDetails.bifurcationEnabled && (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-amber-200/80 animate-in fade-in duration-150">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Cut-Off / Tee-Off Pole No:</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Pole #4"
-                      value={lineDetails.cutOffPoleNo || ''}
-                      onChange={(e) => setLineDetails({ ...lineDetails, cutOffPoleNo: e.target.value })}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
-                    />
+                <div className="space-y-3 pt-2 border-t border-amber-200/85 animate-in fade-in duration-150">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 mb-1">Manual Cut-Off / Tee-Off Pole:</label>
+                      <select
+                        value={lineDetails.cutOffPoleNo || 'Pole #2'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const totalPoles = lineDetails.htPoles || 4;
+                          const poleNumMatch = val.match(/\d+/);
+                          const poleIdx = poleNumMatch ? parseInt(poleNumMatch[0], 10) : 2;
+                          const ratio = Math.min(Math.max(poleIdx / totalPoles, 0.1), 0.9);
+                          const totalKm = lineDetails.htLengthKm || 0.4;
+                          const ex = Number((totalKm * ratio).toFixed(2));
+                          const rem = Number((totalKm - ex).toFixed(2));
+                          setLineDetails({
+                            ...lineDetails,
+                            cutOffPoleNo: val,
+                            existingPortionKm: ex,
+                            remainingPortionKm: rem
+                          });
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                      >
+                        {Array.from({ length: Math.max(2, lineDetails.htPoles || 4) }, (_, i) => (
+                          <option key={i + 1} value={`Pole #${i + 1}`}>
+                            Pole #{i + 1} of {lineDetails.htPoles || 4} (Cut-Off Junction)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 mb-1">Bifurcation / Split Type:</label>
+                      <select
+                        value={lineDetails.bifurcationType || 'tee_off'}
+                        onChange={(e) => setLineDetails({ ...lineDetails, bifurcationType: e.target.value as any })}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900"
+                      >
+                        <option value="tee_off">Tee-Off / Tap-Off Connection</option>
+                        <option value="section_split">Section Split / Sectionalizer</option>
+                        <option value="spur_line">Spur Line Extension</option>
+                        <option value="feeder_segregation">Feeder Segregation</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const half = Number(((lineDetails.htLengthKm || 0.4) / 2).toFixed(2));
+                          setLineDetails({
+                            ...lineDetails,
+                            existingPortionKm: half,
+                            remainingPortionKm: half
+                          });
+                        }}
+                        className="w-full py-1.5 px-3 bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold text-xs rounded-lg transition-colors cursor-pointer border border-amber-300 shadow-2xs"
+                      >
+                        ⚖️ Split 50 / 50 Equal Portions
+                      </button>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Bifurcation / Split Type:</label>
-                    <select
-                      value={lineDetails.bifurcationType || 'tee_off'}
-                      onChange={(e) => setLineDetails({ ...lineDetails, bifurcationType: e.target.value as any })}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900"
-                    >
-                      <option value="tee_off">Tee-Off / Tap-Off Connection</option>
-                      <option value="section_split">Section Split / Sectionalizer</option>
-                      <option value="spur_line">Spur Line Extension</option>
-                      <option value="feeder_segregation">Feeder Segregation</option>
-                    </select>
-                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/80 p-3 rounded-lg border border-amber-200">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 mb-1">Existing Portion Length (km):</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={lineDetails.existingPortionKm || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const total = lineDetails.htLengthKm || 0.4;
+                          setLineDetails({
+                            ...lineDetails,
+                            existingPortionKm: val,
+                            remainingPortionKm: Math.max(0, Number((total - val).toFixed(2)))
+                          });
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">Baseline radial existing feeder segment</span>
+                    </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Existing Portion (km):</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={lineDetails.existingPortionKm || 0}
-                      onChange={(e) => setLineDetails({ ...lineDetails, existingPortionKm: Number(e.target.value) })}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Remaining Portion (km):</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={lineDetails.remainingPortionKm || 0}
-                      onChange={(e) => setLineDetails({ ...lineDetails, remainingPortionKm: Number(e.target.value) })}
-                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
-                    />
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 mb-1">Remaining Portion Length (km):</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={lineDetails.remainingPortionKm || 0}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          const total = lineDetails.htLengthKm || 0.4;
+                          setLineDetails({
+                            ...lineDetails,
+                            remainingPortionKm: val,
+                            existingPortionKm: Math.max(0, Number((total - val).toFixed(2)))
+                          });
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">New proposed line extension segment</span>
+                    </div>
                   </div>
                 </div>
               )}
