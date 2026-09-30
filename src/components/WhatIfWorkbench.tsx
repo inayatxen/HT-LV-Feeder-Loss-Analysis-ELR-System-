@@ -387,6 +387,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                   className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] text-slate-800 focus:outline-none cursor-pointer"
                 >
                   <option value="A">7/0.122" (Original)</option>
+                  <option value="WASP">7/0.170" ACSR Wasp (80 mm²)</option>
                   <option value="DOG">ACSR Dog (100mm²)</option>
                   <option value="RABBIT">ACSR Rabbit</option>
                   <option value="PU3">PVC 37/0.083"</option>
@@ -401,6 +402,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                   className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] text-slate-800 focus:outline-none cursor-pointer"
                 >
                   <option value="A">7/0.122" (Original)</option>
+                  <option value="WASP">7/0.170" ACSR Wasp (80 mm²)</option>
                   <option value="DOG">ACSR Dog (100mm²)</option>
                   <option value="RABBIT">ACSR Rabbit</option>
                   <option value="PU3">PVC 37/0.083"</option>

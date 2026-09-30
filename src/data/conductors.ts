@@ -15,6 +15,24 @@ export const STANDARD_CONDUCTORS: Record<string, Conductor> = {
     type: 'ACSR',
     description: '7-strand 0.122 inch conductor standard for WAPDA LT distribution lines.'
   },
+  'WASP': {
+    code: 'WASP',
+    name: '7/0.170" ACSR Wasp (Code WASP)',
+    resistancePerKm: 0.3410,
+    reactancePerKm: 0.325,
+    ampacity: 235,
+    type: 'ACSR',
+    description: '7-strand 0.170 inch (80 mm²) ACSR Wasp conductor for 11kV distribution lines and reconductoring.'
+  },
+  '2130': {
+    code: '2130',
+    name: '7/0.170" ACSR Wasp (Code 2130)',
+    resistancePerKm: 0.3410,
+    reactancePerKm: 0.325,
+    ampacity: 235,
+    type: 'ACSR',
+    description: '7-strand 0.170 inch (80 mm²) ACSR Wasp conductor (WAPDA Store Code 2130).'
+  },
   'PU3': {
     code: 'PU3',
     name: 'PVC 37/0.083" (Code PU3)',

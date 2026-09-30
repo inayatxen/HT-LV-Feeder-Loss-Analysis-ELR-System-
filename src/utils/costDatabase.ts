@@ -363,7 +363,65 @@ function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsCo
     updatedAt: '2026-09-29T08:30:00.000Z'
   };
 
-  return [est1, est2, est3, est4];
+  // Combination 5: 1.0 km HT Line with ACSR WASP Conductor (7/0.170, Code 2130) & HT Spun Poles 36 Feet
+  const ld5 = {
+    htLengthKm: 1.0,
+    ltLengthKm: 0,
+    htPoles: 12,
+    ltPoles: 0,
+    staySets: 6,
+    roadCrossings: 1,
+    canalCrossings: 0,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'WASP',
+    poleType: 'PCC',
+    poleHeightMeters: 11,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc5 = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld5, factors, materials);
+  const charges5 = computeEstimateCharges(calc5.items, 1.0, { method: 'PER_KM', distanceKm: 20, ratePerKm: 180, loadingUnloadingFixed: 9000 });
+
+  const est5: CostEstimateRecord = {
+    id: 'est-ht-1km-wasp-spun36',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-01005',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-09-30',
+      division: 'Peshawar Cantt Division',
+      subDivision: 'Gulbhar Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'Gulbhar 11kV Feeder',
+      feederCode: 'FDR-GLB-02',
+      proposedLocation: 'Gulbhar Sector C Industrial/Residential Spur',
+      villageLocality: 'Gulbhar Peshawar',
+      gpsLatitude: '34.0150 N',
+      gpsLongitude: '71.5240 E',
+      applicantDepartment: 'PESCO ELR & System Augmentation',
+      schemeProjectName: '1.0 KM 11kV HT Extension with ACSR Wasp Conductor 7/0.170 (Code 2130) on 36ft Spun Poles',
+      purposeOfWork: 'Construction of 1.0 km 11kV HT line extension using ACSR Wasp Conductor 7/0.170 (80mm² - Code 2130) and 36ft PCC HT Spun Poles.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN Peshawar)'
+    },
+    type: 'HT_LINE_EXTENSION',
+    status: 'APPROVED',
+    lineDetails: ld5,
+    items: calc5.items,
+    charges: charges5,
+    calculationSteps: calc5.steps,
+    auditTrail: [
+      { id: 'aud-s5', timestamp: '2026-09-30 10:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate with ACSR Wasp Conductor 7/0.170 (Code 2130)' }
+    ],
+    createdAt: '2026-09-30T10:00:00.000Z',
+    updatedAt: '2026-09-30T10:00:00.000Z'
+  };
+
+  return [est1, est2, est3, est4, est5];
 }
 
 // -------------------------------------------------------------

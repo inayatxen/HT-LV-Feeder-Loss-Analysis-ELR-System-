@@ -973,6 +973,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                       className="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <option value="A">A (7/0.122" ACSR)</option>
+                      <option value="WASP">WASP (7/0.170" ACSR)</option>
                       <option value="PU3">PU3 (PVC 37/0.083")</option>
                       <option value="PU2">PU2 (PVC 19/0.083")</option>
                       <option value="RABBIT">RABBIT (50 mm²)</option>
