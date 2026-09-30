@@ -100,6 +100,10 @@ export function calculateFeederAnalysis(
     nodeMap.has(options.bifurcation.bifurcationNodeId)
   );
   const bifurcationNodeId = isBifurcationActive ? options!.bifurcation!.bifurcationNodeId : '';
+  const transformerNodeId = isBifurcationActive 
+    ? (options!.bifurcation!.transformerNodeId || options!.bifurcation!.bifurcationNodeId) 
+    : '';
+  const trfNodeId = transformerNodeId || bifurcationNodeId;
   const additionalTrfKva = isBifurcationActive ? (options!.bifurcation!.transformerCapacityKva || 100) : 0;
 
   // Identify all nodes in bifurcated sub-tree
@@ -110,7 +114,7 @@ export function calculateFeederAnalysis(
       const outgoing = childrenMap.get(nId) || [];
       outgoing.forEach(s => collectBifurcated(s.toNodeId));
     }
-    collectBifurcated(bifurcationNodeId);
+    collectBifurcated(trfNodeId);
   }
 
   // Node direct load calculator
@@ -202,7 +206,7 @@ export function calculateFeederAnalysis(
 
   // Aggregate Bifurcated (T2) Network if active
   const rootAggregateT2 = isBifurcationActive 
-    ? aggregateDownstream(bifurcationNodeId, false) 
+    ? aggregateDownstream(trfNodeId, false) 
     : null;
 
   // Total Demands
@@ -564,6 +568,7 @@ export function calculateFeederAnalysis(
     // Bifurcation & Additional Transformer Details
     bifurcationActive: isBifurcationActive,
     bifurcationNodeId: isBifurcationActive ? bifurcationNodeId : undefined,
+    transformerNodeId: isBifurcationActive ? transformerNodeId : undefined,
     additionalTransformerKva: isBifurcationActive ? additionalTrfKva : undefined,
     transformer1DemandKva: Number(t1DemandKva.toFixed(1)),
     transformer2DemandKva: isBifurcationActive ? Number(t2DemandKva.toFixed(1)) : 0,

@@ -56,14 +56,15 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
     return map;
   }, [effectiveSummary]);
 
-  const bifurcationNodeId = summary.bifurcationNodeId || '3.0';
+  const cutOffNodeId = summary.bifurcationNodeId || '3.0';
+  const proposedTransformerNodeId = summary.transformerNodeId || summary.bifurcationNodeId || '3.0';
 
   // Helper to check if a node/segment belongs to the current scheme filter
   const isSegmentVisibleInScheme = (fromNodeId: string, toNodeId: string, fedBy?: 'T1' | 'T2') => {
     if (scheme === 'exist' || scheme === 'combined') return true;
     if (scheme === 'proposed_1') {
-      // Cut segment to bifurcation node is tie open or excluded
-      if (toNodeId === bifurcationNodeId) return false;
+      // Cut segment to cut-off node is tie open or excluded
+      if (toNodeId === cutOffNodeId) return false;
       return fedBy === 'T1' || !fedBy;
     }
     if (scheme === 'proposed_2') {
@@ -80,7 +81,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
       return seg ? seg.fedByTransformer === 'T1' || !seg.fedByTransformer : true;
     }
     if (scheme === 'proposed_2') {
-      if (nodeId === bifurcationNodeId) return true;
+      if (nodeId === proposedTransformerNodeId) return true;
       const seg = effectiveSummary.segmentResults.find(s => s.toNodeId === nodeId);
       return seg ? seg.fedByTransformer === 'T2' : false;
     }
@@ -151,7 +152,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   ? `Main Substation T-1 (${schemeTrfKva} kVA) · Un-bifurcated Radial Feed · Total Peak Current: ${schemeCurrentAmps} A`
                   : isProp1
                     ? `Main Substation T-1 (${schemeTrfKva} kVA @ Node 0.0) · Upstream Trunk · Peak Current: ${schemeCurrentAmps} A`
-                    : `Additional Substation T-2 (${schemeTrfKva} kVA @ Node ${bifurcationNodeId}) · Downstream Branch · Peak Current: ${schemeCurrentAmps} A`
+                    : `Additional Substation T-2 (${schemeTrfKva} kVA @ Node ${proposedTransformerNodeId}) · Cut-Off @ Node ${cutOffNodeId} · Peak Current: ${schemeCurrentAmps} A`
                 }
               </span>
             </div>
@@ -214,7 +215,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             {/* Render Segments (Lines) */}
             {layout.segments.map(seg => {
               const segResult = segmentResultMap.get(`${seg.fromNodeId}->${seg.toNodeId}`);
-              const isCutSegment = (summary.bifurcationActive || isProp1 || isProp2) && seg.toNodeId === bifurcationNodeId;
+              const isCutSegment = (summary.bifurcationActive || isProp1 || isProp2) && seg.toNodeId === cutOffNodeId;
               const isFedByT2 = segResult?.fedByTransformer === 'T2';
               const isVisible = isSegmentVisibleInScheme(seg.fromNodeId, seg.toNodeId, segResult?.fedByTransformer);
 
@@ -346,7 +347,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             {layout.nodes.map(node => {
               const x = node.x;
               const y = node.y;
-              const isBifurcationInjectionNode = (summary.bifurcationActive || isProp2) && node.id === bifurcationNodeId;
+              const isBifurcationInjectionNode = (summary.bifurcationActive || isProp2) && node.id === proposedTransformerNodeId;
               const incomingSegResult = segmentResultMap.get(
                 `${effectiveSummary.segmentResults.find(r => r.toNodeId === node.id)?.fromNodeId}->${node.id}`
               ) || effectiveSummary.segmentResults.find(r => r.toNodeId === node.id);
@@ -356,7 +357,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
               const isNodeMuted = isProp1 
                 ? (incomingSegResult?.fedByTransformer === 'T2')
                 : isProp2 
-                  ? (incomingSegResult && incomingSegResult.fedByTransformer !== 'T2' && node.id !== bifurcationNodeId)
+                  ? (incomingSegResult && incomingSegResult.fedByTransformer !== 'T2' && node.id !== proposedTransformerNodeId)
                   : false;
 
               return (

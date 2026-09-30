@@ -64,15 +64,17 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [manualCutOffActive, setManualCutOffActive] = useState<boolean>(summary.bifurcationActive || false);
   const [manualCutOffNodeId, setManualCutOffNodeId] = useState<string>(summary.bifurcationNodeId || '3.0');
+  const [manualTransformerNodeId, setManualTransformerNodeId] = useState<string>(summary.transformerNodeId || summary.bifurcationNodeId || '3.0');
 
-  // Adjusted summary incorporating manual cut-off point
+  // Adjusted summary incorporating manual cut-off point and independent proposed transformer position
   const adjustedSummary = useMemo(() => {
     return {
       ...summary,
       bifurcationActive: manualCutOffActive,
-      bifurcationNodeId: manualCutOffNodeId
+      bifurcationNodeId: manualCutOffNodeId,
+      transformerNodeId: manualTransformerNodeId
     };
-  }, [summary, manualCutOffActive, manualCutOffNodeId]);
+  }, [summary, manualCutOffActive, manualCutOffNodeId, manualTransformerNodeId]);
 
   // Compute non-overlapping layout
   const layout = useMemo(() => {
@@ -244,22 +246,36 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
         </div>
 
         {manualCutOffActive && (
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-amber-900">Select Cut-Off Node:</span>
-            <select
-              value={manualCutOffNodeId}
-              onChange={(e) => setManualCutOffNodeId(e.target.value)}
-              className="bg-white border border-amber-400 rounded-lg px-2.5 py-1 text-slate-900 font-mono font-bold text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
-            >
-              {feeder.nodes.map(node => (
-                <option key={node.id} value={node.id}>
-                  Node {node.id} ({node.label})
-                </option>
-              ))}
-            </select>
-            <span className="text-[10px] font-mono text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded font-bold">
-              Active T-2 Split Point
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-amber-900">Cut-Off Node:</span>
+              <select
+                value={manualCutOffNodeId}
+                onChange={(e) => setManualCutOffNodeId(e.target.value)}
+                className="bg-white border border-amber-400 rounded-lg px-2.5 py-1 text-slate-900 font-mono font-bold text-xs focus:outline-none focus:ring-1 focus:ring-amber-500"
+              >
+                {feeder.nodes.map(node => (
+                  <option key={node.id} value={node.id}>
+                    Node {node.id} ({node.label})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-purple-900">Proposed Trf (T-2) Node:</span>
+              <select
+                value={manualTransformerNodeId}
+                onChange={(e) => setManualTransformerNodeId(e.target.value)}
+                className="bg-white border border-purple-400 rounded-lg px-2.5 py-1 text-purple-950 font-mono font-bold text-xs focus:outline-none focus:ring-1 focus:ring-purple-500"
+              >
+                {feeder.nodes.map(node => (
+                  <option key={node.id} value={node.id}>
+                    Node {node.id} ({node.label})
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         )}
       </div>

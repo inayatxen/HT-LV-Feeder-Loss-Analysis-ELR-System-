@@ -136,7 +136,8 @@ export interface FeederSegment {
 
 export interface BifurcationConfig {
   enabled: boolean;
-  bifurcationNodeId: string;           // The node where bifurcation / additional transformer is placed
+  bifurcationNodeId: string;           // The node where cut-off / line split occurs
+  transformerNodeId?: string;          // Independent node where proposed transformer T-2 is placed
   transformerCapacityKva: number;      // Rating of newly installed transformer (e.g. 50, 100, 200 kVA)
   mode: 'ADDITIONAL_TRANSFORMER' | 'EXPRESS_FEEDER';
   name?: string;
@@ -199,6 +200,7 @@ export interface FeederAnalysisSummary {
   // Bifurcation & Additional Transformer Details
   bifurcationActive?: boolean;
   bifurcationNodeId?: string;
+  transformerNodeId?: string;
   additionalTransformerKva?: number;
   transformer1DemandKva?: number;
   transformer2DemandKva?: number;
