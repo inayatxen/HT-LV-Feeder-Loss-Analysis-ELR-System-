@@ -227,6 +227,31 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
               </span>
             </div>
           </div>
+
+          {estimate.lineDetails.bifurcationEnabled && (
+            <div className="mt-2.5 bg-amber-50 border border-amber-300 p-3 rounded-lg text-xs space-y-1.5 font-sans">
+              <div className="font-bold text-amber-950 flex items-center justify-between">
+                <span>⚡ Bifurcation & Cut-Off Point Separation Analysis</span>
+                <span className="font-mono bg-amber-200 text-amber-950 px-2 py-0.5 rounded text-[10px]">
+                  Split Type: {(estimate.lineDetails.bifurcationType || 'tee_off').replace(/_/g, ' ').toUpperCase()}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs font-mono pt-1 border-t border-amber-200">
+                <div>
+                  <span className="text-slate-600 block text-[11px] font-sans">Cut-Off / Tee-Off Location:</span>
+                  <strong className="text-slate-950">{estimate.lineDetails.cutOffPoleNo || 'N/A'}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-600 block text-[11px] font-sans">Existing Line Portion:</span>
+                  <strong className="text-slate-950">{estimate.lineDetails.existingPortionKm || 0} km</strong>
+                </div>
+                <div>
+                  <span className="text-slate-600 block text-[11px] font-sans">Remaining Line Extension:</span>
+                  <strong className="text-blue-900 font-bold">{estimate.lineDetails.remainingPortionKm || 0} km</strong>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
 
         {/* ========================================================

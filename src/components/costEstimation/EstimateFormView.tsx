@@ -1093,6 +1093,77 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
             </div>
 
+            {/* Bifurcation & Cut-Off Point Configuration (For Separating Existing vs Remaining Lines) */}
+            <div className="bg-amber-50/70 border border-amber-300 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-amber-950">
+                  <input
+                    type="checkbox"
+                    checked={lineDetails.bifurcationEnabled || false}
+                    onChange={(e) => setLineDetails({ ...lineDetails, bifurcationEnabled: e.target.checked })}
+                    className="rounded text-amber-600 focus:ring-amber-500 w-4 h-4"
+                  />
+                  <span>Enable Bifurcation / Cut-Off Point (Separate Existing Line vs. Remaining Line Extension)</span>
+                </label>
+                <span className="text-[10px] font-mono bg-amber-200 text-amber-950 px-2 py-0.5 rounded font-bold">
+                  Bifurcation / Tee-Off Split
+                </span>
+              </div>
+
+              {lineDetails.bifurcationEnabled && (
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-amber-200/80 animate-in fade-in duration-150">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Cut-Off / Tee-Off Pole No:</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Pole #4"
+                      value={lineDetails.cutOffPoleNo || ''}
+                      onChange={(e) => setLineDetails({ ...lineDetails, cutOffPoleNo: e.target.value })}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Bifurcation / Split Type:</label>
+                    <select
+                      value={lineDetails.bifurcationType || 'tee_off'}
+                      onChange={(e) => setLineDetails({ ...lineDetails, bifurcationType: e.target.value as any })}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-bold text-slate-900"
+                    >
+                      <option value="tee_off">Tee-Off / Tap-Off Connection</option>
+                      <option value="section_split">Section Split / Sectionalizer</option>
+                      <option value="spur_line">Spur Line Extension</option>
+                      <option value="feeder_segregation">Feeder Segregation</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Existing Portion (km):</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={lineDetails.existingPortionKm || 0}
+                      onChange={(e) => setLineDetails({ ...lineDetails, existingPortionKm: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-amber-900 mb-1">Remaining Portion (km):</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={lineDetails.remainingPortionKm || 0}
+                      onChange={(e) => setLineDetails({ ...lineDetails, remainingPortionKm: Number(e.target.value) })}
+                      className="w-full px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Transformer Details */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-slate-100">
               <div>

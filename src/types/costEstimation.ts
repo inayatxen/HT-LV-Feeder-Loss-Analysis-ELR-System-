@@ -80,6 +80,12 @@ export interface EstimateLineDetails {
   poleType: string;
   poleHeightMeters: number;
   insulatorType: string;
+  // Bifurcation & Cut-Off Point Configuration for existing vs remaining lines
+  bifurcationEnabled?: boolean;
+  cutOffPoleNo?: string;
+  existingPortionKm?: number;
+  remainingPortionKm?: number;
+  bifurcationType?: 'tee_off' | 'section_split' | 'tap_off' | 'spur_line';
   // Tracking whether values were auto-calculated or manually overridden
   autoCalculatedFlags?: Record<string, boolean>;
 }
