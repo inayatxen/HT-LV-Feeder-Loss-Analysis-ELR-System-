@@ -170,7 +170,7 @@ export function calculateQuantitiesForLine(
   // (3 phases × 1.05 sag, jumpering and termination allowance)
   // -------------------------------------------------------------
   if (htKm > 0) {
-    const htConductorKm = parseFloat((htKm * 3.15).toFixed(3));
+    const htConductorKm = parseFloat((htKm * 3 * 1.15).toFixed(3));
     
     let condCode = '02110'; // Default Dog
     const sizeUpper = (details.conductorSize || '').toUpperCase();
@@ -197,11 +197,11 @@ export function calculateQuantitiesForLine(
     steps.push({
       component: 'HT 11kV Conductor',
       parameter: mat?.name || 'ACSR Conductor',
-      formula: 'Span Length × 3.15 (3 Phases × 1.05 Sag & Wastage Allowance)',
-      calculation: `${htKm.toFixed(2)} km × 3.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`,
+      formula: 'Span Length × 3 × 1.15 (3 Phases × 1.15 Sag, Jumpering & Wastage Allowance)',
+      calculation: `${htKm.toFixed(2)} km × 3 × 1.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`,
       resultQuantity: htConductorKm,
       unit: 'Km',
-      notes: `Standard: Span Length × 3.15 allowance for 3-phase line, sag, jumpering, and dead-end binding.`
+      notes: `Standard: Span Length × 3 × 1.15 allowance for 3-phase line, sag, jumpering, and dead-end binding.`
     });
 
     if (mat) {
@@ -219,7 +219,7 @@ export function calculateQuantitiesForLine(
         labourAmount: Math.round(htConductorKm * mat.labourRate),
         totalAmount: Math.round(htConductorKm * (mat.materialRate + mat.labourRate)),
         isAutoCalculated: true,
-        calculationNotes: `Length of conductor = Span length (${htKm} km) × 3.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`
+        calculationNotes: `Length of conductor = Span length (${htKm} km) × 3 × 1.15 = ${htConductorKm} km (${Math.round(htConductorKm * 1000)} m)`
       });
     }
   }
