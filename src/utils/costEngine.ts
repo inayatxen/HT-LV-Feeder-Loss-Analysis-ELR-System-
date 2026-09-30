@@ -396,7 +396,38 @@ export function calculateQuantitiesForLine(
         calculationNotes: `Galvanized structural fasteners (2.5 kg per pole)`
       });
     }
-  }
+
+    // 11b. PG Connectors for Jumpers and Dead-ends
+    let pgCode = '04130'; // T-110 for Dog
+      const sizeUpper = (details.conductorSize || '').toUpperCase();
+      if (sizeUpper.includes('OSPREY') || sizeUpper.includes('2160')) {
+        pgCode = '04150'; // T-150 for Osprey
+      } else if (sizeUpper.includes('WASP') || sizeUpper.includes('2130') || sizeUpper.includes('2330')) {
+        pgCode = '04160'; // T-120 for Wasp
+      } else if (sizeUpper.includes('RABBIT') || sizeUpper.includes('2120')) {
+        pgCode = '04120'; // S-157 for Rabbit
+      }
+      const pgMat = findMat(pgCode) || findMat('04130') || findMat('4130');
+      if (pgMat) {
+        const pgCount = actualHtPoles <= 6 ? 6 : 12;
+        itemMap.set(pgMat.code, {
+          id: `item-${pgMat.code}`,
+          materialId: pgMat.id,
+          materialCode: pgMat.code,
+          description: pgMat.name,
+          specification: pgMat.specification,
+          unit: pgMat.unit,
+          quantity: pgCount,
+          unitRate: pgMat.materialRate,
+          materialAmount: pgCount * pgMat.materialRate,
+          labourRate: pgMat.labourRate,
+          labourAmount: pgCount * pgMat.labourRate,
+          totalAmount: pgCount * (pgMat.materialRate + pgMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `Parallel Groove PG Connectors for jumpers and terminations`
+        });
+      }
+    }
 
   // 12. Add LT Poles to BOQ
   if (actualLtPoles > 0) {

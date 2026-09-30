@@ -42,7 +42,8 @@ import {
   DollarSign,
   Search,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Check
 } from 'lucide-react';
 
 interface EstimateFormViewProps {
@@ -157,6 +158,140 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<string>('');
   const [materialSearchText, setMaterialSearchText] = useState('');
   const [saveToast, setSaveToast] = useState('');
+  const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
+  const [lastAppliedPresetName, setLastAppliedPresetName] = useState<string | null>(null);
+
+  const PRESET_COMBINATIONS = [
+    {
+      key: 'preset-4spans-dog-steel',
+      label: '⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)',
+      badgeColor: 'bg-amber-400 hover:bg-amber-300 text-slate-900 border-amber-500',
+      activeRing: 'ring-2 ring-amber-500 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0.4,
+      conductorSize: 'DOG',
+      poleType: 'STEEL_STRUCTURE',
+      poleHeightMeters: 11,
+      htPoles: 6,
+      staySets: 4,
+      schemeName: '4 Spans HT Line (ACSR Dog Conductor on 34.8ft Steel Structure Poles)'
+    },
+    {
+      key: 'preset-1km-osprey-spun45',
+      label: '⚡ 1.0 KM HT + Osprey Conductor + HT Spun Poles 45ft',
+      badgeColor: 'bg-sky-300 hover:bg-sky-200 text-slate-900 border-sky-400',
+      activeRing: 'ring-2 ring-sky-500 ring-offset-1 font-black shadow-md',
+      htLengthKm: 1.0,
+      conductorSize: 'OSPREY',
+      poleType: 'SPUN_45FT',
+      poleHeightMeters: 13.7,
+      htPoles: 12,
+      staySets: 6,
+      schemeName: '1.0 KM Heavy HT Trunk Line (Osprey Conductor on 45ft Spun PCC Poles)'
+    },
+    {
+      key: 'preset-4spans-osprey-steel45',
+      label: '⚡ 4 Spans HT + Osprey + Steel Structure 45ft',
+      badgeColor: 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700',
+      activeRing: 'ring-2 ring-indigo-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0.4,
+      conductorSize: 'OSPREY',
+      poleType: 'STEEL_STRUCTURE_45FT',
+      poleHeightMeters: 13.7,
+      htPoles: 6,
+      staySets: 4,
+      schemeName: '4 Spans Heavy Span HT Line (Osprey Conductor on 45ft Steel Structure Towers)'
+    },
+    {
+      key: 'preset-1km-dog-spun36',
+      label: '⚡ 1.0 KM HT + Dog + Spun Poles 36ft (PCC)',
+      badgeColor: 'bg-emerald-300 hover:bg-emerald-200 text-slate-800 border-emerald-400',
+      activeRing: 'ring-2 ring-emerald-500 ring-offset-1 font-black shadow-md',
+      htLengthKm: 1.0,
+      conductorSize: 'DOG',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 12,
+      staySets: 6,
+      schemeName: 'Standard 1.0 KM 11kV HT Extension (ACSR Dog Conductor on 36ft PCC Spun Poles)'
+    },
+    {
+      key: 'preset-4spans-rabbit-spun45',
+      label: '⚡ 4 Spans HT + Rabbit + Spun Poles 45ft',
+      badgeColor: 'bg-purple-300 hover:bg-purple-200 text-slate-800 border-purple-400',
+      activeRing: 'ring-2 ring-purple-500 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0.4,
+      conductorSize: 'RABBIT',
+      poleType: 'SPUN_45FT',
+      poleHeightMeters: 13.7,
+      htPoles: 6,
+      staySets: 4,
+      schemeName: '4 Spans 11kV HT Line (ACSR Rabbit Conductor on 45ft Spun PCC Poles)'
+    },
+    {
+      key: 'preset-1km-wasp-spun36',
+      label: '⚡ 1.0 KM HT + WASP Conductor (Code 2130) + Spun Poles 36ft',
+      badgeColor: 'bg-teal-300 hover:bg-teal-200 text-teal-950 border-teal-400',
+      activeRing: 'ring-2 ring-teal-500 ring-offset-1 font-black shadow-md',
+      htLengthKm: 1.0,
+      conductorSize: 'WASP',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 12,
+      staySets: 6,
+      schemeName: '1.0 KM HT Extension (ACSR WASP Conductor 7/0.170 on 36ft Spun PCC Poles)'
+    }
+  ];
+
+  const handleSelectPreset = (preset: typeof PRESET_COMBINATIONS[0]) => {
+    setActivePresetKey(preset.key);
+    setLastAppliedPresetName(preset.label.replace('⚡ ', ''));
+    setEstimateType('HT_LINE_EXTENSION');
+
+    const updatedLine: EstimateLineDetails = {
+      ...lineDetails,
+      htLengthKm: preset.htLengthKm,
+      ltLengthKm: 0,
+      conductorSize: preset.conductorSize,
+      conductorType: 'ACSR',
+      poleType: preset.poleType,
+      poleHeightMeters: preset.poleHeightMeters,
+      roadCrossings: 0,
+      canalCrossings: 0,
+      transformerCount: 0,
+      transformerStructures: 0,
+      transformerCapacityKva: 0,
+      circuitsCount: 1,
+      htPoles: preset.htPoles,
+      ltPoles: 0,
+      staySets: preset.staySets,
+      autoCalculatedFlags: {
+        htPoles: true,
+        ltPoles: true,
+        staySets: true
+      }
+    };
+
+    setLineDetails(updatedLine);
+
+    setProjectInfo(prev => ({
+      ...prev,
+      schemeProjectName: preset.schemeName,
+      purposeOfWork: `Construction of ${preset.label.replace('⚡ ', '')} as per WAPDA / DISCO engineering specifications.`
+    }));
+
+    // Auto-calculate exact BOQ material quantities for this combination
+    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updatedLine, designFactors, materials);
+    setItems(res.items);
+    setCalculationSteps(res.steps);
+
+    setSaveToast(`✅ ${preset.label} applied: Required material quantities updated in the estimate list below!`);
+    setTimeout(() => setSaveToast(''), 4500);
+
+    const tableEl = document.getElementById('boq-materials-table');
+    if (tableEl) {
+      tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
 
   // 7. Computed Charges (Live)
   const totalKm = (Number(lineDetails.htLengthKm) || 0) + (Number(lineDetails.ltLengthKm) || 0);
@@ -705,125 +840,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 <span className="text-[10px] text-slate-400">Click to auto-configure line length, conductor & pole structure</span>
               </div>
               <div className="flex flex-wrap items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 0.4,
-                      conductorSize: 'DOG',
-                      poleType: 'STEEL_STRUCTURE',
-                      poleHeightMeters: 11
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 1.0,
-                      conductorSize: 'OSPREY',
-                      poleType: 'SPUN_45FT',
-                      poleHeightMeters: 13.7
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-slate-900 bg-sky-300 hover:bg-sky-200 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 1.0 KM HT + Osprey Conductor + HT Spun Poles 45ft
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 0.4,
-                      conductorSize: 'OSPREY',
-                      poleType: 'STEEL_STRUCTURE_45FT',
-                      poleHeightMeters: 13.7
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 4 Spans HT + Osprey + Steel Structure 45ft
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 1.0,
-                      conductorSize: 'DOG',
-                      poleType: 'PCC',
-                      poleHeightMeters: 11
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-slate-800 bg-emerald-300 hover:bg-emerald-200 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 1.0 KM HT + Dog + Spun Poles 36ft (PCC)
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 0.4,
-                      conductorSize: 'RABBIT',
-                      poleType: 'SPUN_45FT',
-                      poleHeightMeters: 13.7
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-slate-800 bg-purple-300 hover:bg-purple-200 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 4 Spans HT + Rabbit + Spun Poles 45ft
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const updated = {
-                      ...lineDetails,
-                      htLengthKm: 1.0,
-                      conductorSize: 'WASP',
-                      poleType: 'PCC',
-                      poleHeightMeters: 11
-                    };
-                    setLineDetails(updated);
-                    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updated, designFactors, materials);
-                    setItems(res.items);
-                    setCalculationSteps(res.steps);
-                  }}
-                  className="px-2.5 py-1 text-[11px] font-bold text-teal-900 bg-teal-300 hover:bg-teal-200 rounded-lg shadow-2xs transition-all cursor-pointer"
-                >
-                  ⚡ 1.0 KM HT + WASP Conductor (Code 2130) + Spun Poles 36ft
-                </button>
+                {PRESET_COMBINATIONS.map(preset => {
+                  const isActive = activePresetKey === preset.key;
+                  return (
+                    <button
+                      key={preset.key}
+                      type="button"
+                      onClick={() => handleSelectPreset(preset)}
+                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 ${preset.badgeColor} ${
+                        isActive ? `${preset.activeRing} scale-102 ring-2` : 'opacity-90 hover:opacity-100'
+                      }`}
+                      title={`Click to auto-configure line parameters and update required material quantities below`}
+                    >
+                      {isActive ? <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-800" /> : null}
+                      <span>{preset.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -1070,7 +1103,27 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           </div>
 
           {/* 3. Searchable Material Selection Table (BOQ) */}
-          <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
+          <div id="boq-materials-table" className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 scroll-mt-6">
+            {/* Active Combination Preset Notification Banner */}
+            {lastAppliedPresetName && (
+              <div className="bg-emerald-50 border border-emerald-300 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-emerald-950 animate-in fade-in duration-200 shadow-2xs">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Combination Active:</strong> {lastAppliedPresetName} — Material quantities below updated automatically.
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[11px] font-mono shrink-0">
+                  <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">
+                    {items.length} Materials
+                  </span>
+                  <span className="text-emerald-700 font-bold">
+                    PKR {items.reduce((s, i) => s + (i.totalAmount || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
