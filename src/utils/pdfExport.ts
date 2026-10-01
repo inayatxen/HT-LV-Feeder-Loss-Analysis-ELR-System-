@@ -64,7 +64,87 @@ export async function exportElementToPdf(
     const contentWidthMm = pageWidthMm - (marginMm * 2);
     const contentHeightMm = pageHeightMm - (marginMm * 2) - 8; // Leave 8mm for running footer
 
-    // High quality canvas render
+    // Check if element contains dedicated per-page units (.print-page-unit)
+    const pageUnits = Array.from(element.querySelectorAll<HTMLElement>('.print-page-unit'))
+      .filter(unit => unit.offsetParent !== null || window.getComputedStyle(unit).display !== 'none');
+
+    if (pageUnits.length > 0) {
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'mm',
+        format: paperSize,
+        compress: true
+      });
+
+      for (let i = 0; i < pageUnits.length; i++) {
+        if (i > 0) {
+          pdf.addPage(paperSize, orientation);
+        }
+
+        const unit = pageUnits[i];
+        const pageCanvas = await html2canvas(unit, {
+          scale: 2, // 2x scale for crisp vectors and fonts
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: unit.scrollWidth || 1100,
+          onclone: (clonedDoc) => {
+            const noPrintItems = clonedDoc.querySelectorAll('.no-print');
+            noPrintItems.forEach(el => {
+              (el as HTMLElement).style.display = 'none';
+            });
+            if (excludeGraphics) {
+              const graphicItems = clonedDoc.querySelectorAll(
+                '.print-watermark, .screen-watermark, .unnecessary-graphic, .decorative-graphic'
+              );
+              graphicItems.forEach(el => {
+                (el as HTMLElement).style.display = 'none';
+              });
+            }
+          }
+        });
+
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const imgWidthPx = pageCanvas.width;
+        const imgHeightPx = pageCanvas.height;
+
+        // Render page unit proportionally inside PDF page with perfect aspect ratio
+        const maxPageHeightMm = pageHeightMm - (marginMm * 2);
+        const naturalHeightMm = (imgHeightPx * contentWidthMm) / imgWidthPx;
+        
+        let renderedWidthMm = contentWidthMm;
+        let renderedHeightMm = naturalHeightMm;
+
+        if (naturalHeightMm > maxPageHeightMm) {
+          renderedHeightMm = maxPageHeightMm;
+          renderedWidthMm = (imgWidthPx * maxPageHeightMm) / imgHeightPx;
+        }
+
+        const xOffsetMm = marginMm + (contentWidthMm - renderedWidthMm) / 2;
+        const yOffsetMm = marginMm;
+
+        pdf.addImage(
+          imgData,
+          'JPEG',
+          xOffsetMm,
+          yOffsetMm,
+          renderedWidthMm,
+          renderedHeightMm,
+          undefined,
+          'FAST'
+        );
+      }
+
+      pdf.save(rawFilename);
+
+      return {
+        success: true,
+        filename: rawFilename,
+        pageCount: pageUnits.length
+      };
+    }
+
+    // High quality canvas render fallback for continuous layouts
     const canvas = await html2canvas(element, {
       scale: 2, // 2x scale for sharp text and vector rendering
       useCORS: true,
@@ -88,10 +168,10 @@ export async function exportElementToPdf(
           (el as HTMLElement).style.display = 'none';
         });
 
-        // If excludeGraphics is requested, remove watermarks, diagrams, and decorative badges
+        // If excludeGraphics is requested, remove watermarks and decorative badges (keep necessary engineering schematics)
         if (excludeGraphics) {
           const graphicItems = clonedDoc.querySelectorAll(
-            '.print-watermark, .screen-watermark, .unnecessary-graphic, .sld-blueprint-section, .decorative-graphic'
+            '.print-watermark, .screen-watermark, .unnecessary-graphic, .decorative-graphic'
           );
           graphicItems.forEach(el => {
             (el as HTMLElement).style.display = 'none';

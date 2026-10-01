@@ -107,23 +107,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const [isMaximized, setIsMaximized] = useState(true);
 
-  // Per-Page Print Settings State - Defaults optimized for Informative Data Report
+  // Per-Page Print Settings State - Defaults set to "1 Report Per Page" with SLD and necessary reports
   const [showPrintSettings, setShowPrintSettings] = useState(false);
-  const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('compact_flow');
+  const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('page_per_section');
   const [pageOrientation, setPageOrientation] = useState<PageOrientation>('portrait');
   const [printScale, setPrintScale] = useState<PrintScale>('standard');
   const [includePageHeaders, setIncludePageHeaders] = useState(true);
   const [includeSignatures, setIncludeSignatures] = useState(true);
   const [includeWatermark, setIncludeWatermark] = useState(false); // Excluded by default to avoid unnecessary graphics
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
-  const [excludeUnnecessaryGraphics, setExcludeUnnecessaryGraphics] = useState<boolean>(true); // Focus purely on informative data report
+  const [excludeUnnecessaryGraphics, setExcludeUnnecessaryGraphics] = useState<boolean>(true); // Focus purely on informative data report and engineering diagrams (no decorative bloat)
 
   // PDF Export Generation State
   const printContentRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfToast, setPdfToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Per-Page Inclusion Toggles - Informative data items enabled, heavy SVG SLD graphics disabled by default
+  // Per-Page Inclusion Toggles - Necessary reports and single line diagrams enabled by default
   const [pagesToPrint, setPagesToPrint] = useState<{
     summarySpecs: boolean;
     bifurcationStatements: boolean;
@@ -135,7 +135,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   }>({
     summarySpecs: true,
     bifurcationStatements: effectiveBifurcationConfig.enabled,
-    singleLineDiagram: false, // Heavy graphic excluded in informative data report
+    singleLineDiagram: true, // Necessary single line diagram included
     inputFormImage1: true,
     outputScheduleImage2: true,
     table1Matrix: true,
@@ -146,12 +146,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const handleExportPdf = async () => {
     if (!printContentRef.current) return;
     setIsGeneratingPdf(true);
-    setPdfToast({ message: 'Generating informative data PDF report...', type: 'info' });
+    setPdfToast({ message: 'Generating engineering PDF dossier (1 report per page)...', type: 'info' });
 
     try {
       const cleanName = (feeder.name || 'Feeder').replace(/[^a-zA-Z0-9_-]/g, '_');
       const todayStr = new Date().toISOString().slice(0, 10);
-      const filename = `PESCO_ELR_Informative_Report_${cleanName}_${todayStr}`;
+      const filename = `PESCO_ELR_Report_${cleanName}_${todayStr}`;
 
       const result = await exportElementToPdf(printContentRef.current, {
         filename,
@@ -165,7 +165,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
       if (result.success) {
         setPdfToast({
-          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages)`,
+          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages, 1 per report)`,
           type: 'success'
         });
         setTimeout(() => setPdfToast(null), 4000);
@@ -194,7 +194,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setPagesToPrint({
         summarySpecs: true,
         bifurcationStatements: effectiveBifurcationConfig.enabled,
-        singleLineDiagram: false, // Omit heavy canvas graphics
+        singleLineDiagram: true, // Necessary SLD included
         inputFormImage1: true,
         outputScheduleImage2: true,
         table1Matrix: true,
@@ -202,7 +202,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       });
       setExcludeUnnecessaryGraphics(true);
       setIncludeWatermark(false);
-      setPageBreakMode('compact_flow');
+      setPageBreakMode('page_per_section');
       setPrintScale('standard');
       setPageOrientation('portrait');
     } else if (preset === 'all') {
@@ -398,6 +398,121 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     );
   };
 
+  // Computed list of active sections for accurate page numbering
+  const activeSections = useMemo(() => {
+    const list: { id: string; title: string; subtitle: string }[] = [];
+    
+    // 1. Specs & Electrical System Demand
+    if (pagesToPrint.summarySpecs && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'table1_matrix')) {
+      list.push({
+        id: 'summarySpecs',
+        title: '1. Feeder Electrical Specifications & System Demand Summary',
+        subtitle: 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'
+      });
+    }
+    // 2. Form A Spans Input
+    if (pagesToPrint.inputFormImage1 && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'dual_form')) {
+      list.push({
+        id: 'inputFormImage1',
+        title: '2. Form Display A: Feeder Spans Input Data Schedule (Ref. image1.png)',
+        subtitle: 'Field Survey Spans Technical Record & Customer Segments (image1.png)'
+      });
+    }
+    // 3. Form B Calculated Output
+    if (pagesToPrint.outputScheduleImage2 && (displayMode === 'full_report' || displayMode === 'output_schedule_image2' || displayMode === 'dual_form')) {
+      list.push({
+        id: 'outputScheduleImage2',
+        title: '3. Form Display B: Calculated Segment Load Flow & Loss Schedule (Ref. image2.png)',
+        subtitle: 'Radial Load Flow, Operating Currents, Voltage Drops & Losses (image2.png)'
+      });
+    }
+    // 4. Single Line Diagram (SLD) Blueprint
+    if (pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes')) {
+      list.push({
+        id: 'singleLineDiagram',
+        title: '4. Single Line Diagram (SLD) Schematic & Network Topology Blueprint',
+        subtitle: 'Feeder Schematic Blueprint & Bifurcation Layout'
+      });
+    }
+    // 5. Line Bifurcation & Multi-Zone Study
+    if (pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements')) {
+      list.push({
+        id: 'bifurcationStatements',
+        title: '5. Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)',
+        subtitle: 'Dual-Zone 6-Node Technical Performance & Relieved Loading Statements'
+      });
+    }
+    // 6. Upgradation Benchmark Matrix
+    if (pagesToPrint.table1Matrix && (displayMode === 'full_report' || displayMode === 'table1_matrix')) {
+      list.push({
+        id: 'table1Matrix',
+        title: '6. Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)',
+        subtitle: 'Technical Economics & Capital Loss Recovery Benchmark Matrix'
+      });
+    }
+    // 7. Directives & Signatures
+    if (pagesToPrint.recommendations && displayMode === 'full_report') {
+      list.push({
+        id: 'recommendations',
+        title: '7. Priority Engineering Remediation Directives & Approvals',
+        subtitle: 'Engineering Directives & Official Verification Approval Chain'
+      });
+    }
+
+    return list;
+  }, [pagesToPrint, displayMode]);
+
+  const getPageInfo = (sectionId: string) => {
+    const idx = activeSections.findIndex(s => s.id === sectionId);
+    const pageNum = idx >= 0 ? idx + 1 : 1;
+    const totalPages = activeSections.length || 1;
+    return {
+      pageNum,
+      totalPages,
+      pageLabel: `Page ${pageNum} of ${totalPages}`
+    };
+  };
+
+  // Official PESCO - WAPDA Footer for each page
+  const renderOfficialFooter = (sectionTitle: string, sectionId: string, specialNote?: string) => {
+    const { pageNum, totalPages } = getPageInfo(sectionId);
+    return (
+      <div className="report-official-footer pt-3 mt-auto border-t-2 border-slate-900 text-[10px] font-mono text-slate-700 print:text-black w-full print-avoid-break">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Left: Organization & Reference */}
+          <div className="flex flex-col text-left">
+            <div className="font-extrabold text-slate-950 uppercase tracking-wider text-[10px]">
+              PESCO / WAPDA · Energy Loss Reduction (ELR) Engineering Directorate
+            </div>
+            <div className="text-slate-600 text-[9px]">
+              Feeder: <strong className="text-slate-900">{feeder.name}</strong> · Substation: <strong>{feeder.substationName}</strong> · Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong>
+            </div>
+          </div>
+
+          {/* Center: Verification status & Officer */}
+          <div className="text-center hidden sm:flex flex-col">
+            <span className="font-bold text-slate-900">
+              {specialNote || sectionTitle}
+            </span>
+            <span className="text-slate-600 text-[9px]">
+              Verified by: <strong className="text-slate-900">{officerTitle}</strong> · Date: <strong>{today}</strong>
+            </span>
+          </div>
+
+          {/* Right: Page Number & Standard Form Ref */}
+          <div className="flex flex-col items-end text-right">
+            <div className="font-black text-slate-950 text-[11px] bg-slate-100 print:bg-transparent px-2 py-0.5 rounded border border-slate-300 print:border-none">
+              Page {pageNum} of {totalPages}
+            </div>
+            <div className="text-slate-500 text-[9px] uppercase tracking-wider">
+              Form WAPDA-ELR-STD · Verified Copy
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Export current report / tables as CSV
   const handleExportCsv = () => {
     const headers = [
@@ -536,10 +651,38 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             display: none !important;
           }
           ${excludeUnnecessaryGraphics ? `
-          .print-watermark, .screen-watermark, .unnecessary-graphic, .sld-blueprint-section, .decorative-graphic {
+          .print-watermark, .screen-watermark, .unnecessary-graphic, .decorative-graphic {
             display: none !important;
           }
           ` : ''}
+          .print-page-unit {
+            page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
+            break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            min-height: ${pageBreakMode === 'page_per_section' ? '96vh' : 'auto'} !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            box-sizing: border-box !important;
+            padding-top: 1mm !important;
+            padding-bottom: 2mm !important;
+            margin-bottom: ${pageBreakMode === 'page_per_section' ? '0' : '2rem'} !important;
+            background: #ffffff !important;
+            position: relative !important;
+          }
+          .print-page-unit:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
+            min-height: auto !important;
+          }
+          .report-official-footer {
+            margin-top: auto !important;
+            padding-top: 8px !important;
+            border-top: 2px solid #0f172a !important;
+            page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
+            break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
+          }
           .print-watermark {
             position: fixed !important;
             top: 50% !important;
@@ -651,9 +794,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 const next = !excludeUnnecessaryGraphics;
                 setExcludeUnnecessaryGraphics(next);
                 if (next) {
-                  setPagesToPrint(p => ({ ...p, singleLineDiagram: false }));
                   setIncludeWatermark(false);
-                  setPageBreakMode('compact_flow');
                 }
               }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
@@ -661,10 +802,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   ? 'bg-emerald-600/90 text-white border-emerald-400 shadow-xs'
                   : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700'
               }`}
-              title="When active, omits heavy SVG diagrams, watermarks and unnecessary blank page portions for clean printing"
+              title="When active, omits unnecessary watermarks and decorative artifacts while retaining technical reports and single line diagrams"
             >
               <Filter className="w-3.5 h-3.5" />
-              <span>{excludeUnnecessaryGraphics ? 'Informative Data (Graphics Omitted)' : 'Graphics Included'}</span>
+              <span>{excludeUnnecessaryGraphics ? 'Clean Reports & SLD (No Watermarks)' : 'Include Watermarks'}</span>
             </button>
 
             {/* Per-Page Settings Toggle Button */}
@@ -701,7 +842,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               onClick={handleExportPdf}
               disabled={isGeneratingPdf}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900/60 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
-              title="Export clean informative report directly to multi-page PDF"
+              title="Export reports and single line diagrams directly to multi-page PDF (1 report per page)"
             >
               {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
               <span>{isGeneratingPdf ? 'Exporting PDF...' : 'Export to PDF'}</span>
@@ -711,10 +852,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <button
               onClick={() => window.print()}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
-              title="Open browser print dialog to print or save to system PDF"
+              title="Print reports and single line diagrams (1 report per page with official footers)"
             >
               <Printer className="w-4 h-4" />
-              <span>Print Report</span>
+              <span>Print (1 Page / Report)</span>
             </button>
 
             {/* Maximize / Restore Screen Button */}
@@ -1269,676 +1410,696 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           )}
 
           {/* ========================================================
-              PAGE 1 / HEADER: OFFICIAL LETTERHEAD & EXECUTIVE SPECS
+              REPORT 1: EXECUTIVE ENGINEERING SUMMARY & SPECIFICATIONS
              ======================================================== */}
-          {((displayMode === 'full_report' && pagesToPrint.summarySpecs) || 
-            (displayMode === 'single_line_diagram' && pagesToPrint.singleLineDiagram) || 
-            (displayMode === 'input_form_image1' && pagesToPrint.inputFormImage1) || 
-            (displayMode === 'output_schedule_image2' && pagesToPrint.outputScheduleImage2) || 
-            (displayMode === 'table1_matrix' && pagesToPrint.table1Matrix)) && (
-            renderOfficialHeader('Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study', pageBreakMode === 'page_per_section' ? 'Page 1' : undefined, true)
-          )}
-
-          {/* Section 1: Feeder & Network Specifications */}
-          {pagesToPrint.summarySpecs && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'input_form_image1' || displayMode === 'table1_matrix') && (
-            <div className="print-avoid-break">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
-                <span>1. Network & Feeder Electrical Specifications</span>
-                <span className="text-[10px] font-mono text-slate-500 font-normal">Base Voltage: {summary.baseVoltage}V</span>
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Feeder Name:</span>
-                  <span className="font-bold text-slate-900">{feeder.name}</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Grid Substation:</span>
-                  <span className="font-bold text-slate-900">{feeder.substationName}</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Transformer Capacity:</span>
-                  <span className="font-mono font-bold text-slate-900">{currentTrfKva} kVA</span>
-                  <span className={`text-[10px] font-bold block ${isTrfOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                    ({currentTrfLoading}% {isTrfOverloaded ? 'OVERLOADED' : 'NORMAL'})
-                  </span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Connected Consumers:</span>
-                  <span className="font-mono font-bold text-slate-900">
-                    {summary.totalSinglePhaseCustomers} (1Φ) + {summary.totalThreePhaseCustomers} (3Φ)
-                  </span>
-                  <span className="text-[10px] text-slate-500 block">Total: {summary.totalSinglePhaseCustomers + summary.totalThreePhaseCustomers}</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Total Circuit Length:</span>
-                  <span className="font-mono font-bold text-slate-900">{summary.totalCircuitLengthKm} km ({Math.round(summary.totalCircuitLengthKm * 1000)} m)</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Feeder Peak Demand:</span>
-                  <span className="font-mono font-bold text-slate-900">{summary.totalSystemDemandKva} kVA ({summary.totalSourceCurrentAmps} A)</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Power Factor / Load Factor:</span>
-                  <span className="font-mono font-bold text-slate-900">{summary.operatingPowerFactor} / {(summary.loadFactor * 100).toFixed(0)}% (LLF: {summary.lossLoadFactor})</span>
-                </div>
-                <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
-                  <span className="text-slate-500 block text-[11px]">Total Line Loss & Ratio:</span>
-                  <span className="font-mono font-bold text-amber-700">{summary.totalLineLossKw} kW ({summary.percentPowerLoss}%)</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Section 1B: Informative Topology Summary Table (Included in clean data report instead of heavy SVG canvas) */}
-          {excludeUnnecessaryGraphics && (
-            <div className="print-avoid-break">
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-indigo-600 flex items-center justify-between">
-                <span>2. Network Topology & Line Bifurcation Architecture</span>
-                <span className="text-[10px] font-mono text-slate-500 font-normal">Informative Data Summary</span>
-              </h2>
-              <div className="overflow-x-auto print:overflow-visible border border-slate-200 rounded-lg">
-                <table className="w-full text-xs text-left border-collapse font-mono">
-                  <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
-                    <tr>
-                      <th className="p-2">Line Segment / Zone</th>
-                      <th className="p-2">Substation / Injection Node</th>
-                      <th className="p-2">Rating (kVA)</th>
-                      <th className="p-2">Spans & Length</th>
-                      <th className="p-2">Peak Current</th>
-                      <th className="p-2">Max Voltage Drop</th>
-                      <th className="p-2">Operational Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    <tr>
-                      <td className="p-2 font-bold text-slate-900 font-sans">
-                        Exist Line (Baseline Feeder)
-                      </td>
-                      <td className="p-2">Node 0.0 (Main Substation)</td>
-                      <td className="p-2">{summary.existingTransformerKva} kVA</td>
-                      <td className="p-2">{feeder.segments.length} spans ({Math.round(summary.totalCircuitLengthKm * 1000)}m)</td>
-                      <td className="p-2">{summary.totalSourceCurrentAmps} A</td>
-                      <td className={`p-2 font-bold ${summary.worstVoltageDropPercent > 9 ? 'text-rose-600' : 'text-slate-900'}`}>
-                        -{summary.worstVoltageDropPercent.toFixed(1)}%
-                      </td>
-                      <td className="p-2 font-sans text-[11px] text-slate-600">
-                        {summary.existingTransformerKva < summary.totalSystemDemandKva ? 'Overloaded Radial' : 'Standard Feed'}
-                      </td>
-                    </tr>
-                    {effectiveBifurcationConfig.enabled && (
-                      <>
-                        <tr className="bg-blue-50/40">
-                          <td className="p-2 font-bold text-blue-900 font-sans">
-                            Proposed-1 Line (Main T-1 Zone)
-                          </td>
-                          <td className="p-2">Node 0.0 (Upstream Trunk)</td>
-                          <td className="p-2">{summary.existingTransformerKva} kVA</td>
-                          <td className="p-2">Upstream to Node {effectiveBifurcationConfig.bifurcationNodeId}</td>
-                          <td className="p-2">
-                            {bifurcationDossier.t1Year0?.currentAmps || summary.totalSourceCurrentAmps} A
-                          </td>
-                          <td className="p-2 font-bold text-blue-900">
-                            -{bifurcationDossier.t1Year0?.worstVoltageDropPercent || '0.0'}%
-                          </td>
-                          <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
-                            Relieved (Normal Load)
-                          </td>
-                        </tr>
-                        <tr className="bg-purple-50/40">
-                          <td className="p-2 font-bold text-purple-900 font-sans">
-                            Proposed-2 Line (New T-2 Zone)
-                          </td>
-                          <td className="p-2">
-                            Node {effectiveBifurcationConfig.transformerNodeId || effectiveBifurcationConfig.bifurcationNodeId} (New Substation)
-                          </td>
-                          <td className="p-2 font-bold text-purple-900">{effectiveBifurcationConfig.transformerCapacityKva} kVA</td>
-                          <td className="p-2">Cut-off isolated downstream zone</td>
-                          <td className="p-2">
-                            {bifurcationDossier.t2Year0?.currentAmps || '0'} A
-                          </td>
-                          <td className="p-2 font-bold text-purple-900">
-                            -{bifurcationDossier.t2Year0?.worstVoltageDropPercent || '0.0'}%
-                          </td>
-                          <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
-                            Tail End Stabilized
-                          </td>
-                        </tr>
-                      </>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 2: SINGLE LINE DIAGRAM (SLD) BLUEPRINTS (Exist, Proposed-1, Proposed-2)
-              (Rendered only when SLD diagrams are explicitly requested and graphics not excluded)
-             ======================================================== */}
-          {pagesToPrint.singleLineDiagram && !excludeUnnecessaryGraphics && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
-            <div className="print-page-break print-avoid-break space-y-4 sld-blueprint-section">
-              {renderOfficialHeader('Single Line Diagram (SLD) Topology & Bifurcation Schemes', pageBreakMode === 'page_per_section' ? 'Page 2' : undefined)}
-              <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <Network className="w-4 h-4 text-indigo-700" />
-                    <span>2. Single Line Diagram (SLD) Topology & Bifurcation Schemes</span>
+          {pagesToPrint.summarySpecs && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'table1_matrix') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                {renderOfficialHeader('Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study', getPageInfo('summarySpecs').pageLabel, true)}
+                
+                {/* Section 1: Feeder & Network Specifications */}
+                <div className="print-avoid-break">
+                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
+                    <span>1. Network & Feeder Electrical Specifications</span>
+                    <span className="text-[10px] font-mono text-slate-500 font-normal">Base Voltage: {summary.baseVoltage}V</span>
                   </h2>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    Separate electrical single line diagrams for Existing (Exist: Baseline), Proposed-1 (T-1 Line Portion), and Proposed-2 (T-2 Bifurcated Line Portion).
-                  </p>
-                </div>
-
-                {/* Scheme Switcher in Report Viewer (no-print) */}
-                <div className="no-print flex flex-wrap items-center gap-1 text-xs">
-                  <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
-                  <button
-                    type="button"
-                    onClick={() => setSldScheme('combined')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                      sldScheme === 'combined' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
-                    }`}
-                  >
-                    Combined
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSldScheme('exist')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                      sldScheme === 'exist' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-amber-950 border border-amber-300'
-                    }`}
-                  >
-                    Exist
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSldScheme('proposed_1')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                      sldScheme === 'proposed_1' ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-900 border border-blue-300'
-                    }`}
-                  >
-                    Proposed-1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSldScheme('proposed_2')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                      sldScheme === 'proposed_2' ? 'bg-purple-600 text-white font-bold' : 'bg-white text-purple-900 border border-purple-300'
-                    }`}
-                  >
-                    Proposed-2
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSldScheme('tri_scheme')}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1 ${
-                      sldScheme === 'tri_scheme' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-900 border border-emerald-300'
-                    }`}
-                  >
-                    <Columns className="w-3 h-3" />
-                    <span>3-Scheme (Exist vs P-1 vs P-2)</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Render SLD Diagrams */}
-              <FeederSLDViewer
-                feeder={feeder}
-                summary={summary}
-                existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
-                scheme={sldScheme}
-                theme="light"
-                isPrintView={true}
-                showMetrics={true}
-              />
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 3: LINE BIFURCATION & MULTI-ZONE STUDY
-              (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)
-             ======================================================== */}
-          {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
-            <div className="print-page-break print-avoid-break space-y-4">
-              {renderOfficialHeader('Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)', pageBreakMode === 'page_per_section' ? 'Page 3' : undefined)}
-              <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
-                    <Split className="w-4 h-4 text-purple-700" />
-                    <span>3. Line Bifurcation & Multi-Zone Study (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)</span>
-                  </h2>
-                  <p className="text-[11px] text-purple-800 mt-0.5">
-                    Node-by-node technical analysis of Exist Line (Baseline), Proposed-1 Line (T-1 Zone), and Proposed-2 Line (T-2 Zone) at 0 Year and after 5 Years (+5% compounded growth).
-                  </p>
-                </div>
-                <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
-                  Cut-Off @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA @ Node {bifurcationDossier.transformerNodeId || bifurcationDossier.bifurcationNodeId}
-                </span>
-              </div>
-
-              <BifurcationStatementsPanel
-                dossier={bifurcationDossier}
-                currencySymbol={feeder.currencySymbol || 'PKR'}
-                isPrintView={true}
-              />
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 4: FORM DISPLAY - INPUT DATA FORM (image1.png)
-             ======================================================== */}
-          {pagesToPrint.inputFormImage1 && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'dual_form') && (
-            <div className="print-page-break print-avoid-break">
-              {renderOfficialHeader('Form Display A: Feeder Spans Input Data Schedule (Ref. image1.png)', pageBreakMode === 'page_per_section' ? 'Page 4' : undefined)}
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-blue-600 flex items-center justify-between">
-                <span>FORM DISPLAY A: FEEDER SPANS INPUT DATA TABLE (image1.png)</span>
-                <span className="text-[10px] font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                  {summary.segmentResults.length} Spans Loaded · Page {pageBreakMode === 'page_per_section' ? '3' : ''}
-                </span>
-              </h2>
-              <p className="text-xs text-slate-600 mb-2">
-                As recorded in WAPDA field survey for Gulbhar Colony Feeder (Ref. image1.png):
-              </p>
-              
-              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
-                      <th className="py-2 px-2 text-center w-8">#</th>
-                      <th className="py-2 px-2.5 text-center">Zone</th>
-                      <th className="py-2 px-3 text-center">From Node</th>
-                      <th className="py-2 px-3 text-center">To Node</th>
-                      <th className="py-2 px-3 text-right">Length (km)</th>
-                      <th className="py-2 px-3 text-right">Length (m)</th>
-                      <th className="py-2 px-3 text-right">3-Ph Customer</th>
-                      <th className="py-2 px-3 text-right">1-Ph Customer</th>
-                      <th className="py-2 px-3 text-left">Conductor Code</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
-                    {summary.segmentResults.map((seg, idx) => (
-                      <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                        <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
-                        <td className="py-1.5 px-2.5 text-center font-sans">
-                          {seg.fedByTransformer === 'T2' ? (
-                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
-                              T-2 Added
-                            </span>
-                          ) : (
-                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
-                              T-1 Main
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
-                        <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
-                        <td className="py-1.5 px-3 text-right font-medium">{seg.lengthKm.toFixed(3)}</td>
-                        <td className="py-1.5 px-3 text-right">{seg.lengthMeters}</td>
-                        <td className="py-1.5 px-3 text-right font-bold text-purple-700">{seg.threePhaseCustomers}</td>
-                        <td className="py-1.5 px-3 text-right font-bold text-slate-900">{seg.singlePhaseCustomers}</td>
-                        <td className="py-1.5 px-3 text-left font-semibold text-slate-800 font-sans">{seg.conductor.code}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-900 text-white font-bold font-mono">
-                      <td colSpan={4} className="py-2 px-3 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
-                        TOTALS
-                      </td>
-                      <td className="py-2 px-3 text-right text-amber-300">
-                        {summary.totalCircuitLengthKm.toFixed(3)} km
-                      </td>
-                      <td className="py-2 px-3 text-right">
-                        {Math.round(summary.totalCircuitLengthKm * 1000)} m
-                      </td>
-                      <td className="py-2 px-3 text-right text-purple-300">
-                        {summary.totalThreePhaseCustomers}
-                      </td>
-                      <td className="py-2 px-3 text-right text-amber-300">
-                        {summary.totalSinglePhaseCustomers}
-                      </td>
-                      <td className="py-2 px-3 text-slate-400 font-sans text-xs">
-                        {summary.segmentResults.length} Spans
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 4: FORM DISPLAY - CALCULATED OUTPUT SCHEDULE (image2.png)
-             ======================================================== */}
-          {pagesToPrint.outputScheduleImage2 && (displayMode === 'full_report' || displayMode === 'output_schedule_image2' || displayMode === 'dual_form') && (
-            <div className="print-page-break print-avoid-break">
-              {renderOfficialHeader('Form Display B: Calculated Segment Load Flow & Loss Schedule (Ref. image2.png)', pageBreakMode === 'page_per_section' ? 'Page 5' : undefined)}
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-emerald-600 flex items-center justify-between">
-                <span>FORM DISPLAY B: CALCULATED SEGMENT LOAD FLOW & LOSS SCHEDULE (image2.png)</span>
-                <span className="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  Line Loss: {summary.totalLineLossKw} kW · Page {pageBreakMode === 'page_per_section' ? '4' : ''}
-                </span>
-              </h2>
-              <p className="text-xs text-slate-600 mb-2">
-                Calculated using WAPDA ELR radial distribution algorithm (Ref. image2.png):
-              </p>
-
-              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
-                      <th className="py-2 px-2 text-center w-8">#</th>
-                      <th className="py-2 px-2 text-center">Zone</th>
-                      <th className="py-2 px-2 text-center">From</th>
-                      <th className="py-2 px-2 text-center">To</th>
-                      <th className="py-2 px-2 text-right">Length (km)</th>
-                      <th className="py-2 px-2 text-right">Length (m)</th>
-                      <th className="py-2 px-2 text-right">Cust (3Φ/1Φ)</th>
-                      <th className="py-2 px-2 text-left">Code</th>
-                      <th className="py-2 px-2 text-right bg-blue-50/80 font-bold text-blue-950">Current (A)</th>
-                      <th className="py-2 px-2 text-right bg-purple-50/80 font-bold text-purple-950">Loading %</th>
-                      <th className="py-2 px-2 text-right bg-rose-50/80 font-bold text-rose-950">Volt Drop %</th>
-                      <th className="py-2 px-2 text-right">Voltage (V)</th>
-                      <th className="py-2 px-2 text-right bg-amber-50/80 font-bold text-amber-950">Loss (kW)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
-                    {summary.segmentResults.map((seg, idx) => (
-                      <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
-                        <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
-                        <td className="py-1.5 px-2.5 text-center font-sans">
-                          {seg.fedByTransformer === 'T2' ? (
-                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
-                              T-2 Added
-                            </span>
-                          ) : (
-                            <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
-                              T-1 Main
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
-                        <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
-                        <td className="py-1.5 px-2 text-right">{seg.lengthKm.toFixed(3)}</td>
-                        <td className="py-1.5 px-2 text-right">{seg.lengthMeters}</td>
-                        <td className="py-1.5 px-2 text-right text-slate-700">
-                          {seg.threePhaseCustomers} / {seg.singlePhaseCustomers}
-                        </td>
-                        <td className="py-1.5 px-2 text-left font-sans text-slate-800">{seg.conductor.code}</td>
-                        <td className="py-1.5 px-2 text-right font-bold text-blue-700 bg-blue-50/30">
-                          {seg.currentAmps.toFixed(1)}
-                        </td>
-                        <td className="py-1.5 px-2 text-right font-bold bg-purple-50/30">
-                          <span className={seg.percentLoading >= 70 ? 'text-amber-700' : 'text-slate-800'}>
-                            {seg.percentLoading}%
-                          </span>
-                        </td>
-                        <td className="py-1.5 px-2 text-right font-bold bg-rose-50/30 text-rose-700">
-                          {seg.percentVoltDrop.toFixed(1)}%
-                        </td>
-                        <td className="py-1.5 px-2 text-right font-semibold text-slate-900">
-                          {seg.receivingVoltage.toFixed(1)}
-                        </td>
-                        <td className="py-1.5 px-2 text-right font-bold text-amber-700 bg-amber-50/30">
-                          {seg.lineLossKw.toFixed(3)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-slate-900 text-white font-bold font-mono">
-                      <td colSpan={4} className="py-2.5 px-2 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
-                        TOTALS & PEAKS
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-amber-300">
-                        {summary.totalCircuitLengthKm.toFixed(3)}
-                      </td>
-                      <td className="py-2.5 px-2 text-right">
-                        {Math.round(summary.totalCircuitLengthKm * 1000)}
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-purple-300">
-                        {summary.totalThreePhaseCustomers} / {summary.totalSinglePhaseCustomers}
-                      </td>
-                      <td className="py-2.5 px-2 text-slate-400 font-sans text-xs">Max</td>
-                      <td className="py-2.5 px-2 text-right text-blue-300 font-bold">
-                        {summary.totalSourceCurrentAmps} A
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-purple-300 font-bold">
-                        85%
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-rose-300 font-bold">
-                        -{summary.worstVoltageDropPercent}%
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-white">
-                        {summary.worstVoltageVolts} V
-                      </td>
-                      <td className="py-2.5 px-2 text-right text-amber-300 font-extrabold text-sm">
-                        {summary.totalLineLossKw} kW
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 5: TABLE 1 UPGRADATION BENCHMARK MATRIX
-             ======================================================== */}
-          {pagesToPrint.table1Matrix && (displayMode === 'full_report' || displayMode === 'table1_matrix') && (
-            <div className="print-page-break print-avoid-break">
-              {renderOfficialHeader('Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)', pageBreakMode === 'page_per_section' ? 'Page 6' : undefined)}
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
-                <span>3. Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)</span>
-                <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: PKR 38.5 / kWh · Page {pageBreakMode === 'page_per_section' ? '5' : ''}</span>
-              </h2>
-
-              <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
-                      <th className="p-2.5">Parameter</th>
-                      <th className="p-2.5 text-right">Existing System</th>
-                      <th className="p-2.5 text-right bg-emerald-50 text-emerald-950 font-bold">Proposed Upgraded</th>
-                      <th className="p-2.5 text-right text-emerald-800">Benefits / Net Savings</th>
-                      <th className="p-2.5 text-right">After 5 Years (Unmitigated)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
-                    {proposedSummary.bifurcationActive && (
-                      <tr className="bg-purple-50/40">
-                        <td className="p-2 font-sans font-semibold text-purple-900">Line Bifurcation & T-2 Substation</td>
-                        <td className="p-2 text-right text-slate-500">None (Single Radial)</td>
-                        <td className="p-2 text-right bg-purple-100/70 text-purple-950 font-bold">
-                          Split @ Node {proposedSummary.bifurcationNodeId} (+{proposedSummary.additionalTransformerKva} kVA T-2)
-                        </td>
-                        <td className="p-2 text-right font-bold text-purple-800">
-                          Relieved {proposedSummary.bifurcationReliefKva} kVA Load
-                        </td>
-                        <td className="p-2 text-right text-slate-400">N/A</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Transformer Capacity (T-1)</td>
-                      <td className="p-2 text-right">{currentTrfKva} kVA</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.existingTransformerKva} kVA</td>
-                      <td className="p-2 text-right font-sans text-emerald-700">
-                        {proposedSummary.bifurcationActive ? 'T-1 Relieved by T-2 Substation' : 'Augmented to Match Load'}
-                      </td>
-                      <td className="p-2 text-right">{currentTrfKva} kVA</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Main Transformer (T-1) Loading</td>
-                      <td className="p-2 text-right font-bold text-rose-700">{currentTrfLoading}%</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">
-                        -{currentTrfLoading - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)}% Overload Relieved
-                      </td>
-                      <td className="p-2 text-right font-bold text-rose-800">151%</td>
-                    </tr>
-                    {proposedSummary.bifurcationActive && (
-                      <tr className="bg-purple-50/20">
-                        <td className="p-2 font-sans font-semibold text-purple-900">Additional Transformer (T-2) Loading</td>
-                        <td className="p-2 text-right text-slate-400">Not Installed</td>
-                        <td className="p-2 text-right bg-purple-100/50 text-purple-950 font-bold">{proposedSummary.transformer2LoadingPercent}%</td>
-                        <td className="p-2 text-right font-bold text-purple-800">
-                          {proposedSummary.transformer2DemandKva} kVA on T-2 ({proposedSummary.additionalTransformerKva} kVA)
-                        </td>
-                        <td className="p-2 text-right text-slate-400">N/A</td>
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Peak Feeder Line Losses</td>
-                      <td className="p-2 text-right">{summary.totalLineLossKw.toFixed(2)} kW</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.totalLineLossKw.toFixed(2)} kW</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">
-                        -{(summary.totalLineLossKw - proposedSummary.totalLineLossKw).toFixed(2)} kW
-                      </td>
-                      <td className="p-2 text-right font-bold">12.555 kW</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Power Loss Ratio</td>
-                      <td className="p-2 text-right">{summary.percentPowerLoss}%</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.percentPowerLoss}%</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">
-                        -{Math.max(0, summary.percentPowerLoss - proposedSummary.percentPowerLoss)}%
-                      </td>
-                      <td className="p-2 text-right">10%</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Annual Energy Losses</td>
-                      <td className="p-2 text-right">{summary.annualEnergyLossKwh.toLocaleString()} kWh</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.annualEnergyLossKwh.toLocaleString()} kWh</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">
-                        -{kwhSaved.toLocaleString()} kWh / yr
-                      </td>
-                      <td className="p-2 text-right font-bold">30,445 kWh</td>
-                    </tr>
-                    <tr>
-                      <td className="p-2 font-sans font-semibold text-slate-800">Worst Voltage Drop</td>
-                      <td className="p-2 text-right font-semibold text-rose-700">-{summary.worstVoltageDropPercent}%</td>
-                      <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">-{proposedSummary.worstVoltageDropPercent}%</td>
-                      <td className="p-2 text-right font-bold text-emerald-700">
-                        +{(summary.worstVoltageDropPercent - proposedSummary.worstVoltageDropPercent).toFixed(1)}% Boosted
-                      </td>
-                      <td className="p-2 text-right font-bold text-rose-800">-14.8%</td>
-                    </tr>
-                    <tr className="bg-slate-100 font-bold">
-                      <td className="p-2 font-sans text-slate-900">Financial Revenue Impact</td>
-                      <td className="p-2 text-right text-slate-900">
-                        {feeder.currencySymbol} {Math.round(summary.annualEnergyLossKwh * tariff).toLocaleString()}
-                      </td>
-                      <td className="p-2 text-right bg-emerald-100 text-emerald-950 font-bold">
-                        {feeder.currencySymbol} {Math.round(proposedSummary.annualEnergyLossKwh * tariff).toLocaleString()}
-                      </td>
-                      <td className="p-2 text-right text-emerald-800 font-bold font-sans">
-                        +{feeder.currencySymbol} {annualSavings.toLocaleString()} / YEAR
-                      </td>
-                      <td className="p-2 text-right text-rose-900">
-                        {feeder.currencySymbol} {Math.round(30445 * tariff).toLocaleString()}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              PAGE 6: RECOMMENDATIONS & OFFICIAL SIGNATURES
-             ======================================================== */}
-          {pagesToPrint.recommendations && (displayMode === 'full_report') && (
-            <div className="print-page-break print-avoid-break space-y-4">
-              {renderOfficialHeader('Priority Engineering Remediation Directives & Approvals', pageBreakMode === 'page_per_section' ? 'Page 7' : undefined)}
-              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500">
-                4. Priority Engineering Remediation Directives
-              </h2>
-              <div className="space-y-2.5">
-                {recommendations.map((rec, i) => (
-                  <div key={i} className="border border-slate-200 p-3 rounded-lg text-xs bg-white">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-900">
-                        Directive 4.{i + 1}: {rec.title}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                        rec.category === 'CRITICAL' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {rec.category}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Feeder Name:</span>
+                      <span className="font-bold text-slate-900">{feeder.name}</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Grid Substation:</span>
+                      <span className="font-bold text-slate-900">{feeder.substationName}</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Transformer Capacity:</span>
+                      <span className="font-mono font-bold text-slate-900">{currentTrfKva} kVA</span>
+                      <span className={`text-[10px] font-bold block ${isTrfOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                        ({currentTrfLoading}% {isTrfOverloaded ? 'OVERLOADED' : 'NORMAL'})
                       </span>
                     </div>
-                    <p className="text-slate-600 mb-1">{rec.description}</p>
-                    <p className="text-slate-900 font-semibold bg-slate-50 p-1.5 rounded border border-slate-200">
-                      Standard Operating Action: {rec.suggestedAction}
-                    </p>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Connected Consumers:</span>
+                      <span className="font-mono font-bold text-slate-900">
+                        {summary.totalSinglePhaseCustomers} (1Φ) + {summary.totalThreePhaseCustomers} (3Φ)
+                      </span>
+                      <span className="text-[10px] text-slate-500 block">Total: {summary.totalSinglePhaseCustomers + summary.totalThreePhaseCustomers}</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Total Circuit Length:</span>
+                      <span className="font-mono font-bold text-slate-900">{summary.totalCircuitLengthKm} km ({Math.round(summary.totalCircuitLengthKm * 1000)} m)</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Feeder Peak Demand:</span>
+                      <span className="font-mono font-bold text-slate-900">{summary.totalSystemDemandKva} kVA ({summary.totalSourceCurrentAmps} A)</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Power Factor / Load Factor:</span>
+                      <span className="font-mono font-bold text-slate-900">{summary.operatingPowerFactor} / {(summary.loadFactor * 100).toFixed(0)}% (LLF: {summary.lossLoadFactor})</span>
+                    </div>
+                    <div className="border border-slate-200 p-3 rounded-lg bg-slate-50/50">
+                      <span className="text-slate-500 block text-[11px]">Total Line Loss & Ratio:</span>
+                      <span className="font-mono font-bold text-amber-700">{summary.totalLineLossKw} kW ({summary.percentPowerLoss}%)</span>
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                {/* Section 1B: Informative Topology Summary Table */}
+                <div className="print-avoid-break">
+                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-indigo-600 flex items-center justify-between">
+                    <span>2. Network Topology & Line Bifurcation Architecture</span>
+                    <span className="text-[10px] font-mono text-slate-500 font-normal">Informative Data Summary</span>
+                  </h2>
+                  <div className="overflow-x-auto print:overflow-visible border border-slate-200 rounded-lg">
+                    <table className="w-full text-xs text-left border-collapse font-mono">
+                      <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-2">Line Segment / Zone</th>
+                          <th className="p-2">Substation / Injection Node</th>
+                          <th className="p-2">Rating (kVA)</th>
+                          <th className="p-2">Spans & Length</th>
+                          <th className="p-2">Peak Current</th>
+                          <th className="p-2">Max Voltage Drop</th>
+                          <th className="p-2">Operational Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        <tr>
+                          <td className="p-2 font-bold text-slate-900 font-sans">
+                            Exist Line (Baseline Feeder)
+                          </td>
+                          <td className="p-2">Node 0.0 (Main Substation)</td>
+                          <td className="p-2">{summary.existingTransformerKva} kVA</td>
+                          <td className="p-2">{feeder.segments.length} spans ({Math.round(summary.totalCircuitLengthKm * 1000)}m)</td>
+                          <td className="p-2">{summary.totalSourceCurrentAmps} A</td>
+                          <td className={`p-2 font-bold ${summary.worstVoltageDropPercent > 9 ? 'text-rose-600' : 'text-slate-900'}`}>
+                            -{summary.worstVoltageDropPercent.toFixed(1)}%
+                          </td>
+                          <td className="p-2 font-sans text-[11px] text-slate-600">
+                            {summary.existingTransformerKva < summary.totalSystemDemandKva ? 'Overloaded Radial' : 'Standard Feed'}
+                          </td>
+                        </tr>
+                        {effectiveBifurcationConfig.enabled && (
+                          <>
+                            <tr className="bg-blue-50/40">
+                              <td className="p-2 font-bold text-blue-900 font-sans">
+                                Proposed-1 Line (Main T-1 Zone)
+                              </td>
+                              <td className="p-2">Node 0.0 (Upstream Trunk)</td>
+                              <td className="p-2">{summary.existingTransformerKva} kVA</td>
+                              <td className="p-2">Upstream to Node {effectiveBifurcationConfig.bifurcationNodeId}</td>
+                              <td className="p-2">
+                                {bifurcationDossier.t1Year0?.currentAmps || summary.totalSourceCurrentAmps} A
+                              </td>
+                              <td className="p-2 font-bold text-blue-900">
+                                -{bifurcationDossier.t1Year0?.worstVoltageDropPercent || '0.0'}%
+                              </td>
+                              <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
+                                Relieved (Normal Load)
+                              </td>
+                            </tr>
+                            <tr className="bg-purple-50/40">
+                              <td className="p-2 font-bold text-purple-900 font-sans">
+                                Proposed-2 Line (New T-2 Zone)
+                              </td>
+                              <td className="p-2">
+                                Node {effectiveBifurcationConfig.transformerNodeId || effectiveBifurcationConfig.bifurcationNodeId} (New Substation)
+                              </td>
+                              <td className="p-2 font-bold text-purple-900">{effectiveBifurcationConfig.transformerCapacityKva} kVA</td>
+                              <td className="p-2">Cut-off isolated downstream zone</td>
+                              <td className="p-2">
+                                {bifurcationDossier.t2Year0?.currentAmps || '0'} A
+                              </td>
+                              <td className="p-2 font-bold text-purple-900">
+                                -{bifurcationDossier.t2Year0?.worstVoltageDropPercent || '0.0'}%
+                              </td>
+                              <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
+                                Tail End Stabilized
+                              </td>
+                            </tr>
+                          </>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
+
+              {renderOfficialFooter('1. Feeder Electrical Specifications & System Demand Summary', 'summarySpecs')}
             </div>
           )}
 
-          {/* Section 7: Official Approvals & Signatures */}
-          {includeSignatures && (
-            <div className="pt-6 border-t-2 border-slate-900 print-avoid-break">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center justify-between">
-                <span>Official Verification, Endorsement & Approval Chain</span>
-                <span className="font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                  Active Officer: <strong>{officerTitle}</strong>
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center text-xs">
-                <div className={`p-3 rounded-xl border ${isSdoMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
-                  <div className="h-12 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
-                    {isSdoMatch && (
-                      <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                        ✓ Endorsed by Active Officer
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-bold text-slate-900 block">Sub-Divisional Officer (SDO)</span>
-                  <span className="text-slate-500 text-[11px]">Gulbhar Sub-Division · PESCO/WAPDA</span>
-                  {isSdoMatch && (
-                    <span className="text-[10px] font-bold text-amber-800 block mt-1">
-                      ({officerTitle})
-                    </span>
-                  )}
-                </div>
-
-                <div className={`p-3 rounded-xl border ${isXenMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
-                  <div className="h-12 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
-                    {isXenMatch && (
-                      <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                        ✓ Endorsed by Active Officer
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-bold text-slate-900 block">Executive Engineer (XEN)</span>
-                  <span className="text-slate-500 text-[11px]">Peshawar City Division</span>
-                  {isXenMatch && (
-                    <span className="text-[10px] font-bold text-amber-800 block mt-1">
-                      ({officerTitle})
-                    </span>
-                  )}
-                </div>
-
-                <div className={`p-3 rounded-xl border ${isSeMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
-                  <div className="h-12 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
-                    {isSeMatch && (
-                      <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
-                        ✓ Endorsed by Active Officer
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-bold text-slate-900 block">
-                    Superintending Engineer / Planning
+          {/* ========================================================
+              REPORT 2: FORM DISPLAY A - INPUT DATA SCHEDULE (image1.png)
+             ======================================================== */}
+          {pagesToPrint.inputFormImage1 && (displayMode === 'full_report' || displayMode === 'input_form_image1' || displayMode === 'dual_form') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {renderOfficialHeader('Form Display A: Feeder Spans Input Data Schedule (Ref. image1.png)', getPageInfo('inputFormImage1').pageLabel)}
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-blue-600 flex items-center justify-between">
+                  <span>FORM DISPLAY A: FEEDER SPANS INPUT DATA TABLE (image1.png)</span>
+                  <span className="text-[10px] font-mono text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    {summary.segmentResults.length} Spans Loaded · {getPageInfo('inputFormImage1').pageLabel}
                   </span>
-                  <span className="text-slate-500 text-[11px]">Planning, Design & ELR Directorate</span>
-                  {isSeMatch && (
-                    <span className="text-[10px] font-bold text-amber-800 block mt-1">
-                      ({officerTitle})
-                    </span>
-                  )}
+                </h2>
+                <p className="text-xs text-slate-600 mb-2">
+                  As recorded in WAPDA field survey for Gulbhar Colony Feeder (Ref. image1.png):
+                </p>
+                
+                <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
+                        <th className="py-2 px-2 text-center w-8">#</th>
+                        <th className="py-2 px-2.5 text-center">Zone</th>
+                        <th className="py-2 px-3 text-center">From Node</th>
+                        <th className="py-2 px-3 text-center">To Node</th>
+                        <th className="py-2 px-3 text-right">Length (km)</th>
+                        <th className="py-2 px-3 text-right">Length (m)</th>
+                        <th className="py-2 px-3 text-right">3-Ph Customer</th>
+                        <th className="py-2 px-3 text-right">1-Ph Customer</th>
+                        <th className="py-2 px-3 text-left">Conductor Code</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
+                      {summary.segmentResults.map((seg, idx) => (
+                        <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                          <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                          <td className="py-1.5 px-2.5 text-center font-sans">
+                            {seg.fedByTransformer === 'T2' ? (
+                              <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
+                                T-2 Added
+                              </span>
+                            ) : (
+                              <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
+                                T-1 Main
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
+                          <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
+                          <td className="py-1.5 px-3 text-right font-medium">{seg.lengthKm.toFixed(3)}</td>
+                          <td className="py-1.5 px-3 text-right">{seg.lengthMeters}</td>
+                          <td className="py-1.5 px-3 text-right font-bold text-purple-700">{seg.threePhaseCustomers}</td>
+                          <td className="py-1.5 px-3 text-right font-bold text-slate-900">{seg.singlePhaseCustomers}</td>
+                          <td className="py-1.5 px-3 text-left font-semibold text-slate-800 font-sans">{seg.conductor.code}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-900 text-white font-bold font-mono">
+                        <td colSpan={4} className="py-2 px-3 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
+                          TOTALS
+                        </td>
+                        <td className="py-2 px-3 text-right text-amber-300">
+                          {summary.totalCircuitLengthKm.toFixed(3)} km
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          {Math.round(summary.totalCircuitLengthKm * 1000)} m
+                        </td>
+                        <td className="py-2 px-3 text-right text-purple-300">
+                          {summary.totalThreePhaseCustomers}
+                        </td>
+                        <td className="py-2 px-3 text-right text-amber-300">
+                          {summary.totalSinglePhaseCustomers}
+                        </td>
+                        <td className="py-2 px-3 text-slate-400 font-sans text-xs">
+                          {summary.segmentResults.length} Spans
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
                 </div>
               </div>
+
+              {renderOfficialFooter('2. Form Display A: Feeder Spans Input Schedule', 'inputFormImage1')}
+            </div>
+          )}
+
+          {/* ========================================================
+              REPORT 3: FORM DISPLAY B - CALCULATED LOAD FLOW & LOSS (image2.png)
+             ======================================================== */}
+          {pagesToPrint.outputScheduleImage2 && (displayMode === 'full_report' || displayMode === 'output_schedule_image2' || displayMode === 'dual_form') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {renderOfficialHeader('Form Display B: Calculated Segment Load Flow & Loss Schedule (Ref. image2.png)', getPageInfo('outputScheduleImage2').pageLabel)}
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-emerald-600 flex items-center justify-between">
+                  <span>FORM DISPLAY B: CALCULATED SEGMENT LOAD FLOW & LOSS SCHEDULE (image2.png)</span>
+                  <span className="text-[10px] font-mono text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    Line Loss: {summary.totalLineLossKw} kW · {getPageInfo('outputScheduleImage2').pageLabel}
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-600 mb-2">
+                  Calculated using WAPDA ELR radial distribution algorithm (Ref. image2.png):
+                </p>
+
+                <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
+                        <th className="py-2 px-2 text-center w-8">#</th>
+                        <th className="py-2 px-2 text-center">Zone</th>
+                        <th className="py-2 px-2 text-center">From</th>
+                        <th className="py-2 px-2 text-center">To</th>
+                        <th className="py-2 px-2 text-right">Length (km)</th>
+                        <th className="py-2 px-2 text-right">Length (m)</th>
+                        <th className="py-2 px-2 text-right">Cust (3Φ/1Φ)</th>
+                        <th className="py-2 px-2 text-left">Code</th>
+                        <th className="py-2 px-2 text-right bg-blue-50/80 font-bold text-blue-950">Current (A)</th>
+                        <th className="py-2 px-2 text-right bg-purple-50/80 font-bold text-purple-950">Loading %</th>
+                        <th className="py-2 px-2 text-right bg-rose-50/80 font-bold text-rose-950">Volt Drop %</th>
+                        <th className="py-2 px-2 text-right">Voltage (V)</th>
+                        <th className="py-2 px-2 text-right bg-amber-50/80 font-bold text-amber-950">Loss (kW)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
+                      {summary.segmentResults.map((seg, idx) => (
+                        <tr key={seg.segment.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70'}>
+                          <td className="py-1.5 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                          <td className="py-1.5 px-2.5 text-center font-sans">
+                            {seg.fedByTransformer === 'T2' ? (
+                              <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-purple-100 text-purple-900">
+                                T-2 Added
+                              </span>
+                            ) : (
+                              <span className="px-1 py-0.2 rounded text-[9px] font-bold bg-blue-100 text-blue-900">
+                                T-1 Main
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.fromNodeId.replace('.0', '')}</td>
+                          <td className="py-1.5 px-3 text-center font-bold text-slate-900">{seg.toNodeId.replace('.0', '')}</td>
+                          <td className="py-1.5 px-2 text-right">{seg.lengthKm.toFixed(3)}</td>
+                          <td className="py-1.5 px-2 text-right">{seg.lengthMeters}</td>
+                          <td className="py-1.5 px-2 text-right text-slate-700">
+                            {seg.threePhaseCustomers} / {seg.singlePhaseCustomers}
+                          </td>
+                          <td className="py-1.5 px-2 text-left font-sans text-slate-800">{seg.conductor.code}</td>
+                          <td className="py-1.5 px-2 text-right font-bold text-blue-700 bg-blue-50/30">
+                            {seg.currentAmps.toFixed(1)}
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-bold bg-purple-50/30">
+                            <span className={seg.percentLoading >= 70 ? 'text-amber-700' : 'text-slate-800'}>
+                              {seg.percentLoading}%
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-bold bg-rose-50/30 text-rose-700">
+                            {seg.percentVoltDrop.toFixed(1)}%
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-semibold text-slate-900">
+                            {seg.receivingVoltage.toFixed(1)}
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-bold text-amber-700 bg-amber-50/30">
+                            {seg.lineLossKw.toFixed(3)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-slate-900 text-white font-bold font-mono">
+                        <td colSpan={4} className="py-2.5 px-2 text-center text-amber-400 uppercase tracking-wider font-sans text-xs">
+                          TOTALS & PEAKS
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-amber-300">
+                          {summary.totalCircuitLengthKm.toFixed(3)}
+                        </td>
+                        <td className="py-2.5 px-2 text-right">
+                          {Math.round(summary.totalCircuitLengthKm * 1000)}
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-purple-300">
+                          {summary.totalThreePhaseCustomers} / {summary.totalSinglePhaseCustomers}
+                        </td>
+                        <td className="py-2.5 px-2 text-slate-400 font-sans text-xs">Max</td>
+                        <td className="py-2.5 px-2 text-right text-blue-300 font-bold">
+                          {summary.totalSourceCurrentAmps} A
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-purple-300 font-bold">
+                          85%
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-rose-300 font-bold">
+                          -{summary.worstVoltageDropPercent}%
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-white">
+                          {summary.worstVoltageVolts} V
+                        </td>
+                        <td className="py-2.5 px-2 text-right text-amber-300 font-extrabold text-sm">
+                          {summary.totalLineLossKw} kW
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+
+              {renderOfficialFooter('3. Form Display B: Calculated Segment Load Flow & Loss Schedule', 'outputScheduleImage2')}
+            </div>
+          )}
+
+          {/* ========================================================
+              REPORT 4: SINGLE LINE DIAGRAM (SLD) SCHEMATIC BLUEPRINT
+             ======================================================== */}
+          {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
+            <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {renderOfficialHeader('Single Line Diagram (SLD) Schematic & Network Topology Blueprint', getPageInfo('singleLineDiagram').pageLabel)}
+                <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Network className="w-4 h-4 text-indigo-700" />
+                      <span>Single Line Diagram (SLD) Topology & Bifurcation Schemes</span>
+                    </h2>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Separate electrical single line diagrams for Existing (Exist: Baseline), Proposed-1 (T-1 Line Portion), and Proposed-2 (T-2 Bifurcated Line Portion).
+                    </p>
+                  </div>
+
+                  {/* Scheme Switcher in Report Viewer (no-print) */}
+                  <div className="no-print flex flex-wrap items-center gap-1 text-xs">
+                    <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
+                    <button
+                      type="button"
+                      onClick={() => setSldScheme('combined')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                        sldScheme === 'combined' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                      }`}
+                    >
+                      Combined
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSldScheme('exist')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                        sldScheme === 'exist' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-amber-950 border border-amber-300'
+                      }`}
+                    >
+                      Exist
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSldScheme('proposed_1')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                        sldScheme === 'proposed_1' ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-900 border border-blue-300'
+                      }`}
+                    >
+                      Proposed-1
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSldScheme('proposed_2')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                        sldScheme === 'proposed_2' ? 'bg-purple-600 text-white font-bold' : 'bg-white text-purple-900 border border-purple-300'
+                      }`}
+                    >
+                      Proposed-2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSldScheme('tri_scheme')}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1 ${
+                        sldScheme === 'tri_scheme' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-900 border border-emerald-300'
+                      }`}
+                    >
+                      <Columns className="w-3 h-3" />
+                      <span>3-Scheme (Exist vs P-1 vs P-2)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Render SLD Diagrams */}
+                <FeederSLDViewer
+                  feeder={feeder}
+                  summary={summary}
+                  existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                  scheme={sldScheme}
+                  theme="light"
+                  isPrintView={true}
+                  showMetrics={true}
+                />
+              </div>
+
+              {renderOfficialFooter('4. Single Line Diagram (SLD) Engineering Blueprint', 'singleLineDiagram')}
+            </div>
+          )}
+
+          {/* ========================================================
+              REPORT 5: LINE BIFURCATION & MULTI-ZONE STUDY
+             ======================================================== */}
+          {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {renderOfficialHeader('Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)', getPageInfo('bifurcationStatements').pageLabel)}
+                <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                      <Split className="w-4 h-4 text-purple-700" />
+                      <span>Line Bifurcation & Multi-Zone Study (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)</span>
+                    </h2>
+                    <p className="text-[11px] text-purple-800 mt-0.5">
+                      Node-by-node technical analysis of Exist Line (Baseline), Proposed-1 Line (T-1 Zone), and Proposed-2 Line (T-2 Zone) at 0 Year and after 5 Years (+5% compounded growth).
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
+                    Cut-Off @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA @ Node {bifurcationDossier.transformerNodeId || bifurcationDossier.bifurcationNodeId}
+                  </span>
+                </div>
+
+                <BifurcationStatementsPanel
+                  dossier={bifurcationDossier}
+                  currencySymbol={feeder.currencySymbol || 'PKR'}
+                  isPrintView={true}
+                />
+              </div>
+
+              {renderOfficialFooter('5. Line Bifurcation & Multi-Zone 6-Node Technical Statements', 'bifurcationStatements')}
+            </div>
+          )}
+
+          {/* ========================================================
+              REPORT 6: COMPARATIVE UPGRADATION & LOSS RELIEF MATRIX
+             ======================================================== */}
+          {pagesToPrint.table1Matrix && (displayMode === 'full_report' || displayMode === 'table1_matrix') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {renderOfficialHeader('Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)', getPageInfo('table1Matrix').pageLabel)}
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
+                  <span>Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)</span>
+                  <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: PKR 38.5 / kWh · {getPageInfo('table1Matrix').pageLabel}</span>
+                </h2>
+
+                <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-200 text-slate-800 font-bold border-b border-slate-300">
+                        <th className="p-2.5">Parameter</th>
+                        <th className="p-2.5 text-right">Existing System</th>
+                        <th className="p-2.5 text-right bg-emerald-50 text-emerald-950 font-bold">Proposed Upgraded</th>
+                        <th className="p-2.5 text-right text-emerald-800">Benefits / Net Savings</th>
+                        <th className="p-2.5 text-right">After 5 Years (Unmitigated)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 font-mono tabular-nums">
+                      {proposedSummary.bifurcationActive && (
+                        <tr className="bg-purple-50/40">
+                          <td className="p-2 font-sans font-semibold text-purple-900">Line Bifurcation & T-2 Substation</td>
+                          <td className="p-2 text-right text-slate-500">None (Single Radial)</td>
+                          <td className="p-2 text-right bg-purple-100/70 text-purple-950 font-bold">
+                            Split @ Node {proposedSummary.bifurcationNodeId} (+{proposedSummary.additionalTransformerKva} kVA T-2)
+                          </td>
+                          <td className="p-2 text-right font-bold text-purple-800">
+                            Relieved {proposedSummary.bifurcationReliefKva} kVA Load
+                          </td>
+                          <td className="p-2 text-right text-slate-400">N/A</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Transformer Capacity (T-1)</td>
+                        <td className="p-2 text-right">{currentTrfKva} kVA</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.existingTransformerKva} kVA</td>
+                        <td className="p-2 text-right font-sans text-emerald-700">
+                          {proposedSummary.bifurcationActive ? 'T-1 Relieved by T-2 Substation' : 'Augmented to Match Load'}
+                        </td>
+                        <td className="p-2 text-right">{currentTrfKva} kVA</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Main Transformer (T-1) Loading</td>
+                        <td className="p-2 text-right font-bold text-rose-700">{currentTrfLoading}%</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%</td>
+                        <td className="p-2 text-right font-bold text-emerald-700">
+                          -{currentTrfLoading - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)}% Overload Relieved
+                        </td>
+                        <td className="p-2 text-right font-bold text-rose-800">151%</td>
+                      </tr>
+                      {proposedSummary.bifurcationActive && (
+                        <tr className="bg-purple-50/20">
+                          <td className="p-2 font-sans font-semibold text-purple-900">Additional Transformer (T-2) Loading</td>
+                          <td className="p-2 text-right text-slate-400">Not Installed</td>
+                          <td className="p-2 text-right bg-purple-100/50 text-purple-950 font-bold">{proposedSummary.transformer2LoadingPercent}%</td>
+                          <td className="p-2 text-right font-bold text-purple-800">
+                            {proposedSummary.transformer2DemandKva} kVA on T-2 ({proposedSummary.additionalTransformerKva} kVA)
+                          </td>
+                          <td className="p-2 text-right text-slate-400">N/A</td>
+                        </tr>
+                      )}
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Peak Feeder Line Losses</td>
+                        <td className="p-2 text-right">{summary.totalLineLossKw.toFixed(2)} kW</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.totalLineLossKw.toFixed(2)} kW</td>
+                        <td className="p-2 text-right font-bold text-emerald-700">
+                          -{(summary.totalLineLossKw - proposedSummary.totalLineLossKw).toFixed(2)} kW
+                        </td>
+                        <td className="p-2 text-right font-bold">12.555 kW</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Power Loss Ratio</td>
+                        <td className="p-2 text-right">{summary.percentPowerLoss}%</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.percentPowerLoss}%</td>
+                        <td className="p-2 text-right font-bold text-emerald-700">
+                          -{Math.max(0, summary.percentPowerLoss - proposedSummary.percentPowerLoss)}%
+                        </td>
+                        <td className="p-2 text-right">10%</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Annual Energy Losses</td>
+                        <td className="p-2 text-right">{summary.annualEnergyLossKwh.toLocaleString()} kWh</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">{proposedSummary.annualEnergyLossKwh.toLocaleString()} kWh</td>
+                        <td className="p-2 text-right font-bold text-emerald-700">
+                          -{kwhSaved.toLocaleString()} kWh / yr
+                        </td>
+                        <td className="p-2 text-right font-bold">30,445 kWh</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-sans font-semibold text-slate-800">Worst Voltage Drop</td>
+                        <td className="p-2 text-right font-semibold text-rose-700">-{summary.worstVoltageDropPercent}%</td>
+                        <td className="p-2 text-right bg-emerald-50 text-emerald-900 font-bold">-{proposedSummary.worstVoltageDropPercent}%</td>
+                        <td className="p-2 text-right font-bold text-emerald-700">
+                          +{(summary.worstVoltageDropPercent - proposedSummary.worstVoltageDropPercent).toFixed(1)}% Boosted
+                        </td>
+                        <td className="p-2 text-right font-bold text-rose-800">-14.8%</td>
+                      </tr>
+                      <tr className="bg-slate-100 font-bold">
+                        <td className="p-2 font-sans text-slate-900">Financial Revenue Impact</td>
+                        <td className="p-2 text-right text-slate-900">
+                          {feeder.currencySymbol} {Math.round(summary.annualEnergyLossKwh * tariff).toLocaleString()}
+                        </td>
+                        <td className="p-2 text-right bg-emerald-100 text-emerald-950 font-bold">
+                          {feeder.currencySymbol} {Math.round(proposedSummary.annualEnergyLossKwh * tariff).toLocaleString()}
+                        </td>
+                        <td className="p-2 text-right text-emerald-800 font-bold font-sans">
+                          +{feeder.currencySymbol} {annualSavings.toLocaleString()} / YEAR
+                        </td>
+                        <td className="p-2 text-right text-rose-900">
+                          {feeder.currencySymbol} {Math.round(30445 * tariff).toLocaleString()}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {renderOfficialFooter('6. Comparative Upgradation & Loss Relief Matrix', 'table1Matrix')}
+            </div>
+          )}
+
+          {/* ========================================================
+              REPORT 7: DIRECTIVES & OFFICIAL APPROVALS CHAIN
+             ======================================================== */}
+          {(pagesToPrint.recommendations || includeSignatures) && (displayMode === 'full_report') && (
+            <div className="print-page-unit flex flex-col justify-between space-y-4">
+              <div className="space-y-4">
+                {renderOfficialHeader('Priority Engineering Remediation Directives & Approvals', getPageInfo('recommendations').pageLabel)}
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500">
+                  4. Priority Engineering Remediation Directives
+                </h2>
+                <div className="space-y-2.5">
+                  {recommendations.map((rec, i) => (
+                    <div key={i} className="border border-slate-200 p-3 rounded-lg text-xs bg-white">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-slate-900">
+                          Directive 4.{i + 1}: {rec.title}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                          rec.category === 'CRITICAL' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
+                        }`}>
+                          {rec.category}
+                        </span>
+                      </div>
+                      <p className="text-slate-600 mb-1">{rec.description}</p>
+                      <p className="text-slate-900 font-semibold bg-slate-50 p-1.5 rounded border border-slate-200">
+                        Standard Operating Action: {rec.suggestedAction}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Section 7: Official Approvals & Signatures */}
+                {includeSignatures && (
+                  <div className="pt-4 border-t-2 border-slate-900 print-avoid-break">
+                    <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
+                      <span>Official Verification, Endorsement & Approval Chain</span>
+                      <span className="font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        Active Officer: <strong>{officerTitle}</strong>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center text-xs">
+                      <div className={`p-3 rounded-xl border ${isSdoMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
+                        <div className="h-10 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
+                          {isSdoMatch && (
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                              ✓ Endorsed by Active Officer
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-slate-900 block">Sub-Divisional Officer (SDO)</span>
+                        <span className="text-slate-500 text-[11px]">Gulbhar Sub-Division · PESCO/WAPDA</span>
+                        {isSdoMatch && (
+                          <span className="text-[10px] font-bold text-amber-800 block mt-1">
+                            ({officerTitle})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={`p-3 rounded-xl border ${isXenMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
+                        <div className="h-10 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
+                          {isXenMatch && (
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                              ✓ Endorsed by Active Officer
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-slate-900 block">Executive Engineer (XEN)</span>
+                        <span className="text-slate-500 text-[11px]">Peshawar City Division</span>
+                        {isXenMatch && (
+                          <span className="text-[10px] font-bold text-amber-800 block mt-1">
+                            ({officerTitle})
+                          </span>
+                        )}
+                      </div>
+
+                      <div className={`p-3 rounded-xl border ${isSeMatch ? 'bg-amber-50/70 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50/50 border-slate-200'}`}>
+                        <div className="h-10 border-b border-dashed border-slate-400 mb-2 flex items-center justify-center">
+                          {isSeMatch && (
+                            <span className="text-[11px] font-mono font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                              ✓ Endorsed by Active Officer
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-bold text-slate-900 block">
+                          Superintending Engineer / Planning
+                        </span>
+                        <span className="text-slate-500 text-[11px]">Planning, Design & ELR Directorate</span>
+                        {isSeMatch && (
+                          <span className="text-[10px] font-bold text-amber-800 block mt-1">
+                            ({officerTitle})
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {renderOfficialFooter('7. Official Engineering Remediation Directives & Final Approval Chain', 'recommendations', 'Official Endorsement Signed')}
             </div>
           )}
 
@@ -1969,7 +2130,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Informative Report</span>
+              <span>Print Dossier (1 Page / Report)</span>
             </button>
             <button
               onClick={onClose}
