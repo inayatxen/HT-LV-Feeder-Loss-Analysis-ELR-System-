@@ -123,7 +123,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfToast, setPdfToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Per-Page Inclusion Toggles - Necessary reports and single line diagrams enabled by default
+  // Per-Page Inclusion Toggles - All 7 necessary reports and single line diagrams enabled by default
   const [pagesToPrint, setPagesToPrint] = useState<{
     summarySpecs: boolean;
     bifurcationStatements: boolean;
@@ -134,13 +134,37 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     recommendations: boolean;
   }>({
     summarySpecs: true,
-    bifurcationStatements: effectiveBifurcationConfig.enabled,
+    bifurcationStatements: true, // Necessary bifurcation study enabled by default
     singleLineDiagram: true, // Necessary single line diagram included
     inputFormImage1: true,
     outputScheduleImage2: true,
     table1Matrix: true,
     recommendations: true
   });
+
+  // Dedicated Print Handler with synchronous multi-page readiness & iframe fallback
+  const handlePrint = (forceFullDossier = false) => {
+    if (forceFullDossier && displayMode !== 'full_report') {
+      setDisplayMode('full_report');
+    }
+
+    setPdfToast({ message: 'Opening system print preview (1 report per page with official footers)...', type: 'info' });
+
+    // Allow browser a tick to layout any updated state
+    setTimeout(() => {
+      try {
+        setPdfToast(null);
+        window.print();
+      } catch (err: any) {
+        console.warn('System print dialog unavailable in iframe environment:', err);
+        setPdfToast({
+          message: 'Direct print dialog unavailable in frame. Generating multi-page PDF automatically...',
+          type: 'info'
+        });
+        handleExportPdf();
+      }
+    }, 150);
+  };
 
   // Direct PDF Export Handler for Informative Data Report
   const handleExportPdf = async () => {
@@ -561,11 +585,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const enabledPagesCount = Object.values(pagesToPrint).filter(Boolean).length;
 
   return (
-    <div className={`fixed inset-0 z-50 ${
-      isMaximized 
-        ? 'bg-slate-950 p-0 flex flex-col overflow-hidden' 
-        : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto'
-    } print:p-0 print:bg-white print:static print:overflow-visible print:h-auto print:max-h-none`}>
+    <div 
+      id="report-modal-overlay"
+      className={`fixed inset-0 z-50 ${
+        isMaximized 
+          ? 'bg-slate-950 p-0 flex flex-col overflow-hidden' 
+          : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto'
+      } print:p-0 print:bg-white print:static print:overflow-visible print:h-auto print:max-h-none`}
+    >
       
       {/* ========================================================
           DYNAMIC @MEDIA PRINT STYLES WITH PER-PAGE CONTROLS
@@ -606,7 +633,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         @media print {
           @page {
             size: ${pageOrientation === 'landscape' ? 'landscape' : 'portrait'};
-            margin: ${printScale === 'compact' ? '8mm' : '12mm'};
+            margin: ${printScale === 'compact' ? '8mm' : '10mm'};
           }
           /* Complete eradication of all scrollbars, slide bars, and tracks on print pages */
           *, *::before, *::after {
@@ -655,12 +682,52 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             display: none !important;
           }
           ` : ''}
+          #report-modal-overlay {
+            position: static !important;
+            inset: auto !important;
+            width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            background: #ffffff !important;
+            display: block !important;
+            z-index: auto !important;
+          }
+          #report-modal-dialog {
+            position: static !important;
+            inset: auto !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+            display: block !important;
+            background: #ffffff !important;
+          }
+          #printable-report {
+            position: static !important;
+            overflow: visible !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            max-height: none !important;
+            background: #ffffff !important;
+          }
           .print-page-unit {
             page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
             break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            min-height: ${pageBreakMode === 'page_per_section' ? '96vh' : 'auto'} !important;
+            min-height: ${pageBreakMode === 'page_per_section' ? (pageOrientation === 'landscape' ? '185mm' : '262mm') : 'auto'} !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
@@ -682,6 +749,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             border-top: 2px solid #0f172a !important;
             page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
             break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
+          }
+          .print-page-unit:last-child .report-official-footer {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
           .print-watermark {
             position: fixed !important;
@@ -755,11 +826,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
       )}
 
-      <div className={`bg-white w-full ${
-        isMaximized 
-          ? 'min-h-screen rounded-none my-0 max-w-none shadow-none border-none flex-1 flex flex-col' 
-          : 'max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 max-h-[94vh] flex flex-col'
-      } print:m-0 print:shadow-none print:border-none print:rounded-none print:max-h-none print:h-auto print:overflow-visible print-container`}>
+      <div 
+        id="report-modal-dialog"
+        className={`bg-white w-full ${
+          isMaximized 
+            ? 'min-h-screen rounded-none my-0 max-w-none shadow-none border-none flex-1 flex flex-col' 
+            : 'max-w-6xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden my-6 max-h-[94vh] flex flex-col'
+        } print:m-0 print:shadow-none print:border-none print:rounded-none print:max-h-none print:h-auto print:overflow-visible print-container`}
+      >
         
         {/* Top Action Bar (hidden when printing) */}
         <div className="p-3.5 sm:p-4 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 no-print border-b border-slate-800 shrink-0">
@@ -850,7 +924,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
             {/* Print Button */}
             <button
-              onClick={() => window.print()}
+              onClick={() => handlePrint(true)}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
               title="Print reports and single line diagrams (1 report per page with official footers)"
             >
@@ -2126,7 +2200,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <span>{isGeneratingPdf ? 'Rendering PDF...' : 'Export to PDF'}</span>
             </button>
             <button
-              onClick={() => window.print()}
+              onClick={() => handlePrint(true)}
               className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
             >
               <Printer className="w-3.5 h-3.5" />
