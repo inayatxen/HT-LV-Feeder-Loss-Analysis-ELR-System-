@@ -62,20 +62,41 @@
     height: auto !important;
   }
   
-  .no-print {
+  .no-print,
+  .print\:hidden {
     display: none !important;
   }
   
+  /* When printing, hide background application elements outside active print report */
+  header,
+  main,
+  footer,
+  nav,
+  aside {
+    display: none !important;
+  }
+
+  #root,
+  #root > div {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .print-only {
     display: block !important;
   }
   
   .print-break-inside-avoid {
-    break-inside: avoid;
-    page-break-inside: avoid;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .print-page-break {
-    page-break-before: always;
+    break-before: page !important;
+    page-break-before: always !important;
   }
 }

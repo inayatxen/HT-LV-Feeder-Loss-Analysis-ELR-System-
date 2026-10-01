@@ -386,40 +386,42 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      {/* 2-Row Header with Category Selector */}
-      <Header
-        activeSystemModule={activeSystemModule}
-        onSelectSystemModule={setActiveSystemModule}
-        activeCategory={activeCategory}
-        onSelectCategory={handleSelectCategory}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        feederType={activeFeeder.type}
-        selectedFeederId={selectedFeederId}
-        onSelectFeeder={handleSelectFeeder}
-        onOpenReport={() => setIsReportOpen(true)}
-        onOpenConductors={() => setIsConductorsOpen(true)}
-        onOpenDatabase={() => setIsLocalDbOpen(true)}
-        onOpenNewJob={() => setIsNewJobOpen(true)}
-        onResetInterventions={handleResetInterventions}
-        hasActiveInterventions={hasActiveInterventions}
-        availableFeeders={availableFeeders}
-        activeTransformerKva={activeTransformerKva}
-        summary={hasActiveInterventions ? proposedSummary : existingSummary}
-        selectedJobTitle={selectedJobTitle}
-        onSelectJobTitle={handleSelectJobTitle}
-      />
+      {/* 2-Row Header with Category Selector (Hidden when printing official reports) */}
+      <div className="print:hidden no-print">
+        <Header
+          activeSystemModule={activeSystemModule}
+          onSelectSystemModule={setActiveSystemModule}
+          activeCategory={activeCategory}
+          onSelectCategory={handleSelectCategory}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          feederType={activeFeeder.type}
+          selectedFeederId={selectedFeederId}
+          onSelectFeeder={handleSelectFeeder}
+          onOpenReport={() => setIsReportOpen(true)}
+          onOpenConductors={() => setIsConductorsOpen(true)}
+          onOpenDatabase={() => setIsLocalDbOpen(true)}
+          onOpenNewJob={() => setIsNewJobOpen(true)}
+          onResetInterventions={handleResetInterventions}
+          hasActiveInterventions={hasActiveInterventions}
+          availableFeeders={availableFeeders}
+          activeTransformerKva={activeTransformerKva}
+          summary={hasActiveInterventions ? proposedSummary : existingSummary}
+          selectedJobTitle={selectedJobTitle}
+          onSelectJobTitle={handleSelectJobTitle}
+        />
+      </div>
 
       {/* Database Save Toast Notification */}
       {dbToast && (
-        <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 print:hidden no-print">
           <Database className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-medium">{dbToast}</span>
         </div>
       )}
 
-      {/* Main Workspace Viewport (100% Screen Width) */}
-      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 space-y-6">
+      {/* Main Workspace Viewport (Hidden when printing reports) */}
+      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 space-y-6 print:hidden">
         
         {activeSystemModule === 'line_cost_estimation' ? (
           <CostEstimationModule currentJobTitle={selectedJobTitle} />
@@ -557,8 +559,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Footer (100% Width) */}
-      <footer className="border-t border-slate-200 bg-white py-4 mt-auto no-print w-full">
+      {/* Footer (100% Width) - Hidden during print */}
+      <footer className="border-t border-slate-200 bg-white py-4 mt-auto no-print print:hidden w-full">
         <div className="w-full px-3 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <div>
             PESCO Distribution Suite · WAPDA ELR Feeder Loss & CSR-2026 Line Cost Estimation
