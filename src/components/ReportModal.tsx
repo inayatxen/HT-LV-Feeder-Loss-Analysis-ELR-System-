@@ -3,10 +3,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { 
   FeederData, 
-  FeederAnalysisSummary,
+  FeederAnalysisSummary, 
   BifurcationConfig,
   BifurcationFourStatementDossier
 } from '../types/feeder';
@@ -40,7 +40,9 @@ import {
   Activity,
   Columns,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Loader2,
+  Filter
 } from 'lucide-react';
 import { 
   generateTechnicalRecommendations,
@@ -50,6 +52,7 @@ import { JobTitle, JOB_TITLE_OPTIONS } from '../types/feeder';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
 import { FeederSLDViewer, SLDSchemeType } from './FeederSLDViewer';
+import { exportElementToPdf } from '../utils/pdfExport';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -104,17 +107,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const [isMaximized, setIsMaximized] = useState(true);
 
-  // Per-Page Print Settings State
+  // Per-Page Print Settings State - Defaults optimized for Informative Data Report
   const [showPrintSettings, setShowPrintSettings] = useState(false);
-  const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('page_per_section');
+  const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('compact_flow');
   const [pageOrientation, setPageOrientation] = useState<PageOrientation>('portrait');
   const [printScale, setPrintScale] = useState<PrintScale>('standard');
   const [includePageHeaders, setIncludePageHeaders] = useState(true);
   const [includeSignatures, setIncludeSignatures] = useState(true);
-  const [includeWatermark, setIncludeWatermark] = useState(true);
+  const [includeWatermark, setIncludeWatermark] = useState(false); // Excluded by default to avoid unnecessary graphics
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
+  const [excludeUnnecessaryGraphics, setExcludeUnnecessaryGraphics] = useState<boolean>(true); // Focus purely on informative data report
 
-  // Per-Page Inclusion Toggles
+  // PDF Export Generation State
+  const printContentRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfToast, setPdfToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Per-Page Inclusion Toggles - Informative data items enabled, heavy SVG SLD graphics disabled by default
   const [pagesToPrint, setPagesToPrint] = useState<{
     summarySpecs: boolean;
     bifurcationStatements: boolean;
@@ -126,16 +135,77 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   }>({
     summarySpecs: true,
     bifurcationStatements: effectiveBifurcationConfig.enabled,
-    singleLineDiagram: true,
+    singleLineDiagram: false, // Heavy graphic excluded in informative data report
     inputFormImage1: true,
     outputScheduleImage2: true,
     table1Matrix: true,
     recommendations: true
   });
 
+  // Direct PDF Export Handler for Informative Data Report
+  const handleExportPdf = async () => {
+    if (!printContentRef.current) return;
+    setIsGeneratingPdf(true);
+    setPdfToast({ message: 'Generating informative data PDF report...', type: 'info' });
+
+    try {
+      const cleanName = (feeder.name || 'Feeder').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const filename = `PESCO_ELR_Informative_Report_${cleanName}_${todayStr}`;
+
+      const result = await exportElementToPdf(printContentRef.current, {
+        filename,
+        paperSize: 'a4',
+        orientation: pageOrientation === 'landscape' ? 'landscape' : 'portrait',
+        marginMm: printScale === 'compact' ? 8 : 10,
+        reportTitle: `PESCO ELR Engineering Report - ${feeder.name}`,
+        docReference: `ELR-PESCO-${feeder.id.toUpperCase()}`,
+        excludeGraphics: excludeUnnecessaryGraphics
+      });
+
+      if (result.success) {
+        setPdfToast({
+          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages)`,
+          type: 'success'
+        });
+        setTimeout(() => setPdfToast(null), 4000);
+      } else {
+        setPdfToast({
+          message: `PDF export failed: ${result.error || 'Unknown error'}`,
+          type: 'error'
+        });
+        setTimeout(() => setPdfToast(null), 5000);
+      }
+    } catch (err: any) {
+      setPdfToast({
+        message: `Error during PDF export: ${err?.message || 'Please retry'}`,
+        type: 'error'
+      });
+      setTimeout(() => setPdfToast(null), 5000);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   // Quick Preset Handlers
-  const handleApplyPreset = (preset: 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix') => {
-    if (preset === 'all') {
+  const handleApplyPreset = (preset: 'informative_only' | 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix') => {
+    if (preset === 'informative_only') {
+      setDisplayMode('full_report');
+      setPagesToPrint({
+        summarySpecs: true,
+        bifurcationStatements: effectiveBifurcationConfig.enabled,
+        singleLineDiagram: false, // Omit heavy canvas graphics
+        inputFormImage1: true,
+        outputScheduleImage2: true,
+        table1Matrix: true,
+        recommendations: true
+      });
+      setExcludeUnnecessaryGraphics(true);
+      setIncludeWatermark(false);
+      setPageBreakMode('compact_flow');
+      setPrintScale('standard');
+      setPageOrientation('portrait');
+    } else if (preset === 'all') {
       setDisplayMode('full_report');
       setSldScheme(effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined');
       setPagesToPrint({
@@ -147,6 +217,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: true,
         recommendations: true
       });
+      setExcludeUnnecessaryGraphics(false);
       setPageBreakMode('page_per_section');
     } else if (preset === 'bifurcation_only') {
       setDisplayMode('bifurcation_4_statements');
@@ -159,6 +230,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: false,
         recommendations: false
       });
+      setExcludeUnnecessaryGraphics(true);
       setPageBreakMode('compact_flow');
     } else if (preset === 'sld_only') {
       setDisplayMode('single_line_diagram');
@@ -172,6 +244,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: false,
         recommendations: false
       });
+      setExcludeUnnecessaryGraphics(false);
       setPageOrientation('landscape');
     } else if (preset === 'tri_sld_only') {
       setDisplayMode('single_line_diagram');
@@ -185,6 +258,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: false,
         recommendations: false
       });
+      setExcludeUnnecessaryGraphics(false);
       setPageOrientation('landscape');
       setPageBreakMode('page_per_section');
     } else if (preset === 'forms_only') {
@@ -198,7 +272,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: false,
         recommendations: false
       });
-      setPageBreakMode('page_per_section');
+      setExcludeUnnecessaryGraphics(true);
+      setPageBreakMode('compact_flow');
     } else if (preset === 'summary_matrix') {
       setDisplayMode('full_report');
       setPagesToPrint({
@@ -210,6 +285,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         table1Matrix: true,
         recommendations: true
       });
+      setExcludeUnnecessaryGraphics(true);
       setPageBreakMode('compact_flow');
     }
   };
@@ -459,6 +535,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           .no-print {
             display: none !important;
           }
+          ${excludeUnnecessaryGraphics ? `
+          .print-watermark, .screen-watermark, .unnecessary-graphic, .sld-blueprint-section, .decorative-graphic {
+            display: none !important;
+          }
+          ` : ''}
           .print-watermark {
             position: fixed !important;
             top: 50% !important;
@@ -474,7 +555,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             pointer-events: none !important;
             z-index: 9999 !important;
             mix-blend-mode: multiply !important;
-            opacity: ${includeWatermark ? watermarkOpacity : 0} !important;
+            opacity: ${includeWatermark && !excludeUnnecessaryGraphics ? watermarkOpacity : 0} !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
@@ -504,19 +585,32 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             page-break-inside: auto;
             position: relative !important;
             overflow: visible !important;
+            border-collapse: collapse !important;
+            width: 100% !important;
           }
           tr {
-            page-break-inside: avoid;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
             page-break-after: auto;
           }
           thead {
-            display: table-header-group;
+            display: table-header-group !important;
           }
           tfoot {
-            display: table-footer-group;
+            display: table-footer-group !important;
           }
         }
       `}</style>
+
+      {/* PDF Export Feedback Toast */}
+      {pdfToast && (
+        <div className="fixed top-20 right-6 z-60 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 no-print">
+          {pdfToast.type === 'info' && <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />}
+          {pdfToast.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+          {pdfToast.type === 'error' && <ShieldAlert className="w-4 h-4 text-rose-400 shrink-0" />}
+          <span className="font-semibold">{pdfToast.message}</span>
+        </div>
+      )}
 
       <div className={`bg-white w-full ${
         isMaximized 
@@ -533,16 +627,46 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               className="w-9 h-9 rounded-full border border-amber-500/40 shadow-xs shrink-0"
             />
             <div>
-              <span className="font-bold text-sm block leading-tight">
-                PESCO / WAPDA Feeder Loss Analysis & ELR Report
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm block leading-tight">
+                  PESCO / WAPDA Feeder Loss Analysis & ELR Report
+                </span>
+                {excludeUnnecessaryGraphics && (
+                  <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono px-2 py-0.2 rounded font-bold uppercase">
+                    Data Report Only
+                  </span>
+                )}
+              </div>
               <span className="text-[11px] text-slate-400">
-                Peshawar Electric Supply Company · Official Form Display & Engineering Dossier
+                Official WAPDA Forms image1.png, image2.png & Multi-Zone Statements
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Informative Data Mode Quick Switch */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !excludeUnnecessaryGraphics;
+                setExcludeUnnecessaryGraphics(next);
+                if (next) {
+                  setPagesToPrint(p => ({ ...p, singleLineDiagram: false }));
+                  setIncludeWatermark(false);
+                  setPageBreakMode('compact_flow');
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                excludeUnnecessaryGraphics
+                  ? 'bg-emerald-600/90 text-white border-emerald-400 shadow-xs'
+                  : 'bg-slate-800 text-slate-300 hover:text-white border-slate-700'
+              }`}
+              title="When active, omits heavy SVG diagrams, watermarks and unnecessary blank page portions for clean printing"
+            >
+              <Filter className="w-3.5 h-3.5" />
+              <span>{excludeUnnecessaryGraphics ? 'Informative Data (Graphics Omitted)' : 'Graphics Included'}</span>
+            </button>
+
             {/* Per-Page Settings Toggle Button */}
             <button
               type="button"
@@ -555,7 +679,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               title="Configure Per-Page Print Settings, Page Breaks, Orientation and Layout"
             >
               <Settings2 className="w-3.5 h-3.5 text-amber-400" />
-              <span>Per-Page Print Settings</span>
+              <span>Print Settings</span>
               <span className="bg-slate-950/80 text-amber-300 px-1.5 py-0.2 rounded text-[10px] font-mono">
                 {pageBreakMode === 'page_per_section' ? '1 Page/Sec' : 'Continuous'} · {enabledPagesCount} pgs
               </span>
@@ -565,17 +689,32 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <button
               onClick={handleExportCsv}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              title="Export numerical data as CSV spreadsheet"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Export CSV</span>
+              <span className="hidden sm:inline">CSV</span>
             </button>
 
+            {/* Direct Export to PDF Button */}
+            <button
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900/60 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+              title="Export clean informative report directly to multi-page PDF"
+            >
+              {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              <span>{isGeneratingPdf ? 'Exporting PDF...' : 'Export to PDF'}</span>
+            </button>
+
+            {/* Print Button */}
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
+              title="Open browser print dialog to print or save to system PDF"
             >
               <Printer className="w-4 h-4" />
-              <span>Print / Save as PDF</span>
+              <span>Print Report</span>
             </button>
 
             {/* Maximize / Restore Screen Button */}
@@ -616,10 +755,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 <span className="text-slate-400 text-[11px] mr-1">Quick Presets:</span>
                 <button
                   type="button"
+                  onClick={() => handleApplyPreset('informative_only')}
+                  className={`px-2.5 py-1 rounded font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all ${
+                    excludeUnnecessaryGraphics && !pagesToPrint.singleLineDiagram
+                      ? 'bg-emerald-600 text-white shadow-xs border border-emerald-400 ring-1 ring-emerald-400'
+                      : 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-600'
+                  }`}
+                  title="Recommended: Only prints informative data tables, specs, bifurcation node analyses, and financial figures without heavy graphics"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-300" />
+                  <span>★ Informative Data Report</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleApplyPreset('all')}
                   className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer font-medium text-[11px]"
                 >
-                  Full Dossier
+                  Full Dossier (with SLD)
                 </button>
                 <button
                   type="button"
@@ -627,7 +779,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   className="px-2.5 py-1 rounded bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-600/80 cursor-pointer font-bold text-[11px] flex items-center gap-1"
                 >
                   <Split className="w-3 h-3 text-purple-300" />
-                  <span>Bifurcation 4-Node Statements</span>
+                  <span>Bifurcation 6-Node Statements</span>
                 </button>
                 <button
                   type="button"
@@ -730,21 +882,39 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               {/* Setting 3: Header, Watermark & Verification Options */}
               <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
                 <label className="text-slate-200 font-bold block flex items-center justify-between">
-                  <span>3. Running Header & Watermark</span>
-                  <span className="text-[10px] font-mono text-amber-400 font-normal">Watermark / Stamp</span>
+                  <span>3. Informative Mode & Graphics Options</span>
+                  <span className="text-[10px] font-mono text-amber-400 font-normal">Clean Report</span>
                 </label>
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
                       type="checkbox"
-                      checked={includeWatermark}
-                      onChange={(e) => setIncludeWatermark(e.target.checked)}
-                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-400 cursor-pointer"
+                      checked={excludeUnnecessaryGraphics}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setExcludeUnnecessaryGraphics(checked);
+                        if (checked) {
+                          setIncludeWatermark(false);
+                          setPagesToPrint(p => ({ ...p, singleLineDiagram: false }));
+                        }
+                      }}
+                      className="rounded border-slate-700 text-emerald-500 focus:ring-emerald-400 cursor-pointer"
                     />
-                    <span className="font-bold text-amber-300">Logo Watermark</span>
+                    <span className="font-bold text-emerald-300">Exclude Heavy Graphics & SVGs</span>
                   </label>
 
-                  {includeWatermark && (
+                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={includeWatermark && !excludeUnnecessaryGraphics}
+                      disabled={excludeUnnecessaryGraphics}
+                      onChange={(e) => setIncludeWatermark(e.target.checked)}
+                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-400 cursor-pointer disabled:opacity-40"
+                    />
+                    <span className={`font-bold ${excludeUnnecessaryGraphics ? 'text-slate-500 line-through' : 'text-amber-300'}`}>Logo Watermark</span>
+                  </label>
+
+                  {includeWatermark && !excludeUnnecessaryGraphics && (
                     <select
                       value={watermarkOpacity}
                       onChange={(e) => setWatermarkOpacity(Number(e.target.value))}
@@ -1063,10 +1233,14 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {/* Printable Report Document Body */}
-        <div className={`relative p-4 sm:p-8 lg:p-12 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-none' : 'max-w-6xl mx-auto'} ${scaleWrapperClass}`} id="printable-report">
+        <div 
+          ref={printContentRef}
+          className={`relative p-4 sm:p-8 lg:p-12 text-slate-900 space-y-8 bg-white overflow-y-auto flex-1 print:overflow-visible print:p-0 ${isMaximized ? 'w-full max-w-none' : 'max-w-6xl mx-auto'} ${scaleWrapperClass}`} 
+          id="printable-report"
+        >
           
-          {/* Official PESCO - WAPDA Logo Watermark (repeats on every physical page in print view, and visible on-screen) */}
-          {includeWatermark && (
+          {/* Official PESCO - WAPDA Logo Watermark (repeats on every physical page in print view, and visible on-screen) - Only if not excluded */}
+          {includeWatermark && !excludeUnnecessaryGraphics && (
             <>
               {/* Print Watermark: repeats on every physical page via CSS position: fixed with mix-blend-mode: multiply */}
               <div 
@@ -1155,11 +1329,94 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
           )}
 
+          {/* Section 1B: Informative Topology Summary Table (Included in clean data report instead of heavy SVG canvas) */}
+          {excludeUnnecessaryGraphics && (
+            <div className="print-avoid-break">
+              <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-indigo-600 flex items-center justify-between">
+                <span>2. Network Topology & Line Bifurcation Architecture</span>
+                <span className="text-[10px] font-mono text-slate-500 font-normal">Informative Data Summary</span>
+              </h2>
+              <div className="overflow-x-auto print:overflow-visible border border-slate-200 rounded-lg">
+                <table className="w-full text-xs text-left border-collapse font-mono">
+                  <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
+                    <tr>
+                      <th className="p-2">Line Segment / Zone</th>
+                      <th className="p-2">Substation / Injection Node</th>
+                      <th className="p-2">Rating (kVA)</th>
+                      <th className="p-2">Spans & Length</th>
+                      <th className="p-2">Peak Current</th>
+                      <th className="p-2">Max Voltage Drop</th>
+                      <th className="p-2">Operational Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <td className="p-2 font-bold text-slate-900 font-sans">
+                        Exist Line (Baseline Feeder)
+                      </td>
+                      <td className="p-2">Node 0.0 (Main Substation)</td>
+                      <td className="p-2">{summary.existingTransformerKva} kVA</td>
+                      <td className="p-2">{feeder.segments.length} spans ({Math.round(summary.totalCircuitLengthKm * 1000)}m)</td>
+                      <td className="p-2">{summary.totalSourceCurrentAmps} A</td>
+                      <td className={`p-2 font-bold ${summary.worstVoltageDropPercent > 9 ? 'text-rose-600' : 'text-slate-900'}`}>
+                        -{summary.worstVoltageDropPercent.toFixed(1)}%
+                      </td>
+                      <td className="p-2 font-sans text-[11px] text-slate-600">
+                        {summary.existingTransformerKva < summary.totalSystemDemandKva ? 'Overloaded Radial' : 'Standard Feed'}
+                      </td>
+                    </tr>
+                    {effectiveBifurcationConfig.enabled && (
+                      <>
+                        <tr className="bg-blue-50/40">
+                          <td className="p-2 font-bold text-blue-900 font-sans">
+                            Proposed-1 Line (Main T-1 Zone)
+                          </td>
+                          <td className="p-2">Node 0.0 (Upstream Trunk)</td>
+                          <td className="p-2">{summary.existingTransformerKva} kVA</td>
+                          <td className="p-2">Upstream to Node {effectiveBifurcationConfig.bifurcationNodeId}</td>
+                          <td className="p-2">
+                            {bifurcationDossier.t1Year0?.currentAmps || summary.totalSourceCurrentAmps} A
+                          </td>
+                          <td className="p-2 font-bold text-blue-900">
+                            -{bifurcationDossier.t1Year0?.worstVoltageDropPercent || '0.0'}%
+                          </td>
+                          <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
+                            Relieved (Normal Load)
+                          </td>
+                        </tr>
+                        <tr className="bg-purple-50/40">
+                          <td className="p-2 font-bold text-purple-900 font-sans">
+                            Proposed-2 Line (New T-2 Zone)
+                          </td>
+                          <td className="p-2">
+                            Node {effectiveBifurcationConfig.transformerNodeId || effectiveBifurcationConfig.bifurcationNodeId} (New Substation)
+                          </td>
+                          <td className="p-2 font-bold text-purple-900">{effectiveBifurcationConfig.transformerCapacityKva} kVA</td>
+                          <td className="p-2">Cut-off isolated downstream zone</td>
+                          <td className="p-2">
+                            {bifurcationDossier.t2Year0?.currentAmps || '0'} A
+                          </td>
+                          <td className="p-2 font-bold text-purple-900">
+                            -{bifurcationDossier.t2Year0?.worstVoltageDropPercent || '0.0'}%
+                          </td>
+                          <td className="p-2 font-sans text-[11px] text-emerald-700 font-semibold">
+                            Tail End Stabilized
+                          </td>
+                        </tr>
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* ========================================================
               PAGE 2: SINGLE LINE DIAGRAM (SLD) BLUEPRINTS (Exist, Proposed-1, Proposed-2)
+              (Rendered only when SLD diagrams are explicitly requested and graphics not excluded)
              ======================================================== */}
-          {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
-            <div className="print-page-break print-avoid-break space-y-4">
+          {pagesToPrint.singleLineDiagram && !excludeUnnecessaryGraphics && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
+            <div className="print-page-break print-avoid-break space-y-4 sld-blueprint-section">
               {renderOfficialHeader('Single Line Diagram (SLD) Topology & Bifurcation Schemes', pageBreakMode === 'page_per_section' ? 'Page 2' : undefined)}
               <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
                 <div>
@@ -1238,23 +1495,24 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           )}
 
           {/* ========================================================
-              PAGE 3: LINE BIFURCATION & T-2 FOUR-STATEMENT STUDY
+              PAGE 3: LINE BIFURCATION & MULTI-ZONE STUDY
+              (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)
              ======================================================== */}
           {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
             <div className="print-page-break print-avoid-break space-y-4">
-              {renderOfficialHeader('Line Bifurcation & Additional Transformer (T-2) 4-Statement Study', pageBreakMode === 'page_per_section' ? 'Page 3' : undefined)}
+              {renderOfficialHeader('Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)', pageBreakMode === 'page_per_section' ? 'Page 3' : undefined)}
               <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
                     <Split className="w-4 h-4 text-purple-700" />
-                    <span>3. Line Bifurcation & Additional Transformer (T-2) Dual-Zone 4-Statement Study</span>
+                    <span>3. Line Bifurcation & Multi-Zone Study (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)</span>
                   </h2>
                   <p className="text-[11px] text-purple-800 mt-0.5">
-                    Portion of line with Transformer 1 (T-1) at 0 Year & 5 Years, and portion of line with Transformer 2 (T-2) at 0 Year & 5 Years.
+                    Node-by-node technical analysis of Exist Line (Baseline), Proposed-1 Line (T-1 Zone), and Proposed-2 Line (T-2 Zone) at 0 Year and after 5 Years (+5% compounded growth).
                   </p>
                 </div>
                 <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
-                  Split @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA · Page {pageBreakMode === 'page_per_section' ? '3' : ''}
+                  Cut-Off @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA @ Node {bifurcationDossier.transformerNodeId || bifurcationDossier.bifurcationNodeId}
                 </span>
               </div>
 
@@ -1687,20 +1945,35 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 no-print">
-          <div>
-            Document: <strong>Official WAPDA ELR Form & Technical Report</strong> · Per-Page Mode: <strong>{pageBreakMode === 'page_per_section' ? 'Page-by-Page' : 'Continuous'}</strong>
+        <div className="px-6 py-3 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 no-print">
+          <div className="flex items-center gap-2">
+            <span>Mode:</span>
+            <span className="font-semibold text-slate-900">
+              {excludeUnnecessaryGraphics ? 'Informative Data Only (Graphics Omitted)' : 'Full Graphical Dossier'}
+            </span>
+            <span>·</span>
+            <span>Layout: <strong>{pageBreakMode === 'page_per_section' ? 'Page-by-Page' : 'Compact Continuous'}</strong></span>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.print()}
-              className="px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+              type="button"
+              onClick={handleExportPdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900/60 text-white font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
             >
-              Print Document
+              {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+              <span>{isGeneratingPdf ? 'Rendering PDF...' : 'Export to PDF'}</span>
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Informative Report</span>
             </button>
             <button
               onClick={onClose}
-              className="px-3.5 py-1.5 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold cursor-pointer"
+              className="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 font-semibold cursor-pointer"
             >
               Close
             </button>

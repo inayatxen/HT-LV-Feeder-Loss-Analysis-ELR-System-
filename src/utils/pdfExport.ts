@@ -13,6 +13,7 @@ export interface PdfExportOptions {
   marginMm?: number;
   reportTitle?: string;
   docReference?: string;
+  excludeGraphics?: boolean;
 }
 
 export interface PdfExportResult {
@@ -43,11 +44,12 @@ export async function exportElementToPdf(
     paperSize = 'a4',
     orientation = 'portrait',
     marginMm = 10,
-    reportTitle = 'PESCO WAPDA Engineering Estimate & BOQ Dossier',
-    docReference = ''
+    reportTitle = 'PESCO WAPDA Engineering Report',
+    docReference = '',
+    excludeGraphics = false
   } = options;
 
-  let rawFilename = (options.filename || `Estimate_Report_${new Date().toISOString().slice(0, 10)}`).trim();
+  let rawFilename = (options.filename || `Report_${new Date().toISOString().slice(0, 10)}`).trim();
   if (!rawFilename.toLowerCase().endsWith('.pdf')) {
     rawFilename += '.pdf';
   }
@@ -68,8 +70,34 @@ export async function exportElementToPdf(
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
-      windowWidth: element.scrollWidth,
-      windowHeight: element.scrollHeight
+      windowWidth: element.scrollWidth || 1200,
+      windowHeight: element.scrollHeight || 1600,
+      onclone: (clonedDoc) => {
+        // Expand the cloned element fully
+        const targetId = element.id;
+        const clonedTarget = targetId ? clonedDoc.getElementById(targetId) : null;
+        if (clonedTarget) {
+          clonedTarget.style.overflow = 'visible';
+          clonedTarget.style.maxHeight = 'none';
+          clonedTarget.style.height = 'auto';
+        }
+
+        // Hide all no-print elements in the cloned document
+        const noPrintItems = clonedDoc.querySelectorAll('.no-print');
+        noPrintItems.forEach(el => {
+          (el as HTMLElement).style.display = 'none';
+        });
+
+        // If excludeGraphics is requested, remove watermarks, diagrams, and decorative badges
+        if (excludeGraphics) {
+          const graphicItems = clonedDoc.querySelectorAll(
+            '.print-watermark, .screen-watermark, .unnecessary-graphic, .sld-blueprint-section, .decorative-graphic'
+          );
+          graphicItems.forEach(el => {
+            (el as HTMLElement).style.display = 'none';
+          });
+        }
+      }
     });
 
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
