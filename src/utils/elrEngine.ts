@@ -823,35 +823,56 @@ export function calculateBifurcationFourStatements(
   // Helper to extract zone specific metrics
   function extractZoneStatement(
     summary: FeederAnalysisSummary,
-    transformerId: 'T1' | 'T2',
+    transformerId: 'T1' | 'T2' | 'EXIST',
     year: 0 | 5
   ): BifurcationZoneAnalysisStatement {
+    const isExist = transformerId === 'EXIST';
     const isT1 = transformerId === 'T1';
-    const capacityKva = isT1 ? t1CapacityKva : t2CapacityKva;
-    const injectionNodeId = isT1 ? '0.0' : bifurcationNodeId;
-    const transformerName = isT1 
-      ? `Main Transformer T-1 (${capacityKva} kVA @ Substation)`
-      : `Additional Transformer T-2 (${capacityKva} kVA @ Node ${bifurcationNodeId})`;
+    const capacityKva = isExist || isT1 ? t1CapacityKva : t2CapacityKva;
+    const injectionNodeId = isExist || isT1 ? '0.0' : bifurcationNodeId;
+    const lineLabel = isExist 
+      ? 'Exist Line' 
+      : (isT1 ? 'Proposed-1 Line' : 'Proposed-2 Line');
+
+    const transformerName = isExist
+      ? `Exist Line: Baseline Substation T-1 (${capacityKva} kVA)`
+      : isT1 
+        ? `Proposed-1 Line: Main Substation T-1 (${capacityKva} kVA @ Substation)`
+        : `Proposed-2 Line: Additional Substation T-2 (${capacityKva} kVA @ Node ${bifurcationNodeId})`;
 
     // Filter segments belonging to this transformer zone
-    const zoneSegments = summary.segmentResults.filter(s => s.fedByTransformer === transformerId);
+    const zoneSegments = isExist 
+      ? summary.segmentResults 
+      : summary.segmentResults.filter(s => s.fedByTransformer === transformerId);
     const spansCount = zoneSegments.length;
     const zoneLengthKm = zoneSegments.reduce((acc, s) => acc + s.lengthKm, 0);
     const zoneLengthMeters = Math.round(zoneLengthKm * 1000);
 
     // Filter nodes in this zone
-    const zoneToNodes = new Set(zoneSegments.map(s => s.toNodeId));
-    if (isT1) zoneToNodes.add('0.0');
-    else zoneToNodes.add(bifurcationNodeId);
-
-    const connectedNodes = feeder.nodes.filter(n => zoneToNodes.has(n.id));
-    const connected1PhCust = connectedNodes.reduce((acc, n) => acc + n.singlePhaseCustomers, 0);
-    const connected3PhCust = connectedNodes.reduce((acc, n) => acc + n.threePhaseCustomers, 0);
+    let connected1PhCust = 0;
+    let connected3PhCust = 0;
+    if (isExist) {
+      connected1PhCust = feeder.nodes.reduce((acc, n) => acc + n.singlePhaseCustomers, 0);
+      connected3PhCust = feeder.nodes.reduce((acc, n) => acc + n.threePhaseCustomers, 0);
+    } else {
+      const zoneToNodes = new Set(zoneSegments.map(s => s.toNodeId));
+      if (isT1) zoneToNodes.add('0.0');
+      else zoneToNodes.add(bifurcationNodeId);
+      const connectedNodes = feeder.nodes.filter(n => zoneToNodes.has(n.id));
+      connected1PhCust = connectedNodes.reduce((acc, n) => acc + n.singlePhaseCustomers, 0);
+      connected3PhCust = connectedNodes.reduce((acc, n) => acc + n.threePhaseCustomers, 0);
+    }
     const totalConnectedCust = connected1PhCust + connected3PhCust;
 
-    const demandKva = isT1 ? (summary.transformer1DemandKva || 0) : (summary.transformer2DemandKva || 0);
-    const demandKw = demandKva * powerFactor;
-    const currentAmps = Number((demandKva / (Math.sqrt(3) * vKv)).toFixed(1));
+    const demandKva = isExist 
+      ? summary.totalSystemDemandKva 
+      : (isT1 ? (summary.transformer1DemandKva || 0) : (summary.transformer2DemandKva || 0));
+    const demandKw = isExist 
+      ? summary.totalSystemDemandKw 
+      : demandKva * powerFactor;
+    const currentAmps = isExist 
+      ? summary.totalSourceCurrentAmps 
+      : Number((demandKva / (Math.sqrt(3) * vKv)).toFixed(1));
 
     const loadingPercent = Math.round((demandKva / capacityKva) * 100);
     const isOverloaded = loadingPercent > 100;
@@ -859,32 +880,44 @@ export function calculateBifurcationFourStatements(
     // Worst voltage drop in this zone
     let worstDrop = 0;
     let worstNode = injectionNodeId;
-    zoneSegments.forEach(s => {
-      if (s.percentVoltDrop > worstDrop) {
-        worstDrop = s.percentVoltDrop;
-        worstNode = s.toNodeId;
-      }
-    });
+    if (isExist) {
+      worstDrop = summary.worstVoltageDropPercent;
+      worstNode = summary.worstVoltageDropNodeId;
+    } else {
+      zoneSegments.forEach(s => {
+        if (s.percentVoltDrop > worstDrop) {
+          worstDrop = s.percentVoltDrop;
+          worstNode = s.toNodeId;
+        }
+      });
+    }
 
     const worstVoltageVolts = Number((summary.baseVoltage * (1 - worstDrop / 100)).toFixed(1));
 
     // Zone line loss
-    const lineLossKw = isT1 ? (summary.t1LineLossKw || 0) : (summary.t2LineLossKw || 0);
+    const lineLossKw = isExist 
+      ? summary.totalLineLossKw 
+      : (isT1 ? (summary.t1LineLossKw || 0) : (summary.t2LineLossKw || 0));
 
     // Transformation losses for this specific transformer
     const trfSpec = getTransformerSpec(capacityKva);
     const trfRatio = demandKva / capacityKva;
-    const transformationLossKw = Number((trfSpec.ironLossKw + trfSpec.copperLossKw * Math.pow(trfRatio, 2)).toFixed(3));
+    const transformationLossKw = isExist 
+      ? summary.transformationLossKw 
+      : Number((trfSpec.ironLossKw + trfSpec.copperLossKw * Math.pow(trfRatio, 2)).toFixed(3));
     const totalPowerLossKw = Number((lineLossKw + transformationLossKw).toFixed(3));
 
     const totalInputKw = demandKw + totalPowerLossKw;
     const percentPowerLoss = totalInputKw > 0 ? Number(((totalPowerLossKw / totalInputKw) * 100).toFixed(1)) : 0;
 
-    const annualEnergyLossKwh = Math.round(totalPowerLossKw * 8760 * lossFactorCoeff);
+    const annualEnergyLossKwh = isExist 
+      ? summary.annualEnergyLossKwh 
+      : Math.round(totalPowerLossKw * 8760 * lossFactorCoeff);
     const annualLossCostPkr = Math.round(annualEnergyLossKwh * tariff);
 
     return {
       transformerId,
+      lineLabel,
       transformerName,
       year,
       yearLabel: year === 0 ? '0 Year (Current Peak)' : 'After 5 Years (Compounded Growth)',
@@ -915,7 +948,9 @@ export function calculateBifurcationFourStatements(
     };
   }
 
-  // Generate the 4 Statements
+  // Generate the 6 Statements: Exist (0 & 5), Proposed-1 (0 & 5), Proposed-2 (0 & 5)
+  const existYear0 = extractZoneStatement(baselineYear0, 'EXIST', 0);
+  const existYear5 = extractZoneStatement(baselineYear5, 'EXIST', 5);
   const t1Year0 = extractZoneStatement(bifurcatedYear0, 'T1', 0);
   const t1Year5 = extractZoneStatement(bifurcatedYear5, 'T1', 5);
   const t2Year0 = extractZoneStatement(bifurcatedYear0, 'T2', 0);
@@ -965,9 +1000,12 @@ export function calculateBifurcationFourStatements(
   return {
     isActive: bifurcationConfig.enabled,
     bifurcationNodeId,
+    transformerNodeId: bifurcationConfig.transformerNodeId || bifurcationNodeId,
     additionalTransformerKva: t2CapacityKva,
     growthRatePercent: growthPercent,
     tariffPerKwh: tariff,
+    existYear0,
+    existYear5,
     t1Year0,
     t1Year5,
     t2Year0,

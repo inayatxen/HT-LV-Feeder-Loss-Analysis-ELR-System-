@@ -18,7 +18,8 @@ import {
 } from './types/feeder';
 import { 
   calculateFeederAnalysis, 
-  generateGrowthForecast 
+  generateGrowthForecast,
+  calculateBifurcationFourStatements
 } from './utils/elrEngine';
 import { Header } from './components/Header';
 import { SummaryMetrics } from './components/SummaryMetrics';
@@ -82,17 +83,62 @@ export default function App() {
     });
   }, [customFeeders, activeCategory]);
 
+  // Helper to load persisted bifurcation configuration from localStorage
+  const getSavedBifurcationConfig = (feeder: FeederData): BifurcationConfig => {
+    const defaultCutOff = feeder.nodes[2]?.id || '3.0';
+    const defaultKva = feeder.category === 'HV' ? 2500 : 100;
+    try {
+      const saved = localStorage.getItem(`pesco_bifurcation_${feeder.id}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            enabled: Boolean(parsed.enabled),
+            bifurcationNodeId: parsed.bifurcationNodeId || defaultCutOff,
+            transformerNodeId: parsed.transformerNodeId || parsed.bifurcationNodeId || defaultCutOff,
+            transformerCapacityKva: Number(parsed.transformerCapacityKva) || defaultKva,
+            mode: parsed.mode || 'ADDITIONAL_TRANSFORMER'
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('Could not read saved bifurcation config:', err);
+    }
+    return {
+      enabled: false,
+      bifurcationNodeId: defaultCutOff,
+      transformerNodeId: defaultCutOff,
+      transformerCapacityKva: defaultKva,
+      mode: 'ADDITIONAL_TRANSFORMER'
+    };
+  };
+
   // What-If Interventions State
   const [activeTransformerKva, setActiveTransformerKva] = useState<number>(activeFeeder.existingTransformerKva);
   const [activeConductors, setActiveConductors] = useState<Record<string, string>>({});
   const [activeCapacitors, setActiveCapacitors] = useState<Record<string, number>>({});
   const [activeLoadFactor, setActiveLoadFactor] = useState<number | undefined>(undefined);
-  const [bifurcationConfig, setBifurcationConfig] = useState<BifurcationConfig>({
-    enabled: false,
-    bifurcationNodeId: '3.0',
-    transformerCapacityKva: 100,
-    mode: 'ADDITIONAL_TRANSFORMER'
+  const [bifurcationConfig, setBifurcationConfig] = useState<BifurcationConfig>(() => {
+    return getSavedBifurcationConfig(GULBHAR_COLONY_LT_FEEDER);
   });
+
+  // Handler to update and persist bifurcation config
+  const handleUpdateBifurcationConfig = (newConfig: BifurcationConfig) => {
+    setBifurcationConfig(newConfig);
+    try {
+      localStorage.setItem(`pesco_bifurcation_${selectedFeederId}`, JSON.stringify(newConfig));
+      localStorage.setItem('pesco_bifurcation_active', JSON.stringify({
+        feederId: selectedFeederId,
+        config: newConfig
+      }));
+    } catch (e) {
+      console.warn('Failed to save bifurcation config:', e);
+    }
+    if (newConfig.enabled) {
+      setDbToast(`Bifurcation status saved: Cut-off @ Node ${newConfig.bifurcationNodeId} · T-2: ${newConfig.transformerCapacityKva} kVA @ Node ${newConfig.transformerNodeId || newConfig.bifurcationNodeId}`);
+      setTimeout(() => setDbToast(''), 3500);
+    }
+  };
 
   // Category switch handler (LV vs HV)
   const handleSelectCategory = (category: FeederCategory) => {
@@ -109,16 +155,11 @@ export default function App() {
       setActiveConductors({});
       setActiveCapacitors({});
       setActiveLoadFactor(undefined);
-      setBifurcationConfig({
-        enabled: false,
-        bifurcationNodeId: target.nodes[2]?.id || '3.0',
-        transformerCapacityKva: target.category === 'HV' ? 2500 : 100,
-        mode: 'ADDITIONAL_TRANSFORMER'
-      });
+      setBifurcationConfig(getSavedBifurcationConfig(target));
     }
   };
 
-  // When switching feeders, reset what-if parameters
+  // When switching feeders, load persisted bifurcation configuration
   const handleSelectFeeder = (feederId: string) => {
     setSelectedFeederId(feederId);
     const target = customFeeders[feederId] || PRESET_FEEDERS.find(f => f.id === feederId) || GULBHAR_COLONY_LT_FEEDER;
@@ -128,12 +169,7 @@ export default function App() {
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
-    setBifurcationConfig({
-      enabled: false,
-      bifurcationNodeId: target.nodes[2]?.id || '3.0',
-      transformerCapacityKva: target.category === 'HV' ? 2500 : 100,
-      mode: 'ADDITIONAL_TRANSFORMER'
-    });
+    setBifurcationConfig(getSavedBifurcationConfig(target));
   };
 
   // Modals state
@@ -205,6 +241,16 @@ export default function App() {
     });
   }, [activeFeeder, activeConductors, activeCapacitors, bifurcationConfig]);
 
+  // Bifurcation Analysis Dossier (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)
+  const bifurcationDossier = useMemo(() => {
+    return calculateBifurcationFourStatements(activeFeeder, bifurcationConfig, {
+      customConductors: activeConductors,
+      customCapacitors: activeCapacitors,
+      t1TransformerOverrideKva: activeTransformerKva,
+      loadFactorOverride: activeLoadFactor
+    });
+  }, [activeFeeder, bifurcationConfig, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor]);
+
   const hasActiveInterventions = 
     activeTransformerKva !== activeFeeder.existingTransformerKva ||
     Object.keys(activeConductors).length > 0 ||
@@ -240,9 +286,10 @@ export default function App() {
   const handleApplyPackage = (pkg: 'standard' | 'max' | 'capacitor_only' | 'bifurcation') => {
     if (pkg === 'bifurcation') {
       setActiveTransformerKva(activeFeeder.existingTransformerKva);
-      setBifurcationConfig({
+      handleUpdateBifurcationConfig({
         enabled: true,
         bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+        transformerNodeId: activeFeeder.nodes[2]?.id || '3.0',
         transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
         mode: 'ADDITIONAL_TRANSFORMER'
       });
@@ -251,15 +298,16 @@ export default function App() {
       setActiveLoadFactor(undefined);
     } else if (pkg === 'standard') {
       setActiveTransformerKva(activeFeeder.proposedTransformerKva);
-      setBifurcationConfig(prev => ({ ...prev, enabled: false }));
+      handleUpdateBifurcationConfig({ ...bifurcationConfig, enabled: false });
       setActiveCapacitors({ '6.0': 20 });
       setActiveConductors({});
       setActiveLoadFactor(undefined);
     } else if (pkg === 'max') {
       setActiveTransformerKva(activeFeeder.proposedTransformerKva);
-      setBifurcationConfig({
+      handleUpdateBifurcationConfig({
         enabled: true,
         bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+        transformerNodeId: activeFeeder.nodes[2]?.id || '3.0',
         transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
         mode: 'ADDITIONAL_TRANSFORMER'
       });
@@ -267,7 +315,7 @@ export default function App() {
       setActiveConductors({ 's-1-2': 'DOG', 's-2-3': 'DOG' });
       setActiveLoadFactor(undefined);
     } else if (pkg === 'capacitor_only') {
-      setBifurcationConfig(prev => ({ ...prev, enabled: false }));
+      handleUpdateBifurcationConfig({ ...bifurcationConfig, enabled: false });
       setActiveCapacitors({ '6.0': 20, '12.0': 15 });
       setActiveLoadFactor(undefined);
     }
@@ -278,9 +326,10 @@ export default function App() {
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
-    setBifurcationConfig({
+    handleUpdateBifurcationConfig({
       enabled: false,
       bifurcationNodeId: activeFeeder.nodes[2]?.id || '3.0',
+      transformerNodeId: activeFeeder.nodes[2]?.id || '3.0',
       transformerCapacityKva: activeFeeder.category === 'HV' ? 2500 : 100,
       mode: 'ADDITIONAL_TRANSFORMER'
     });
@@ -421,6 +470,10 @@ export default function App() {
                 <SingleLineDiagram
                   feeder={activeFeeder}
                   summary={hasActiveInterventions ? proposedSummary : existingSummary}
+                  existingSummary={existingSummary}
+                  bifurcationConfig={bifurcationConfig}
+                  onUpdateBifurcation={handleUpdateBifurcationConfig}
+                  bifurcationDossier={bifurcationDossier}
                   onSelectNode={(node) => setInspectedNode(node)}
                   onSelectSegment={(segResult) => {
                     setActiveTab('table');
@@ -482,9 +535,10 @@ export default function App() {
                   activeLoadFactor={activeLoadFactor}
                   onSetLoadFactor={(lf) => setActiveLoadFactor(lf)}
                   bifurcationConfig={bifurcationConfig}
-                  onSetBifurcation={setBifurcationConfig}
+                  onSetBifurcation={handleUpdateBifurcationConfig}
                   onApplyPackage={handleApplyPackage}
                   onReset={handleResetInterventions}
+                  onOpenPrintReport={() => setIsReportOpen(true)}
                 />
               </div>
             )}

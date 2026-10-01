@@ -233,7 +233,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                 {/* Bifurcation Split Node */}
                 <div>
                   <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                    Bifurcation Split Pole/Node:
+                    Bifurcation Cut-Off Point / Split Node:
                   </label>
                   <select
                     value={bifurcationConfig.bifurcationNodeId}
@@ -246,6 +246,27 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     {candidateNodes.map(n => (
                       <option key={n.id} value={n.id}>
                         {n.label || `Pole ${n.id}`} ({n.singlePhaseCustomers} 1-Ph, {n.threePhaseCustomers} 3-Ph)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Additional Transformer Location Node */}
+                <div>
+                  <label className="text-[10px] font-bold text-purple-900 block mb-1">
+                    New Additional Transformer (T-2) Substation Location:
+                  </label>
+                  <select
+                    value={bifurcationConfig.transformerNodeId || bifurcationConfig.bifurcationNodeId}
+                    onChange={(e) => onSetBifurcation({
+                      ...bifurcationConfig,
+                      transformerNodeId: e.target.value
+                    })}
+                    className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                  >
+                    {feeder.nodes.map(n => (
+                      <option key={n.id} value={n.id}>
+                        Node {n.id} ({n.label}) {n.id === bifurcationConfig.bifurcationNodeId ? '★ Cut-Off Point' : ''}
                       </option>
                     ))}
                   </select>
@@ -270,6 +291,12 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                {/* Status persistence badge */}
+                <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
+                  <span>Status Saved: Active until changed or reset.</span>
                 </div>
 
                 {/* Dual Loading Preview */}

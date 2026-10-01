@@ -46,10 +46,12 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
   onOpenPrintReport,
   isPrintView = false
 }) => {
-  const { t1Year0, t1Year5, t2Year0, t2Year5, combinedYear0, combinedYear5, reliefBenefits } = dossier;
+  const { existYear0, existYear5, t1Year0, t1Year5, t2Year0, t2Year5, combinedYear0, combinedYear5, reliefBenefits } = dossier;
 
   // Active view in interactive mode
-  const [activeNodeTab, setActiveNodeTab] = useState<'all' | 't1_yr0' | 't1_yr5' | 't2_yr0' | 't2_yr5'>('all');
+  const [activeNodeTab, setActiveNodeTab] = useState<
+    'all' | 'exist_yr0' | 'exist_yr5' | 't1_yr0' | 't1_yr5' | 't2_yr0' | 't2_yr5' | 'compare_0yr' | 'compare_5yr'
+  >('all');
   const [expandedSection, setExpandedSection] = useState<{
     overview: boolean;
     nodeStatements: boolean;
@@ -60,37 +62,49 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
     matrixTable: true
   });
 
-  const renderStatementCard = (stmt: BifurcationZoneAnalysisStatement, bgTheme: 'blue' | 'purple') => {
+  const renderStatementCard = (stmt: BifurcationZoneAnalysisStatement, bgTheme: 'amber' | 'blue' | 'purple') => {
+    if (!stmt) return null;
+    const isExist = stmt.transformerId === 'EXIST';
     const isT1 = stmt.transformerId === 'T1';
     const isYr0 = stmt.year === 0;
 
-    const headerGradient = isT1
-      ? (isYr0 ? 'bg-blue-900 text-white' : 'bg-slate-900 text-blue-300')
-      : (isYr0 ? 'bg-purple-900 text-white' : 'bg-slate-900 text-purple-300');
+    const headerGradient = isExist
+      ? (isYr0 ? 'bg-amber-900 text-white' : 'bg-slate-900 text-amber-300')
+      : isT1
+        ? (isYr0 ? 'bg-blue-900 text-white' : 'bg-slate-900 text-blue-300')
+        : (isYr0 ? 'bg-purple-900 text-white' : 'bg-slate-900 text-purple-300');
 
-    const badgeClass = isT1
-      ? (isYr0 ? 'bg-blue-800 text-blue-100 border-blue-700' : 'bg-blue-950 text-blue-300 border-blue-800')
-      : (isYr0 ? 'bg-purple-800 text-purple-100 border-purple-700' : 'bg-purple-950 text-purple-300 border-purple-800');
+    const badgeClass = isExist
+      ? (isYr0 ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-amber-950 text-amber-200 border-amber-700')
+      : isT1
+        ? (isYr0 ? 'bg-blue-800 text-blue-100 border-blue-700' : 'bg-blue-950 text-blue-300 border-blue-800')
+        : (isYr0 ? 'bg-purple-800 text-purple-100 border-purple-700' : 'bg-purple-950 text-purple-300 border-purple-800');
 
     return (
-      <div className={`rounded-xl border ${isT1 ? 'border-blue-200' : 'border-purple-200'} bg-white overflow-hidden shadow-xs flex flex-col justify-between print:border-slate-400 print:shadow-none`}>
+      <div className={`rounded-xl border ${
+        isExist ? 'border-amber-300' : isT1 ? 'border-blue-200' : 'border-purple-200'
+      } bg-white overflow-hidden shadow-xs flex flex-col justify-between print:border-slate-400 print:shadow-none`}>
         {/* Statement Header */}
         <div className={`p-3.5 ${headerGradient} flex items-center justify-between`}>
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center font-bold font-mono text-xs">
-              {stmt.transformerId}
+              {isExist ? 'EX' : stmt.transformerId}
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-xs">
-                  {stmt.transformerId === 'T1' ? 'Transformer T-1 (Main)' : 'Transformer T-2 (Added)'}
+                  {isExist 
+                    ? 'Exist Line (Baseline Feeder)' 
+                    : isT1 
+                      ? 'Proposed-1 Line (Main T-1)' 
+                      : 'Proposed-2 Line (New T-2)'}
                 </span>
                 <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-semibold ${badgeClass}`}>
-                  {stmt.year === 0 ? 'Year 0 (Present)' : 'Year 5 (Forecast)'}
+                  {stmt.year === 0 ? '0 Yr (Present)' : '5 Yrs (Compounded)'}
                 </span>
               </div>
               <span className="text-[10px] opacity-80 block">
-                {stmt.capacityKva} kVA @ {isT1 ? 'Substation Node 0.0' : `Injection Node ${dossier.bifurcationNodeId}`}
+                {stmt.capacityKva} kVA @ {isExist || isT1 ? 'Substation Node 0.0' : `Node ${dossier.transformerNodeId || dossier.bifurcationNodeId}`}
               </span>
             </div>
           </div>
@@ -173,11 +187,12 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
   // Node Analysis Schedule Table Generator for a Single Statement
   const renderNodeAnalysisTable = (
     stmt: BifurcationZoneAnalysisStatement,
-    statementNumber: 1 | 2 | 3 | 4,
-    themeColor: 'blue' | 'purple'
+    titleLabel: string,
+    themeColor: 'amber' | 'blue' | 'purple'
   ) => {
-    const isT1 = stmt.transformerId === 'T1';
+    if (!stmt) return null;
     const isYr0 = stmt.year === 0;
+    const isAmber = themeColor === 'amber';
     const isBlue = themeColor === 'blue';
     const segments = stmt.segmentResults || [];
 
@@ -187,18 +202,26 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
     const totalLossKw = segments.reduce((sum, s) => sum + s.lineLossKw, 0);
     const totalEnergyKwh = stmt.annualEnergyLossKwh;
 
+    const bannerBg = isAmber
+      ? (isYr0 ? 'bg-amber-900' : 'bg-slate-900')
+      : isBlue
+        ? (isYr0 ? 'bg-blue-900' : 'bg-slate-900')
+        : (isYr0 ? 'bg-purple-900' : 'bg-slate-900');
+
     return (
       <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none print:border-slate-800 print-avoid-break mb-6">
         {/* Table Title Banner */}
-        <div className={`px-4 py-3 ${isBlue ? (isYr0 ? 'bg-blue-900' : 'bg-slate-900') : (isYr0 ? 'bg-purple-900' : 'bg-slate-900')} text-white flex flex-wrap items-center justify-between gap-2`}>
+        <div className={`px-4 py-3 ${bannerBg} text-white flex flex-wrap items-center justify-between gap-2`}>
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center font-mono font-bold text-xs text-amber-300">
-              #{statementNumber}
+            <div className={`w-6 h-6 rounded-md bg-white/10 flex items-center justify-center font-mono font-bold text-xs ${
+              isAmber ? 'text-amber-300' : isBlue ? 'text-blue-300' : 'text-purple-300'
+            }`}>
+              {isAmber ? 'EX' : stmt.transformerId}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-xs sm:text-sm tracking-wide uppercase">
-                  NODE ANALYSIS STATEMENT {statementNumber}: {stmt.transformerId === 'T1' ? 'TRANSFORMER T-1 (MAIN FEEDER PORTION)' : 'TRANSFORMER T-2 (BIFURCATED LINE PORTION)'}
+                  NODE ANALYSIS: {titleLabel}
                 </span>
                 <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase ${isYr0 ? 'bg-emerald-500 text-slate-950' : 'bg-amber-400 text-slate-950'}`}>
                   {isYr0 ? '0 Year (Current Peak)' : 'After 5 Years (+5% Compounded)'}
@@ -278,8 +301,10 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
                       <td className="py-2 px-2 text-right font-bold text-purple-700">
                         {seg.threePhaseCustomers}
                       </td>
-                      <td className="py-2 px-2.5 text-left font-sans text-[11px] font-medium text-slate-800">
-                        {seg.conductor.code}
+                      <td className="py-2 px-2.5 text-left font-sans text-[11px]">
+                        <span className="font-semibold text-slate-900">
+                          {seg.conductor.name}
+                        </span>
                       </td>
                       <td className="py-2 px-2.5 text-right font-semibold text-slate-900">
                         {seg.downstreamKva.toFixed(1)} kVA
@@ -291,12 +316,12 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
                         {seg.voltDropVolts.toFixed(1)} V
                       </td>
                       <td className={`py-2 px-2 text-right font-bold ${
-                        isCriticalDrop ? 'text-rose-600 bg-rose-50/70' : 'text-slate-900'
+                        isCriticalDrop ? 'text-rose-600 bg-rose-50/60' : 'text-slate-900'
                       }`}>
                         -{seg.percentVoltDrop.toFixed(1)}%
                       </td>
                       <td className={`py-2 px-2 text-right font-bold ${
-                        isCriticalDrop ? 'text-rose-700' : 'text-emerald-800'
+                        seg.receivingVoltage < 210 ? 'text-rose-600 bg-rose-50/60' : 'text-slate-900'
                       }`}>
                         {seg.receivingVoltage.toFixed(1)} V
                       </td>
@@ -326,7 +351,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
             <tfoot>
               <tr className="bg-slate-900 text-white font-bold">
                 <td colSpan={2} className="py-2.5 px-3 text-center text-amber-400 font-sans uppercase tracking-wider text-xs">
-                  STATEMENT {statementNumber} TOTALS
+                  {titleLabel} TOTALS
                 </td>
                 <td className="py-2.5 px-2 text-right text-amber-300">
                   {totalLengthM} m ({stmt.zoneLengthKm} km)
@@ -381,14 +406,14 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base sm:text-lg font-black tracking-tight uppercase">
-                Line Bifurcation & T-2 Transformer Dual-Zone Node Analysis
+                Dual-Zone Node Analysis: Exist, Proposed-1 & Proposed-2 Lines
               </h2>
               <span className="bg-purple-500/20 text-purple-300 border border-purple-400/40 text-[10px] font-mono px-2 py-0.5 rounded font-bold uppercase print:text-slate-900 print:border-slate-700">
-                4 Statements Active
+                0 Years & 5 Years Compounded
               </span>
             </div>
             <p className="text-xs text-slate-300 print:text-slate-600 mt-0.5">
-              Node-by-node load flow and electrical span analysis of Transformer 1 (T-1) & Transformer 2 (T-2) line portions at 0 Year vs after 5 Years ({dossier.growthRatePercent}% annual growth).
+              Node-by-node electrical load flow and technical performance of Exist, Proposed-1 (T-1), and Proposed-2 (T-2) lines at Year 0 vs after 5 Years ({dossier.growthRatePercent}% annual growth).
             </p>
           </div>
         </div>
@@ -399,7 +424,7 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
             className="no-print flex items-center gap-1.5 px-3.5 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer shrink-0"
           >
             <Printer className="w-4 h-4" />
-            <span>Print All 4 Node Analyses</span>
+            <span>Print All Node Analyses</span>
           </button>
         )}
       </div>
@@ -440,67 +465,94 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
       </div>
 
       {/* ========================================================
-          THE FOUR ANALYSIS STATEMENTS (4-QUADRANT SUMMARY CARDS)
+          THE SIX ANALYSIS STATEMENTS (OVERVIEW CARDS)
          ======================================================== */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
             <Layers className="w-4 h-4 text-purple-600" />
-            <span>4 Engineering Analysis Statements Overview</span>
+            <span>6 Engineering Analysis Statements (Exist, Proposed-1, Proposed-2)</span>
           </h3>
           <span className="text-[11px] font-mono text-slate-500">
-            Split Node: <strong>Node {dossier.bifurcationNodeId}</strong> · T-2: <strong>{dossier.additionalTransformerKva} kVA</strong>
+            Cut-Off: <strong>Node {dossier.bifurcationNodeId}</strong> · T-2 Substation: <strong>{dossier.additionalTransformerKva} kVA @ Node {dossier.transformerNodeId || dossier.bifurcationNodeId}</strong>
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Statement 1 */}
+        <div className="space-y-4">
+          {/* Section A: Exist Line (Baseline) */}
           <div>
-            <div className="text-[11px] font-bold text-blue-900 mb-1.5 flex items-center justify-between">
-              <span>STATEMENT 1: T-1 ZONE AT 0 YEAR (PRESENT)</span>
-              <span className="text-[10px] text-blue-600 font-mono">Trunk & Upstream Poles ({t1Year0.spansCount} Spans)</span>
+            <div className="text-[11px] font-bold text-amber-950 mb-1.5 flex items-center justify-between bg-amber-50/80 px-2.5 py-1 rounded border border-amber-200">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                EXIST LINE (BASELINE RADIAL FEEDER - PRE-BIFURCATION)
+              </span>
+              <span className="text-[10px] text-amber-800 font-mono">Un-bifurcated System</span>
             </div>
-            {renderStatementCard(t1Year0, 'blue')}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">EXIST LINE @ 0 YEAR (CURRENT PEAK)</div>
+                {renderStatementCard(existYear0, 'amber')}
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">EXIST LINE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
+                {renderStatementCard(existYear5, 'amber')}
+              </div>
+            </div>
           </div>
 
-          {/* Statement 2 */}
+          {/* Section B: Proposed-1 Line (Main T-1 Zone) */}
           <div>
-            <div className="text-[11px] font-bold text-blue-900 mb-1.5 flex items-center justify-between">
-              <span>STATEMENT 2: T-1 ZONE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR)</span>
-              <span className="text-[10px] text-blue-600 font-mono">5-Year Growth Compounded ({t1Year5.spansCount} Spans)</span>
+            <div className="text-[11px] font-bold text-blue-950 mb-1.5 flex items-center justify-between bg-blue-50/80 px-2.5 py-1 rounded border border-blue-200">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600" />
+                PROPOSED-1 LINE (MAIN TRANSFORMER T-1 ZONE UP TO CUT-OFF)
+              </span>
+              <span className="text-[10px] text-blue-800 font-mono">Trunk Section ({t1Year0.spansCount} Spans)</span>
             </div>
-            {renderStatementCard(t1Year5, 'blue')}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-1 @ 0 YEAR (CURRENT PEAK)</div>
+                {renderStatementCard(t1Year0, 'blue')}
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-1 AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
+                {renderStatementCard(t1Year5, 'blue')}
+              </div>
+            </div>
           </div>
 
-          {/* Statement 3 */}
+          {/* Section C: Proposed-2 Line (Additional T-2 Zone) */}
           <div>
-            <div className="text-[11px] font-bold text-purple-900 mb-1.5 flex items-center justify-between">
-              <span>STATEMENT 3: T-2 ZONE AT 0 YEAR (COMMISSIONING)</span>
-              <span className="text-[10px] text-purple-600 font-mono">Bifurcated Branch ({t2Year0.spansCount} Spans)</span>
+            <div className="text-[11px] font-bold text-purple-950 mb-1.5 flex items-center justify-between bg-purple-50/80 px-2.5 py-1 rounded border border-purple-200">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-purple-600" />
+                PROPOSED-2 LINE (NEW ADDITIONAL TRANSFORMER T-2 BIFURCATED ZONE)
+              </span>
+              <span className="text-[10px] text-purple-800 font-mono">Bifurcated Branch ({t2Year0.spansCount} Spans)</span>
             </div>
-            {renderStatementCard(t2Year0, 'purple')}
-          </div>
-
-          {/* Statement 4 */}
-          <div>
-            <div className="text-[11px] font-bold text-purple-900 mb-1.5 flex items-center justify-between">
-              <span>STATEMENT 4: T-2 ZONE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR)</span>
-              <span className="text-[10px] text-purple-600 font-mono">5-Year Growth Compounded ({t2Year5.spansCount} Spans)</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-2 @ 0 YEAR (COMMISSIONING)</div>
+                {renderStatementCard(t2Year0, 'purple')}
+              </div>
+              <div>
+                <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-2 AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
+                {renderStatementCard(t2Year5, 'purple')}
+              </div>
             </div>
-            {renderStatementCard(t2Year5, 'purple')}
           </div>
         </div>
       </div>
 
       {/* ========================================================
-          THE FOUR NODE ANALYSIS STATEMENTS (NODE-BY-NODE TABLES)
+          NODE-BY-NODE ANALYSIS STATEMENTS (NODE TABLES)
          ======================================================== */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-purple-700" />
             <h3 className="text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wider">
-              Node-by-Node Analysis Schedules (All 4 Statements)
+              Node Analysis Schedules: Exist, Proposed-1 & Proposed-2 Lines
             </h3>
           </div>
 
@@ -515,97 +567,133 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
                   : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
-              All 4 Node Statements
+              All 6 Schedules
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('exist_yr0')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 'exist_yr0'
+                  ? 'bg-amber-600 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-amber-950 hover:bg-amber-50'
+              }`}
+            >
+              Exist (0 Yr)
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveNodeTab('exist_yr5')}
+              className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                activeNodeTab === 'exist_yr5'
+                  ? 'bg-amber-800 text-white font-bold shadow-xs'
+                  : 'bg-slate-100 text-amber-950 hover:bg-amber-50'
+              }`}
+            >
+              Exist (5 Yrs)
             </button>
             <button
               type="button"
               onClick={() => setActiveNodeTab('t1_yr0')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 activeNodeTab === 't1_yr0'
-                  ? 'bg-blue-700 text-white font-bold shadow-xs'
+                  ? 'bg-blue-600 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-blue-900 hover:bg-blue-50'
               }`}
             >
-              Stmt 1: T-1 (0 Yr)
+              Proposed-1 (0 Yr)
             </button>
             <button
               type="button"
               onClick={() => setActiveNodeTab('t1_yr5')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 activeNodeTab === 't1_yr5'
-                  ? 'bg-blue-900 text-white font-bold shadow-xs'
+                  ? 'bg-blue-800 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-blue-900 hover:bg-blue-50'
               }`}
             >
-              Stmt 2: T-1 (5 Yrs)
+              Proposed-1 (5 Yrs)
             </button>
             <button
               type="button"
               onClick={() => setActiveNodeTab('t2_yr0')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 activeNodeTab === 't2_yr0'
-                  ? 'bg-purple-700 text-white font-bold shadow-xs'
+                  ? 'bg-purple-600 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-purple-900 hover:bg-purple-50'
               }`}
             >
-              Stmt 3: T-2 (0 Yr)
+              Proposed-2 (0 Yr)
             </button>
             <button
               type="button"
               onClick={() => setActiveNodeTab('t2_yr5')}
               className={`px-2.5 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
                 activeNodeTab === 't2_yr5'
-                  ? 'bg-purple-900 text-white font-bold shadow-xs'
+                  ? 'bg-purple-800 text-white font-bold shadow-xs'
                   : 'bg-slate-100 text-purple-900 hover:bg-purple-50'
               }`}
             >
-              Stmt 4: T-2 (5 Yrs)
+              Proposed-2 (5 Yrs)
             </button>
           </div>
         </div>
 
-        {/* 1. Statement 1 Node Table */}
+        {/* 1. Exist Line 0 Year */}
+        {(activeNodeTab === 'all' || activeNodeTab === 'exist_yr0' || isPrintView) && existYear0 && (
+          <div>
+            {renderNodeAnalysisTable(existYear0, 'EXIST LINE (0 YEAR / CURRENT PEAK)', 'amber')}
+          </div>
+        )}
+
+        {/* 2. Exist Line 5 Years */}
+        {(activeNodeTab === 'all' || activeNodeTab === 'exist_yr5' || isPrintView) && existYear5 && (
+          <div>
+            {renderNodeAnalysisTable(existYear5, 'EXIST LINE (AFTER 5 YEARS / +5% COMPOUNDED)', 'amber')}
+          </div>
+        )}
+
+        {/* 3. Proposed-1 Line 0 Year */}
         {(activeNodeTab === 'all' || activeNodeTab === 't1_yr0' || isPrintView) && (
           <div>
-            {renderNodeAnalysisTable(t1Year0, 1, 'blue')}
+            {renderNodeAnalysisTable(t1Year0, 'PROPOSED-1 LINE: T-1 MAIN ZONE (0 YEAR)', 'blue')}
           </div>
         )}
 
-        {/* 2. Statement 2 Node Table */}
+        {/* 4. Proposed-1 Line 5 Years */}
         {(activeNodeTab === 'all' || activeNodeTab === 't1_yr5' || isPrintView) && (
           <div>
-            {renderNodeAnalysisTable(t1Year5, 2, 'blue')}
+            {renderNodeAnalysisTable(t1Year5, 'PROPOSED-1 LINE: T-1 MAIN ZONE (AFTER 5 YEARS)', 'blue')}
           </div>
         )}
 
-        {/* 3. Statement 3 Node Table */}
+        {/* 5. Proposed-2 Line 0 Year */}
         {(activeNodeTab === 'all' || activeNodeTab === 't2_yr0' || isPrintView) && (
           <div>
-            {renderNodeAnalysisTable(t2Year0, 3, 'purple')}
+            {renderNodeAnalysisTable(t2Year0, 'PROPOSED-2 LINE: T-2 BIFURCATED ZONE (0 YEAR)', 'purple')}
           </div>
         )}
 
-        {/* 4. Statement 4 Node Table */}
+        {/* 6. Proposed-2 Line 5 Years */}
         {(activeNodeTab === 'all' || activeNodeTab === 't2_yr5' || isPrintView) && (
           <div>
-            {renderNodeAnalysisTable(t2Year5, 4, 'purple')}
+            {renderNodeAnalysisTable(t2Year5, 'PROPOSED-2 LINE: T-2 BIFURCATED ZONE (AFTER 5 YEARS)', 'purple')}
           </div>
         )}
       </div>
 
       {/* ========================================================
-          COMPREHENSIVE 4-STATEMENT MASTER MATRIX (TABLE)
+          COMPREHENSIVE 6-STATEMENT MASTER COMPARATIVE MATRIX (TABLE)
          ======================================================== */}
       <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none">
         <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-amber-400" />
             <span className="font-bold uppercase tracking-wider">
-              Comprehensive 4-Statement Comparative Matrix Table
+              Comparative Analysis Matrix: Exist vs Proposed-1 vs Proposed-2 Line
             </span>
           </div>
           <span className="font-mono text-[11px] text-slate-300">
-            WAPDA ELR Standard Evaluation Format
+            0 Years vs After 5 Years Compounded
           </span>
         </div>
 
@@ -614,17 +702,21 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
             <thead>
               <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
                 <th className="p-2.5 font-sans">Parameter / Metric</th>
-                <th className="p-2.5 text-right bg-blue-50/70 text-blue-950">T-1 @ 0 Yr</th>
-                <th className="p-2.5 text-right bg-blue-100/70 text-blue-950">T-1 @ 5 Yrs</th>
-                <th className="p-2.5 text-right bg-purple-50/70 text-purple-950">T-2 @ 0 Yr</th>
-                <th className="p-2.5 text-right bg-purple-100/70 text-purple-950">T-2 @ 5 Yrs</th>
-                <th className="p-2.5 text-right bg-emerald-50/80 text-emerald-950 font-bold">Total @ 0 Yr</th>
-                <th className="p-2.5 text-right bg-emerald-100/80 text-emerald-950 font-bold">Total @ 5 Yrs</th>
+                <th className="p-2.5 text-right bg-amber-50 text-amber-950">Exist (0 Yr)</th>
+                <th className="p-2.5 text-right bg-amber-100 text-amber-950">Exist (5 Yrs)</th>
+                <th className="p-2.5 text-right bg-blue-50 text-blue-950">P-1 (0 Yr)</th>
+                <th className="p-2.5 text-right bg-blue-100 text-blue-950">P-1 (5 Yrs)</th>
+                <th className="p-2.5 text-right bg-purple-50 text-purple-950">P-2 (0 Yr)</th>
+                <th className="p-2.5 text-right bg-purple-100 text-purple-950">P-2 (5 Yrs)</th>
+                <th className="p-2.5 text-right bg-emerald-50 text-emerald-950 font-bold">Total P-1+P-2 (0 Yr)</th>
+                <th className="p-2.5 text-right bg-emerald-100 text-emerald-950 font-bold">Total P-1+P-2 (5 Yrs)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               <tr>
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Rating (kVA)</td>
+                <td className="p-2.5 text-right font-bold text-amber-900">{existYear0 ? existYear0.capacityKva : '-'} kVA</td>
+                <td className="p-2.5 text-right font-bold text-amber-900">{existYear5 ? existYear5.capacityKva : '-'} kVA</td>
                 <td className="p-2.5 text-right font-bold text-blue-800">{t1Year0.capacityKva} kVA</td>
                 <td className="p-2.5 text-right font-bold text-blue-800">{t1Year5.capacityKva} kVA</td>
                 <td className="p-2.5 text-right font-bold text-purple-800">{t2Year0.capacityKva} kVA</td>
@@ -634,6 +726,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr className="bg-slate-50/50">
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Peak Demand (kVA)</td>
+                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? existYear0.demandKva : '-'}</td>
+                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? existYear5.demandKva : '-'}</td>
                 <td className="p-2.5 text-right text-blue-900">{t1Year0.demandKva}</td>
                 <td className="p-2.5 text-right text-blue-900">{t1Year5.demandKva}</td>
                 <td className="p-2.5 text-right text-purple-900">{t2Year0.demandKva}</td>
@@ -643,6 +737,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr>
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Source Current (Amperes)</td>
+                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? `${existYear0.currentAmps} A` : '-'}</td>
+                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? `${existYear5.currentAmps} A` : '-'}</td>
                 <td className="p-2.5 text-right text-blue-900">{t1Year0.currentAmps} A</td>
                 <td className="p-2.5 text-right text-blue-900">{t1Year5.currentAmps} A</td>
                 <td className="p-2.5 text-right text-purple-900">{t2Year0.currentAmps} A</td>
@@ -652,6 +748,12 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr className="bg-slate-50/50">
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Loading %</td>
+                <td className={`p-2.5 text-right font-bold ${existYear0 && existYear0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  {existYear0 ? `${existYear0.transformerLoadingPercent}%` : '-'}
+                </td>
+                <td className={`p-2.5 text-right font-bold ${existYear5 && existYear5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                  {existYear5 ? `${existYear5.transformerLoadingPercent}%` : '-'}
+                </td>
                 <td className={`p-2.5 text-right font-bold ${t1Year0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
                   {t1Year0.transformerLoadingPercent}%
                 </td>
@@ -664,15 +766,21 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
                 <td className={`p-2.5 text-right font-bold ${t2Year5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
                   {t2Year5.transformerLoadingPercent}%
                 </td>
-                <td className="p-2.5 text-right font-bold">
+                <td className="p-2.5 text-right font-bold text-slate-900">
                   {Math.round((combinedYear0.totalDemandKva / combinedYear0.totalCapacityKva) * 100)}%
                 </td>
-                <td className="p-2.5 text-right font-bold">
+                <td className="p-2.5 text-right font-bold text-slate-900">
                   {Math.round((combinedYear5.totalDemandKva / combinedYear5.totalCapacityKva) * 100)}%
                 </td>
               </tr>
               <tr>
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Worst Voltage Drop %</td>
+                <td className="p-2.5 text-right font-bold text-amber-950">
+                  {existYear0 ? `-${existYear0.worstVoltageDropPercent}%` : '-'}
+                </td>
+                <td className="p-2.5 text-right font-bold text-amber-950">
+                  {existYear5 ? `-${existYear5.worstVoltageDropPercent}%` : '-'}
+                </td>
                 <td className="p-2.5 text-right text-slate-900">-{t1Year0.worstVoltageDropPercent}%</td>
                 <td className="p-2.5 text-right text-slate-900">-{t1Year5.worstVoltageDropPercent}%</td>
                 <td className="p-2.5 text-right text-slate-900">-{t2Year0.worstVoltageDropPercent}%</td>
@@ -682,6 +790,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr className="bg-slate-50/50">
                 <td className="p-2.5 font-sans font-semibold text-slate-800">End Receiving Voltage (V)</td>
+                <td className="p-2.5 text-right font-bold text-amber-950">{existYear0 ? `${existYear0.worstVoltageVolts} V` : '-'}</td>
+                <td className="p-2.5 text-right font-bold text-amber-950">{existYear5 ? `${existYear5.worstVoltageVolts} V` : '-'}</td>
                 <td className="p-2.5 text-right font-bold text-slate-900">{t1Year0.worstVoltageVolts} V</td>
                 <td className="p-2.5 text-right font-bold text-slate-900">{t1Year5.worstVoltageVolts} V</td>
                 <td className="p-2.5 text-right font-bold text-slate-900">{t2Year0.worstVoltageVolts} V</td>
@@ -691,6 +801,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr>
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Line Loss (kW)</td>
+                <td className="p-2.5 text-right font-bold text-rose-700">{existYear0 ? existYear0.lineLossKw : '-'}</td>
+                <td className="p-2.5 text-right font-bold text-rose-700">{existYear5 ? existYear5.lineLossKw : '-'}</td>
                 <td className="p-2.5 text-right font-bold text-amber-700">{t1Year0.lineLossKw}</td>
                 <td className="p-2.5 text-right font-bold text-amber-700">{t1Year5.lineLossKw}</td>
                 <td className="p-2.5 text-right font-bold text-amber-700">{t2Year0.lineLossKw}</td>
@@ -700,6 +812,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr className="bg-slate-50/50">
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Total Power Loss (kW)</td>
+                <td className="p-2.5 text-right font-bold text-rose-800">{existYear0 ? existYear0.totalPowerLossKw : '-'}</td>
+                <td className="p-2.5 text-right font-bold text-rose-800">{existYear5 ? existYear5.totalPowerLossKw : '-'}</td>
                 <td className="p-2.5 text-right text-slate-900">{t1Year0.totalPowerLossKw}</td>
                 <td className="p-2.5 text-right text-slate-900">{t1Year5.totalPowerLossKw}</td>
                 <td className="p-2.5 text-right text-slate-900">{t2Year0.totalPowerLossKw}</td>
@@ -709,6 +823,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr>
                 <td className="p-2.5 font-sans font-semibold text-slate-800">Annual Energy Loss (kWh)</td>
+                <td className="p-2.5 text-right font-bold text-rose-900">{existYear0 ? existYear0.annualEnergyLossKwh.toLocaleString() : '-'}</td>
+                <td className="p-2.5 text-right font-bold text-rose-900">{existYear5 ? existYear5.annualEnergyLossKwh.toLocaleString() : '-'}</td>
                 <td className="p-2.5 text-right text-slate-900">{t1Year0.annualEnergyLossKwh.toLocaleString()}</td>
                 <td className="p-2.5 text-right text-slate-900">{t1Year5.annualEnergyLossKwh.toLocaleString()}</td>
                 <td className="p-2.5 text-right text-purple-900">{t2Year0.annualEnergyLossKwh.toLocaleString()}</td>
@@ -718,6 +834,8 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               </tr>
               <tr className="bg-slate-100 font-bold">
                 <td className="p-2.5 font-sans text-slate-900">Annual Loss Cost ({currencySymbol})</td>
+                <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear0 ? existYear0.annualLossCostPkr.toLocaleString() : '-'}</td>
+                <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear5 ? existYear5.annualLossCostPkr.toLocaleString() : '-'}</td>
                 <td className="p-2.5 text-right text-blue-950">{t1Year0.annualLossCostPkr.toLocaleString()}</td>
                 <td className="p-2.5 text-right text-blue-950">{t1Year5.annualLossCostPkr.toLocaleString()}</td>
                 <td className="p-2.5 text-right text-purple-950">{t2Year0.annualLossCostPkr.toLocaleString()}</td>

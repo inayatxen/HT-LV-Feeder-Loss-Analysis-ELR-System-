@@ -255,7 +255,8 @@ export interface ForecastYearResult {
 }
 
 export interface BifurcationZoneAnalysisStatement {
-  transformerId: 'T1' | 'T2';
+  transformerId: 'T1' | 'T2' | 'EXIST';
+  lineLabel?: string;
   transformerName: string;
   year: 0 | 5;
   yearLabel: string;
@@ -288,13 +289,20 @@ export interface BifurcationZoneAnalysisStatement {
 export interface BifurcationFourStatementDossier {
   isActive: boolean;
   bifurcationNodeId: string;
+  transformerNodeId?: string;
   additionalTransformerKva: number;
   growthRatePercent: number;
   tariffPerKwh: number;
   
-  // The 4 Core Statements
+  // Exist Line Statements (Baseline Radial Feeder)
+  existYear0: BifurcationZoneAnalysisStatement;
+  existYear5: BifurcationZoneAnalysisStatement;
+
+  // Proposed-1 Line Statements (Main Transformer T-1 Zone)
   t1Year0: BifurcationZoneAnalysisStatement;
   t1Year5: BifurcationZoneAnalysisStatement;
+
+  // Proposed-2 Line Statements (Additional Transformer T-2 Zone)
   t2Year0: BifurcationZoneAnalysisStatement;
   t2Year5: BifurcationZoneAnalysisStatement;
   
