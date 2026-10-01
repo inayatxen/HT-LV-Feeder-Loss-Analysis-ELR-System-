@@ -584,6 +584,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const enabledPagesCount = Object.values(pagesToPrint).filter(Boolean).length;
 
+  if (!isOpen) return null;
+
   return (
     <div 
       id="report-modal-overlay"

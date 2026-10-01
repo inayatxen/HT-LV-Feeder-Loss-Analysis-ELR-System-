@@ -599,16 +599,18 @@ export default function App() {
       </footer>
 
       {/* Modals */}
-      <ReportModal
-        isOpen={isReportOpen}
-        onClose={() => setIsReportOpen(false)}
-        feeder={activeFeeder}
-        summary={existingSummary}
-        proposedSummary={proposedSummary}
-        activeTransformerKva={activeTransformerKva}
-        bifurcationConfig={bifurcationConfig}
-        selectedJobTitle={selectedJobTitle}
-      />
+      {isReportOpen && (
+        <ReportModal
+          isOpen={isReportOpen}
+          onClose={() => setIsReportOpen(false)}
+          feeder={activeFeeder}
+          summary={existingSummary}
+          proposedSummary={proposedSummary}
+          activeTransformerKva={activeTransformerKva}
+          bifurcationConfig={bifurcationConfig}
+          selectedJobTitle={selectedJobTitle}
+        />
+      )}
 
       <ConductorLibraryModal
         isOpen={isConductorsOpen}
