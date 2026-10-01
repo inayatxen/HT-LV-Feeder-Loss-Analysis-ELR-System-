@@ -34,28 +34,28 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   return (
     <div className="space-y-4">
       {/* Top Banner / Feeder Status Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-            <span className={`font-bold px-2 py-0.5 rounded text-[11px] font-mono ${
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className={`font-bold font-mono text-[11px] ${
               feeder.category === 'HV' || feeder.type === 'HT' 
-                ? 'bg-sky-100 text-sky-900 border border-sky-300' 
-                : 'bg-amber-100 text-amber-900 border border-amber-300'
+                ? 'text-sky-700' 
+                : 'text-amber-800'
             }`}>
-              {feeder.category === 'HV' || feeder.type === 'HT' ? 'HV Analysis (11kV HT)' : 'LV Analysis (400V LT)'}
+              {feeder.category === 'HV' || feeder.type === 'HT' ? '11kV HT Network' : '400V LT Network'}
             </span>
-            <span aria-hidden="true">·</span>
-            <span>{feeder.substationName}</span>
-            <span aria-hidden="true">·</span>
-            <span>Base Voltage: {summary.baseVoltage >= 1000 ? `${summary.baseVoltage / 1000} kV` : `${summary.baseVoltage} V`}</span>
-            <span aria-hidden="true">·</span>
-            <span>Power Factor: {summary.operatingPowerFactor}</span>
-            <span aria-hidden="true">·</span>
-            <span className="text-emerald-800 font-semibold">Load Factor: {(summary.loadFactor * 100).toFixed(0)}% (LLF: {summary.lossLoadFactor})</span>
-            <span aria-hidden="true">·</span>
-            <span>Circuit Length: {summary.totalCircuitLengthKm} km</span>
+            <span aria-hidden="true" className="text-slate-300">·</span>
+            <span className="font-medium text-slate-700">{feeder.substationName}</span>
+            <span aria-hidden="true" className="text-slate-300">·</span>
+            <span>Base Voltage: <strong className="font-mono text-slate-800">{summary.baseVoltage >= 1000 ? `${summary.baseVoltage / 1000} kV` : `${summary.baseVoltage} V`}</strong></span>
+            <span aria-hidden="true" className="text-slate-300">·</span>
+            <span>PF: <strong className="font-mono text-slate-800">{summary.operatingPowerFactor}</strong></span>
+            <span aria-hidden="true" className="text-slate-300">·</span>
+            <span className="text-emerald-800 font-medium">LF: <strong className="font-mono">{(summary.loadFactor * 100).toFixed(0)}%</strong> (LLF: {summary.lossLoadFactor})</span>
+            <span aria-hidden="true" className="text-slate-300">·</span>
+            <span>Length: <strong className="font-mono text-slate-800">{summary.totalCircuitLengthKm} km</strong></span>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight mt-1">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight mt-1.5">
             {summary.feederName}
           </h2>
         </div>
