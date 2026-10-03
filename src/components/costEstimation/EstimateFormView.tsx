@@ -240,6 +240,34 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       schemeName: 'Installation of 50 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
     },
     {
+      key: 'preset-100kva-transformer-lump-sum',
+      label: '⚡ 100 KVA Transformer Installation (20-Item Lump Sum Package)',
+      badgeColor: 'bg-amber-600 hover:bg-amber-500 text-white border-amber-700 font-extrabold shadow-sm',
+      activeRing: 'ring-2 ring-amber-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0,
+      conductorSize: 'DOG',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 0,
+      staySets: 0,
+      is100KvaPackage: true,
+      schemeName: 'Installation of 100 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
+    },
+    {
+      key: 'preset-200kva-transformer-lump-sum',
+      label: '⚡ 200 KVA Transformer Installation (Lump Sum Package)',
+      badgeColor: 'bg-purple-600 hover:bg-purple-500 text-white border-purple-700 font-extrabold shadow-sm',
+      activeRing: 'ring-2 ring-purple-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0,
+      conductorSize: 'WASP',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 0,
+      staySets: 0,
+      is200KvaPackage: true,
+      schemeName: 'Installation of 200 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
+    },
+    {
       key: 'preset-4spans-dog-steel',
       label: '⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)',
       badgeColor: 'bg-amber-400 hover:bg-amber-300 text-slate-900 border-amber-500',
@@ -454,6 +482,145 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       const tableEl = document.getElementById('boq-materials-table');
       if (tableEl) {
         tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    if ((preset as any).is100KvaPackage) {
+      setEstimateType('NEW_DISTRIBUTION_TRANSFORMER');
+      const updatedLine: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 0,
+        ltLengthKm: 0,
+        conductorSize: 'DOG',
+        conductorType: 'ACSR',
+        poleType: 'PCC',
+        poleHeightMeters: 11,
+        roadCrossings: 0,
+        canalCrossings: 0,
+        transformerCount: 1,
+        transformerStructures: 1,
+        transformerCapacityKva: 100,
+        is100KvaLumpSumPackage: true,
+        is50KvaLumpSumPackage: false,
+        is25KvaLumpSumPackage: false,
+        circuitsCount: 1,
+        htPoles: 0,
+        ltPoles: 0,
+        staySets: 0,
+        autoCalculatedFlags: {
+          htPoles: true,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+
+      setLineDetails(updatedLine);
+
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Standard Truck'
+      });
+
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: preset.schemeName,
+        purposeOfWork: 'Installation of 100 KVA 11/0.415 kV Distribution Transformer with 20-item lump sum material list including Store Code 08130 @ Rate Rs. 631,000 (Total Material Rs. 851,227.21), 10% Labour Cost (Rs. 85,122.72), and 16% Over Heads on material cost (Rs. 136,196.35). Net Cost: Rs. 1,072,546.28.'
+      }));
+
+      const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
+      setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+      setCalculationSteps(res.steps);
+
+      setSaveToast('✅ 100 KVA Transformer Installation Package applied: 20-item lump sum material schedule loaded with Code 08130 @ Rs. 631,000 (Material Rs. 851,227.21) + 10% Labour (Rs. 85,122.72) + 16% Over Heads on Material (Rs. 136,196.35) = Net Cost Rs. 1,072,546.28.');
+      setTimeout(() => setSaveToast(''), 5500);
+
+      const tableEl = document.getElementById('boq-materials-table');
+      if (tableEl) {
+        tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    if ((preset as any).is200KvaPackage) {
+      setEstimateType('NEW_DISTRIBUTION_TRANSFORMER');
+      const updatedLine: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 0,
+        ltLengthKm: 0,
+        conductorSize: 'WASP',
+        conductorType: 'ACSR',
+        poleType: 'PCC',
+        poleHeightMeters: 11,
+        roadCrossings: 0,
+        canalCrossings: 0,
+        transformerCount: 1,
+        transformerStructures: 1,
+        transformerCapacityKva: 200,
+        is200KvaLumpSumPackage: true,
+        is100KvaLumpSumPackage: false,
+        is50KvaLumpSumPackage: false,
+        is25KvaLumpSumPackage: false,
+        circuitsCount: 1,
+        htPoles: 0,
+        ltPoles: 0,
+        staySets: 0,
+        autoCalculatedFlags: {
+          htPoles: true,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+
+      setLineDetails(updatedLine);
+
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Standard Truck'
+      });
+
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: preset.schemeName,
+        purposeOfWork: 'Installation of 200 KVA 11/0.415 kV Distribution Transformer with lump sum material list (Total Material Rs. 1,981,233.97), 10% Labour Cost (Rs. 198,123.40), and 16% Over Heads on material cost (Rs. 316,997.44). Net Cost: Rs. 2,496,354.81.'
+      }));
+
+      const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
+      setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+      setCalculationSteps(res.steps);
+
+      setSaveToast('✅ 200 KVA Transformer Installation Package applied: lump sum material schedule loaded (Material Rs. 1,981,233.97) + 10% Labour (Rs. 198,123.40) + 16% Over Heads on Material (Rs. 316,997.44) = Net Cost Rs. 2,496,354.81.');
+      setTimeout(() => setSaveToast(''), 5500);
+
+      const tableEl2 = document.getElementById('boq-materials-table');
+      if (tableEl2) {
+        tableEl2.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
       return;
     }

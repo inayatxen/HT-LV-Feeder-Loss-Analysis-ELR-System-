@@ -29,7 +29,25 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
 
   const totalKm = (estimate.lineDetails.htLengthKm || 0) + (estimate.lineDetails.ltLengthKm || 0);
 
-  // Check whether estimate is 50 kVA Transformer Lump Sum Package
+  // Check whether estimate is 50 kVA, 100 kVA or 200 kVA Transformer Lump Sum Package
+  const is200KvaPackage = Boolean(
+    estimate.lineDetails?.transformerCapacityKva === 200 ||
+    estimate.lineDetails?.is200KvaLumpSumPackage ||
+    estimate.projectInfo?.schemeProjectName?.includes('200 KVA') ||
+    estimate.projectInfo?.purposeOfWork?.includes('200 KVA') ||
+    estimate.id?.includes('200kva') ||
+    estimate.items?.some(i => i.materialCode === '08140')
+  );
+
+  const is100KvaPackage = Boolean(
+    estimate.lineDetails?.transformerCapacityKva === 100 ||
+    estimate.lineDetails?.is100KvaLumpSumPackage ||
+    estimate.projectInfo?.schemeProjectName?.includes('100 KVA') ||
+    estimate.projectInfo?.purposeOfWork?.includes('100 KVA') ||
+    estimate.id?.includes('100kva') ||
+    estimate.items?.some(i => i.materialCode === '08130')
+  );
+
   const is50KvaPackage = Boolean(
     estimate.lineDetails?.transformerCapacityKva === 50 ||
     estimate.lineDetails?.is50KvaLumpSumPackage ||
@@ -61,7 +79,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
     }
     return item;
   }).filter(item => {
-    if ((is50KvaPackage || estimate.charges.overheadBasis === 'MATERIAL') && ((estimate.lineDetails.htLengthKm || 0) === 0 && (estimate.lineDetails.ltLengthKm || 0) === 0)) {
+    if ((is50KvaPackage || is100KvaPackage || is200KvaPackage || estimate.charges.overheadBasis === 'MATERIAL') && ((estimate.lineDetails.htLengthKm || 0) === 0 && (estimate.lineDetails.ltLengthKm || 0) === 0)) {
       return item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD');
     }
     return true;
@@ -70,7 +88,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
   const materialCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
   const labourCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
   
-  const isLumpSumOverhead = estimate.charges.overheadBasis === 'MATERIAL' || is50KvaPackage;
+  const isLumpSumOverhead = estimate.charges.overheadBasis === 'MATERIAL' || is50KvaPackage || is100KvaPackage || is200KvaPackage;
   const deptPercent = estimate.charges.departmentalOverheadPercent || 6.0;
   const contPercent = estimate.charges.contractorOverheadPercent || 10.0;
   const deptOverhead = isLumpSumOverhead

@@ -122,8 +122,8 @@ export async function initCostDatabase(): Promise<{
     if (!estimateMap.has(seed.id)) {
       await putRecord(db, 'estimates', seed);
       estimateMap.set(seed.id, seed);
-    } else if (seed.id === 'est-dt-25kva-lump-sum' || seed.id === 'est-dt-50kva-lump-sum') {
-      // Keep official 25 kVA & 50 kVA packages in sync with latest WAPDA schedule rates & overhead percentages
+    } else if (seed.id === 'est-dt-25kva-lump-sum' || seed.id === 'est-dt-50kva-lump-sum' || seed.id === 'est-dt-100kva-lump-sum') {
+      // Keep official 25 kVA, 50 kVA & 100 kVA packages in sync with latest WAPDA schedule rates & overhead percentages
       await putRecord(db, 'estimates', seed);
       estimateMap.set(seed.id, seed);
     }
@@ -642,7 +642,155 @@ function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsCo
     updatedAt: '2026-10-02T10:30:00.000Z'
   };
 
-  return [est0, est0b, est1, est2, est3, est4, est5];
+  // Combination 0C: 100 KVA Transformer Installation (20-Item Official Lump Sum Schedule)
+  const ld0c = {
+    htLengthKm: 0,
+    ltLengthKm: 0,
+    htPoles: 0,
+    ltPoles: 0,
+    staySets: 0,
+    roadCrossings: 0,
+    canalCrossings: 0,
+    transformerStructures: 1,
+    transformerCount: 1,
+    transformerCapacityKva: 100,
+    is100KvaLumpSumPackage: true,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'DOG',
+    poleType: 'PCC',
+    poleHeightMeters: 11,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc0c = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', ld0c, factors, materials);
+  const charges0c = computeEstimateCharges(calc0c.items, 0, {
+    method: 'FIXED',
+    distanceKm: 0,
+    ratePerKm: 0,
+    loadingUnloadingFixed: 0
+  }, {
+    departmentalPercent: 6.0,
+    contractorPercent: 10.0,
+    engineeringPercent: 0.0,
+    contingencyPercent: 0.0,
+    taxPercent: 0.0,
+    otherChargesFixed: 0,
+    overheadBasis: 'MATERIAL'
+  });
+
+  const est0c: CostEstimateRecord = {
+    id: 'est-dt-100kva-lump-sum',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-00100',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-10-02',
+      division: 'Peshawar City Division',
+      subDivision: 'University Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'University Town 11kV Feeder',
+      feederCode: 'FDR-UTN-02',
+      proposedLocation: 'Sector B-5 Distribution Transformer Sub-Station Site',
+      villageLocality: 'University Town Peshawar',
+      gpsLatitude: '34.0065 N',
+      gpsLongitude: '71.4910 E',
+      applicantDepartment: 'PESCO Distribution Operations / System Augmentation',
+      schemeProjectName: 'Installation of 100 KVA Distribution Transformer Sub-Station (Lump Sum Package)',
+      purposeOfWork: 'Installation of 100 KVA Transformer using 20-item lump sum material list including Store Code 08130 @ Rate Rs. 631,000 (Total Material Rs. 851,227.21). Net cost is estimated adding 10% Labour Cost (Rs. 85,122.72) and 16% Over Heads on material cost (Rs. 136,196.35) = Rs. 1,072,546.28.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN Peshawar)',
+      approvedBy: 'Engr. Abdul Rehman (SE Circle-1)'
+    },
+    type: 'NEW_DISTRIBUTION_TRANSFORMER',
+    status: 'APPROVED',
+    lineDetails: ld0c,
+    items: calc0c.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')),
+    charges: charges0c,
+    calculationSteps: calc0c.steps,
+    auditTrail: [
+      { id: 'aud-s0c', timestamp: '2026-10-02 09:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate for 100 KVA Transformer Installation with 20-item lump sum schedule + Store Code 08130 (@ Rs. 631,000) + 10% Labour + 16% Over Heads on Material Cost' },
+      { id: 'aud-s0c-appr', timestamp: '2026-10-02 11:00', user: 'Engr. Tariq Khan', role: 'XEN', action: 'Approved technical sanction for 100 KVA package (Net Cost Rs. 1,072,546.28)' }
+    ],
+    createdAt: '2026-10-02T09:00:00.000Z',
+    updatedAt: '2026-10-02T11:00:00.000Z'
+  };
+
+  // Combination 0D: 200 KVA Transformer Installation (Lump Sum Schedule)
+  const ld0d = {
+    htLengthKm: 0,
+    ltLengthKm: 0,
+    htPoles: 0,
+    ltPoles: 0,
+    staySets: 0,
+    roadCrossings: 0,
+    canalCrossings: 0,
+    transformerStructures: 1,
+    transformerCount: 1,
+    transformerCapacityKva: 200,
+    is200KvaLumpSumPackage: true,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'WASP',
+    poleType: 'PCC',
+    poleHeightMeters: 11,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc0d = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', ld0d, factors, materials);
+  const charges0d = computeEstimateCharges(calc0d.items, 0, {
+    method: 'FIXED',
+    distanceKm: 0,
+    ratePerKm: 0,
+    loadingUnloadingFixed: 0
+  }, {
+    departmentalPercent: 6.0,
+    contractorPercent: 10.0,
+    engineeringPercent: 0.0,
+    contingencyPercent: 0.0,
+    taxPercent: 0.0,
+    otherChargesFixed: 0,
+    overheadBasis: 'MATERIAL'
+  });
+
+  const est0d: CostEstimateRecord = {
+    id: 'est-dt-200kva-lump-sum',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-00200',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-10-02',
+      division: 'Peshawar City Division',
+      subDivision: 'University Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'University Town 11kV Feeder',
+      feederCode: 'FDR-UTN-02',
+      proposedLocation: 'Sector B-6 Distribution Transformer Sub-Station Site',
+      villageLocality: 'University Town Peshawar',
+      gpsLatitude: '34.0075 N',
+      gpsLongitude: '71.4925 E',
+      applicantDepartment: 'PESCO Distribution Operations / System Augmentation',
+      schemeProjectName: 'Installation of 200 KVA Distribution Transformer Sub-Station (Lump Sum Package)',
+      purposeOfWork: 'Installation of 200 KVA Transformer using lump sum material list (Total Material Rs. 1,981,233.97). Net cost is estimated adding 10% Labour Cost (Rs. 198,123.40) and 16% Over Heads on material cost (Rs. 316,997.44) = Rs. 2,496,354.81.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN Peshawar)',
+      approvedBy: 'Engr. Abdul Rehman (SE Circle-1)'
+    },
+    type: 'NEW_DISTRIBUTION_TRANSFORMER',
+    status: 'APPROVED',
+    lineDetails: ld0d,
+    items: calc0d.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')),
+    charges: charges0d,
+    calculationSteps: calc0d.steps,
+    auditTrail: [
+      { id: 'aud-s0d', timestamp: '2026-10-02 09:30', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate for 200 KVA Transformer Installation with lump sum schedule + 10% Labour + 16% Over Heads on Material Cost' },
+      { id: 'aud-s0d-appr', timestamp: '2026-10-02 11:30', user: 'Engr. Tariq Khan', role: 'XEN', action: 'Approved technical sanction for 200 KVA package (Net Cost Rs. 2,496,354.81)' }
+    ],
+    createdAt: '2026-10-02T09:30:00.000Z',
+    updatedAt: '2026-10-02T11:30:00.000Z'
+  };
+
+  return [est0, est0b, est0c, est0d, est1, est2, est3, est4, est5];
 }
 
 // -------------------------------------------------------------
