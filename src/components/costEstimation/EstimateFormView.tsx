@@ -127,10 +127,48 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   // 4. BOQ Items State
   const [items, setItems] = useState<EstimateItem[]>(() => {
     if (initialEstimate?.items && initialEstimate.items.length > 0) {
+      const is50Kva = Boolean(
+        initialEstimate.lineDetails.is50KvaLumpSumPackage || 
+        initialEstimate.lineDetails.transformerCapacityKva === 50 ||
+        initialEstimate.projectInfo?.schemeProjectName?.includes('50 KVA') ||
+        initialEstimate.projectInfo?.purposeOfWork?.includes('50 KVA')
+      );
+      if (is50Kva) {
+        return initialEstimate.items.map(item => {
+          if (item.materialCode === '08110' || item.description?.includes('25 KVA') || (item.materialCode === '08120' && item.unitRate !== 434200)) {
+            return {
+              ...item,
+              id: 'item-08120',
+              materialId: 'mat-trf-50kva',
+              materialCode: '08120',
+              description: 'TRANSFORMER 50 KVA',
+              specification: 'Distribution Transformer 50 kVA 11/0.415 kV Copper Wound (WAPDA Code 08120)',
+              unit: 'EA',
+              quantity: 1,
+              unitRate: 434200,
+              materialAmount: 434200,
+              labourRate: 43420,
+              labourAmount: 43420,
+              totalAmount: 477620,
+              calculationNotes: '50 kVA Transformer Installation Schedule item: 10% Labour Cost applied'
+            };
+          }
+          return item;
+        }).filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+      }
+      if (initialEstimate.lineDetails.is25KvaLumpSumPackage || initialEstimate.lineDetails.transformerCapacityKva === 25) {
+        return initialEstimate.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+      }
       return initialEstimate.items;
     }
     // Auto calculate initial default BOQ
     const calc = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
+    if (lineDetails.is50KvaLumpSumPackage || lineDetails.transformerCapacityKva === 50) {
+      return calc.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+    }
+    if (lineDetails.is25KvaLumpSumPackage || lineDetails.transformerCapacityKva === 25) {
+      return calc.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+    }
     return calc.items;
   });
 
@@ -147,13 +185,22 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     vehicleType: 'Heavy Truck'
   });
 
-  const [percentages, setPercentages] = useState({
+  const [percentages, setPercentages] = useState<{
+    engineeringPercent: number;
+    contingencyPercent: number;
+    departmentalPercent: number;
+    contractorPercent: number;
+    taxPercent: number;
+    otherChargesFixed: number;
+    overheadBasis?: 'MATERIAL' | 'PRIME_COST';
+  }>({
     engineeringPercent: initialEstimate?.charges.engineeringChargesPercent ?? 2.0,
     contingencyPercent: initialEstimate?.charges.contingencyPercent ?? 3.0,
     departmentalPercent: initialEstimate?.charges.departmentalOverheadPercent ?? 5.0,
     contractorPercent: initialEstimate?.charges.contractorOverheadPercent ?? 10.0,
     taxPercent: initialEstimate?.charges.taxGstPercent ?? 0.0,
-    otherChargesFixed: initialEstimate?.charges.otherChargesAmount ?? 0
+    otherChargesFixed: initialEstimate?.charges.otherChargesAmount ?? 0,
+    overheadBasis: initialEstimate?.charges.overheadBasis
   });
 
   // Material search / adder dropdown state
@@ -164,6 +211,34 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const [lastAppliedPresetName, setLastAppliedPresetName] = useState<string | null>(null);
 
   const PRESET_COMBINATIONS = [
+    {
+      key: 'preset-25kva-transformer-lump-sum',
+      label: '⚡ 25 KVA Transformer Installation (18-Item Lump Sum Package)',
+      badgeColor: 'bg-rose-600 hover:bg-rose-500 text-white border-rose-700 font-extrabold shadow-sm',
+      activeRing: 'ring-2 ring-rose-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0,
+      conductorSize: 'DOG',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 0,
+      staySets: 0,
+      is25KvaPackage: true,
+      schemeName: 'Installation of 25 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
+    },
+    {
+      key: 'preset-50kva-transformer-lump-sum',
+      label: '⚡ 50 KVA Transformer Installation (18-Item Lump Sum Package)',
+      badgeColor: 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700 font-extrabold shadow-sm',
+      activeRing: 'ring-2 ring-indigo-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 0,
+      conductorSize: 'DOG',
+      poleType: 'PCC',
+      poleHeightMeters: 11,
+      htPoles: 0,
+      staySets: 0,
+      is50KvaPackage: true,
+      schemeName: 'Installation of 50 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
+    },
     {
       key: 'preset-4spans-dog-steel',
       label: '⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)',
@@ -247,6 +322,142 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const handleSelectPreset = (preset: typeof PRESET_COMBINATIONS[0]) => {
     setActivePresetKey(preset.key);
     setLastAppliedPresetName(preset.label.replace('⚡ ', ''));
+
+    if ((preset as any).is25KvaPackage) {
+      setEstimateType('NEW_DISTRIBUTION_TRANSFORMER');
+      const updatedLine: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 0,
+        ltLengthKm: 0,
+        conductorSize: 'DOG',
+        conductorType: 'ACSR',
+        poleType: 'PCC',
+        poleHeightMeters: 11,
+        roadCrossings: 0,
+        canalCrossings: 0,
+        transformerCount: 1,
+        transformerStructures: 1,
+        transformerCapacityKva: 25,
+        is25KvaLumpSumPackage: true,
+        circuitsCount: 1,
+        htPoles: 0,
+        ltPoles: 0,
+        staySets: 0,
+        autoCalculatedFlags: {
+          htPoles: true,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+
+      setLineDetails(updatedLine);
+
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Standard Truck'
+      });
+
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: preset.schemeName,
+        purposeOfWork: 'Installation of 25 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list (Rs. 447,128.07), 10% Labour Cost (Rs. 44,712.81), and 16% Over Heads on material cost (Rs. 71,540.49). Net Cost: Rs. 563,381.37.'
+      }));
+
+      const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
+      setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+      setCalculationSteps(res.steps);
+
+      setSaveToast('✅ 25 KVA Transformer Installation Package applied: 18-item lump sum material schedule loaded (Rs. 447,128.07) + 10% Labour (Rs. 44,712.81) + 16% Over Heads on Material (Rs. 71,540.49) = Net Cost Rs. 563,381.37.');
+      setTimeout(() => setSaveToast(''), 5500);
+
+      const tableEl = document.getElementById('boq-materials-table');
+      if (tableEl) {
+        tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    if ((preset as any).is50KvaPackage) {
+      setEstimateType('NEW_DISTRIBUTION_TRANSFORMER');
+      const updatedLine: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 0,
+        ltLengthKm: 0,
+        conductorSize: 'DOG',
+        conductorType: 'ACSR',
+        poleType: 'PCC',
+        poleHeightMeters: 11,
+        roadCrossings: 0,
+        canalCrossings: 0,
+        transformerCount: 1,
+        transformerStructures: 1,
+        transformerCapacityKva: 50,
+        is50KvaLumpSumPackage: true,
+        is25KvaLumpSumPackage: false,
+        circuitsCount: 1,
+        htPoles: 0,
+        ltPoles: 0,
+        staySets: 0,
+        autoCalculatedFlags: {
+          htPoles: true,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+
+      setLineDetails(updatedLine);
+
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Standard Truck'
+      });
+
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: preset.schemeName,
+        purposeOfWork: 'Installation of 50 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list including Store Code 08120 @ Rate Rs. 434,200 (Total Material Rs. 571,542.07), 10% Labour Cost (Rs. 57,154.21), and 16% Over Heads on material cost (Rs. 91,446.73). Net Cost: Rs. 720,143.01.'
+      }));
+
+      const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
+      setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+      setCalculationSteps(res.steps);
+
+      setSaveToast('✅ 50 KVA Transformer Installation Package applied: 18-item lump sum material schedule loaded with Code 08120 @ Rs. 434,200 (Material Rs. 571,542.07) + 10% Labour (Rs. 57,154.21) + 16% Over Heads on Material (Rs. 91,446.73) = Net Cost Rs. 720,143.01.');
+      setTimeout(() => setSaveToast(''), 5500);
+
+      const tableEl = document.getElementById('boq-materials-table');
+      if (tableEl) {
+        tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
     setEstimateType('HT_LINE_EXTENSION');
 
     const updatedLine: EstimateLineDetails = {
@@ -303,18 +514,26 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
 
   // Handler: Run Automatic Material Calculation Engine
   const handleCalculateRequiredMaterials = () => {
+    const is25Kva = lineDetails.is25KvaLumpSumPackage || 
+                    (estimateType === 'NEW_DISTRIBUTION_TRANSFORMER' && lineDetails.transformerCapacityKva === 25) ||
+                    (lineDetails.transformerCapacityKva === 25 && (!lineDetails.htLengthKm || lineDetails.htLengthKm === 0));
+
     const res = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
-    setItems(res.items);
+    const cleanedItems = is25Kva 
+      ? res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'))
+      : res.items;
+
+    setItems(cleanedItems);
     setCalculationSteps(res.steps);
     setLineDetails(prev => ({
       ...prev,
       htPoles: res.updatedLineDetails.htPoles ?? prev.htPoles,
       ltPoles: res.updatedLineDetails.ltPoles ?? prev.ltPoles,
-      staySets: res.updatedLineDetails.staySets ?? prev.staySets,
+      staySets: is25Kva ? 0 : (res.updatedLineDetails.staySets ?? prev.staySets),
       autoCalculatedFlags: {
         htPoles: true,
         ltPoles: true,
-        staySets: true
+        staySets: !is25Kva
       }
     }));
     setShowCalculationDrawer(true);
@@ -331,6 +550,55 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         ...prev,
         ...tmpl.defaultAdditionalPercentages
       }));
+    }
+
+    if (tmpl.defaultTransformerKva === 25 || tmpl.id.includes('25kva')) {
+      const updatedDetails: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 0,
+        ltLengthKm: 0,
+        htPoles: 0,
+        ltPoles: 0,
+        staySets: 0,
+        transformerCount: 1,
+        transformerStructures: 1,
+        transformerCapacityKva: 25,
+        is25KvaLumpSumPackage: true,
+        conductorSize: 'DOG',
+        autoCalculatedFlags: {
+          htPoles: true,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+      setLineDetails(updatedDetails);
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Standard Truck'
+      });
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: 'Installation of 25 KVA Distribution Transformer Sub-Station (Lump Sum Package)',
+        purposeOfWork: 'Installation of 25 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list (Rs. 447,128.07), 10% Labour Cost (Rs. 44,712.81), and 16% Over Heads on material cost (Rs. 71,540.49). Net Cost: Rs. 563,381.37.'
+      }));
+      const res = calculateQuantitiesForLine(tmpl.type, updatedDetails, designFactors, materials);
+      setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+      setCalculationSteps(res.steps);
+      setSaveToast('✅ 25 KVA Transformer Installation Template applied: 18-Item lump sum schedule loaded (Net Cost Rs. 563,381.37).');
+      setTimeout(() => setSaveToast(''), 4500);
+      return;
     }
 
     const updatedDetails: EstimateLineDetails = {
@@ -1250,7 +1518,22 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">Transformer Capacity (kVA)</label>
                 <select
                   value={lineDetails.transformerCapacityKva}
-                  onChange={(e) => setLineDetails({ ...lineDetails, transformerCapacityKva: Number(e.target.value) })}
+                  onChange={(e) => {
+                    const newKva = Number(e.target.value);
+                    if (newKva === 25 && (!lineDetails.htLengthKm || lineDetails.htLengthKm === 0)) {
+                      handleSelectPreset(PRESET_COMBINATIONS[0]);
+                      return;
+                    }
+                    const updated = { 
+                      ...lineDetails, 
+                      transformerCapacityKva: newKva,
+                      staySets: newKva === 25 ? 0 : lineDetails.staySets
+                    };
+                    setLineDetails(updated);
+                    if (newKva === 25) {
+                      setItems(prev => prev.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
+                    }
+                  }}
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
                 >
                   <option value={0}>None (Line Only)</option>
@@ -1261,6 +1544,16 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   <option value={400}>400 kVA</option>
                   <option value={630}>630 kVA</option>
                 </select>
+                {lineDetails.transformerCapacityKva === 25 && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPreset(PRESET_COMBINATIONS[0])}
+                    className="mt-1.5 w-full py-1 px-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded font-semibold text-[11px] flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                    title="Load official 18-item WAPDA lump sum schedule for 25 kVA Transformer"
+                  >
+                    ⚡ Load 18-Item 25 kVA Package (Rs. 447,128.07)
+                  </button>
+                )}
               </div>
             </div>
 
@@ -1316,6 +1609,44 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   <span className="text-emerald-700 font-bold">
                     PKR {items.reduce((s, i) => s + (i.totalAmount || 0), 0).toLocaleString()}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* 25 kVA Transformer Lump Sum Package Official Notification Callout */}
+            {(lineDetails.is25KvaLumpSumPackage || (lineDetails.transformerCapacityKva === 25 && items.some(i => i.materialCode === '08110'))) && (
+              <div className="bg-rose-50 border border-rose-300 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs shadow-2xs">
+                <div className="flex items-start gap-2.5">
+                  <span className="p-1.5 bg-rose-600 text-white rounded-lg text-sm shrink-0">⚡</span>
+                  <div>
+                    <h4 className="font-extrabold text-rose-950 text-sm">
+                      Official WAPDA Lump Sum Material Schedule: 25 KVA Transformer Installation
+                    </h4>
+                    <p className="text-rose-800 text-[11px] mt-0.5">
+                      18-item standard schedule with exact CSR rates. Net cost is calculated by adding <strong>10% Labour Cost</strong> and <strong>16% Over Heads</strong> directly on material cost.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-white px-3.5 py-2 rounded-lg border border-rose-200 shrink-0 font-mono text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase">Material</span>
+                    <span className="font-bold text-slate-900">Rs. {computedCharges.materialCost.toLocaleString()}</span>
+                  </div>
+                  <span className="text-slate-400 font-bold">+</span>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase">10% Labour</span>
+                    <span className="font-bold text-rose-700">Rs. {computedCharges.labourCost.toLocaleString()}</span>
+                  </div>
+                  <span className="text-slate-400 font-bold">+</span>
+                  <div>
+                    <span className="text-[10px] text-slate-500 block uppercase">16% Overheads</span>
+                    <span className="font-bold text-blue-700">Rs. {((computedCharges.departmentalOverheadAmount + computedCharges.contractorOverheadAmount)).toLocaleString()}</span>
+                  </div>
+                  <span className="text-slate-400 font-bold">=</span>
+                  <div>
+                    <span className="text-[10px] text-emerald-800 block uppercase font-bold">Net Cost</span>
+                    <span className="font-black text-emerald-700 text-sm">Rs. {computedCharges.grandTotal.toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1697,79 +2028,142 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           <div className="bg-slate-900 text-white rounded-xl border border-slate-800 p-5 shadow-lg space-y-4">
             <div className="border-b border-slate-800 pb-3">
               <span className="text-[10px] font-mono text-amber-400 font-bold tracking-widest uppercase">
-                PESCO · ESTIMATE SUMMARY
+                {computedCharges.overheadBasis === 'MATERIAL' ? '25 KVA TRANSFORMER · LUMP SUM PACKAGE' : 'PESCO · ESTIMATE SUMMARY'}
               </span>
               <h3 className="text-base font-bold text-white mt-0.5">
-                Total Sanctioned Estimate Cost
+                {computedCharges.overheadBasis === 'MATERIAL' ? 'Net Estimated Sub-Station Cost' : 'Total Sanctioned Estimate Cost'}
               </h3>
               <p className="text-xs text-slate-400">
-                {estimateType.replace(/_/g, ' ')} · {totalKm.toFixed(2)} km Line
+                {computedCharges.overheadBasis === 'MATERIAL' 
+                  ? '18-Item Official Material Schedule + 10% Labour + 16% Over Heads'
+                  : `${estimateType.replace(/_/g, ' ')} · ${totalKm.toFixed(2)} km Line`}
               </p>
             </div>
 
-            <div className="space-y-2 text-xs divide-y divide-slate-800/80 font-mono">
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Material Cost:</span>
-                <span className="text-slate-200">Rs. {computedCharges.materialCost.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Labour / Erection Cost:</span>
-                <span className="text-slate-200">Rs. {computedCharges.labourCost.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Transportation & Hauling:</span>
-                <span className="text-slate-200">Rs. {computedCharges.transportationCost.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Engineering Charges ({percentages.engineeringPercent}%):</span>
-                <span className="text-slate-200">Rs. {computedCharges.engineeringChargesAmount.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Contingency ({percentages.contingencyPercent}%):</span>
-                <span className="text-slate-200">Rs. {computedCharges.contingencyAmount.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Departmental Overhead ({percentages.departmentalPercent}%):</span>
-                <span className="text-slate-200">Rs. {computedCharges.departmentalOverheadAmount.toLocaleString()}</span>
-              </div>
-
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-slate-400 font-sans">Contractor Overhead ({percentages.contractorPercent}%):</span>
-                <span className="text-slate-200">Rs. {computedCharges.contractorOverheadAmount.toLocaleString()}</span>
-              </div>
-
-              {computedCharges.taxGstAmount > 0 && (
+            {computedCharges.overheadBasis === 'MATERIAL' ? (
+              <div className="space-y-2 text-xs divide-y divide-slate-800/80 font-mono">
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Taxes / GST ({percentages.taxPercent}%):</span>
-                  <span className="text-slate-200">Rs. {computedCharges.taxGstAmount.toLocaleString()}</span>
+                  <span className="text-slate-400 font-sans">Material Cost (18 WAPDA Items):</span>
+                  <span className="text-slate-100 font-bold">Rs. {computedCharges.materialCost.toLocaleString()}</span>
                 </div>
-              )}
 
-              {computedCharges.otherChargesAmount > 0 && (
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Other Charges:</span>
-                  <span className="text-slate-200">Rs. {computedCharges.otherChargesAmount.toLocaleString()}</span>
+                  <span className="text-slate-400 font-sans">Labour Cost (10% on Material Cost):</span>
+                  <span className="text-rose-400 font-bold">Rs. {computedCharges.labourCost.toLocaleString()}</span>
                 </div>
-              )}
-            </div>
+
+                <div className="flex items-center justify-between pt-1 text-slate-300">
+                  <span className="text-slate-400 font-sans">Subtotal (Material + 10% Labour):</span>
+                  <span className="font-bold">Rs. {(computedCharges.materialCost + computedCharges.labourCost).toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Departmental Overhead ({percentages.departmentalPercent}% on Material):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.departmentalOverheadAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Contractor Overhead ({percentages.contractorPercent}% on Material):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.contractorOverheadAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1 text-amber-300 font-bold">
+                  <span className="font-sans">Total Over Heads (16% on Material):</span>
+                  <span>Rs. {(computedCharges.departmentalOverheadAmount + computedCharges.contractorOverheadAmount).toLocaleString()}</span>
+                </div>
+
+                {computedCharges.transportationCost > 0 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 font-sans">Transportation & Hauling:</span>
+                    <span className="text-slate-200">Rs. {computedCharges.transportationCost.toLocaleString()}</span>
+                  </div>
+                )}
+
+                {computedCharges.taxGstAmount > 0 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 font-sans">Taxes / GST ({percentages.taxPercent}%):</span>
+                    <span className="text-slate-200">Rs. {computedCharges.taxGstAmount.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2 text-xs divide-y divide-slate-800/80 font-mono">
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Material Cost:</span>
+                  <span className="text-slate-200">Rs. {computedCharges.materialCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Labour / Erection Cost:</span>
+                  <span className="text-slate-200">Rs. {computedCharges.labourCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Transportation & Hauling:</span>
+                  <span className="text-slate-200">Rs. {computedCharges.transportationCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Engineering Charges ({percentages.engineeringPercent}%):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.engineeringChargesAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Contingency ({percentages.contingencyPercent}%):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.contingencyAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Departmental Overhead ({percentages.departmentalPercent}%):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.departmentalOverheadAmount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-slate-400 font-sans">Contractor Overhead ({percentages.contractorPercent}%):</span>
+                  <span className="text-slate-200">Rs. {computedCharges.contractorOverheadAmount.toLocaleString()}</span>
+                </div>
+
+                {computedCharges.taxGstAmount > 0 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 font-sans">Taxes / GST ({percentages.taxPercent}%):</span>
+                    <span className="text-slate-200">Rs. {computedCharges.taxGstAmount.toLocaleString()}</span>
+                  </div>
+                )}
+
+                {computedCharges.otherChargesAmount > 0 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 font-sans">Other Charges:</span>
+                    <span className="text-slate-200">Rs. {computedCharges.otherChargesAmount.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Grand Total Box */}
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <span className="text-[11px] text-slate-400 font-sans block">ESTIMATED GRAND TOTAL:</span>
+              <span className="text-[11px] text-slate-400 font-sans block">
+                {computedCharges.overheadBasis === 'MATERIAL' ? 'NET ESTIMATED COST (GRAND TOTAL):' : 'ESTIMATED GRAND TOTAL:'}
+              </span>
               <div className="text-2xl font-black text-amber-400 font-mono tracking-tight">
                 Rs. {computedCharges.grandTotal.toLocaleString()}
               </div>
 
               <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
-                <span>Cost per Kilometer:</span>
-                <strong className="text-emerald-400 font-bold">
-                  Rs. {computedCharges.costPerKm.toLocaleString()} / km
-                </strong>
+                {computedCharges.overheadBasis === 'MATERIAL' ? (
+                  <>
+                    <span>Package Basis:</span>
+                    <strong className="text-emerald-400 font-bold">
+                      25 kVA Transformer Installation
+                    </strong>
+                  </>
+                ) : (
+                  <>
+                    <span>Cost per Kilometer:</span>
+                    <strong className="text-emerald-400 font-bold">
+                      Rs. {computedCharges.costPerKm.toLocaleString()} / km
+                    </strong>
+                  </>
+                )}
               </div>
             </div>
 

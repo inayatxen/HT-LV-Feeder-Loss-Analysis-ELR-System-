@@ -1534,11 +1534,11 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
     name: 'TRANSFORMER 25 KVA',
     category: 'TRANSFORMERS',
     unit: 'EA',
-    specification: 'Distribution Transformer 25 kVA, 11/0.415 kV (Code 08110 / 8110, AUP: Rs. 129,499.00)',
+    specification: 'Distribution Transformer 25 kVA, 11/0.415 kV Copper Wound (Code 08110, AUP: Rs. 309,786.00)',
     voltageApplicability: 'HT',
     defaultQtyFactor: 1,
-    materialRate: 129499.00,
-    labourRate: 20000,
+    materialRate: 309786.00,
+    labourRate: 30978.60,
     installationRate: 12000,
     transportationRate: 8000,
     effectiveFrom: '2026-01-01',
@@ -1550,11 +1550,11 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
     name: 'TRANSFORMER 50 KVA',
     category: 'TRANSFORMERS',
     unit: 'EA',
-    specification: 'Distribution Transformer 50 kVA, 11/0.415 kV (Code 08120 / 8120, AUP: Rs. 179,900.00)',
+    specification: 'Distribution Transformer 50 kVA, 11/0.415 kV Copper Wound (WAPDA Code 08120, Rate: Rs. 434,200.00)',
     voltageApplicability: 'HT',
     defaultQtyFactor: 1,
-    materialRate: 179900.00,
-    labourRate: 25000,
+    materialRate: 434200.00,
+    labourRate: 43420.00,
     installationRate: 16000,
     transportationRate: 10000,
     effectiveFrom: '2026-01-01',
@@ -1922,7 +1922,333 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
   }
 ];
 
+// ==========================================
+// OFFICIAL WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 25 KVA TRANSFORMER INSTALLATION
+// ==========================================
+export interface LumpSum25KvaItem {
+  code: string;
+  description: string;
+  specification: string;
+  unit: string;
+  quantity: number;
+  unitRate: number;
+  materialAmount: number;
+  labourRate: number; // 10% Labour
+  labourAmount: number; // 10% Labour Amount
+  totalAmount: number;
+  category: 'CONDUCTORS' | 'INSULATORS' | 'HARDWARE' | 'TRANSFORMERS' | 'OTHER' | 'POLES';
+}
+
+export const LUMP_SUM_25KVA_TRANSFORMER_ITEMS: LumpSum25KvaItem[] = [
+  {
+    code: '03140',
+    description: 'WIRE GALVANISED STEEL 10MM STRANDED',
+    specification: 'Wire Galvanized Steel 10mm Stranded (WAPDA Code 03140)',
+    unit: 'KG',
+    quantity: 6,
+    unitRate: 378,
+    materialAmount: 2268,
+    labourRate: 37.8,
+    labourAmount: 226.8,
+    totalAmount: 2494.8,
+    category: 'HARDWARE'
+  },
+  {
+    code: '03320',
+    description: 'WIRE SOFT ANNEALED ALUMINIUM',
+    specification: 'Wire Soft Annealed Aluminium for Binding (WAPDA Code 03320)',
+    unit: 'KG',
+    quantity: 1,
+    unitRate: 60,
+    materialAmount: 60,
+    labourRate: 6,
+    labourAmount: 6,
+    totalAmount: 66,
+    category: 'HARDWARE'
+  },
+  {
+    code: '04150',
+    description: 'CONNECTOR P.G TYPE T-150',
+    specification: 'Parallel Groove Connector P.G Type T-150 Heavy Duty (WAPDA Code 04150)',
+    unit: 'EA',
+    quantity: 7,
+    unitRate: 689,
+    materialAmount: 4823,
+    labourRate: 68.9,
+    labourAmount: 482.3,
+    totalAmount: 5305.3,
+    category: 'HARDWARE'
+  },
+  {
+    code: '05110',
+    description: 'INSULATOR PORCELAIN LT SPOOL TYPE',
+    specification: 'Insulator Porcelain LT Spool Type (WAPDA Code 05110)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 303,
+    materialAmount: 1212,
+    labourRate: 30.3,
+    labourAmount: 121.2,
+    totalAmount: 1333.2,
+    category: 'INSULATORS'
+  },
+  {
+    code: '05210',
+    description: 'INSULATOR PORCELAIN 11KV PIN TYPE NORMAL',
+    specification: 'Insulator Porcelain 11kV Pin Type Normal (WAPDA Code 05210)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 845,
+    materialAmount: 3380,
+    labourRate: 84.5,
+    labourAmount: 338,
+    totalAmount: 3718,
+    category: 'INSULATORS'
+  },
+  {
+    code: '05410',
+    description: 'PIN G.I. FOR 11KV INSULATOR NORMAL',
+    specification: 'Pin G.I. for 11kV Insulator Normal (WAPDA Code 05410)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 769,
+    materialAmount: 3076,
+    labourRate: 76.9,
+    labourAmount: 307.6,
+    totalAmount: 3383.6,
+    category: 'HARDWARE'
+  },
+  {
+    code: '06250',
+    description: 'CROSS ARM 11KV LATTICE STEEL',
+    specification: 'Cross Arm 11kV Lattice Steel Heavy Duty (WAPDA Code 06250)',
+    unit: 'EA',
+    quantity: 1,
+    unitRate: 8450,
+    materialAmount: 8450,
+    labourRate: 845,
+    labourAmount: 845,
+    totalAmount: 9295,
+    category: 'HARDWARE'
+  },
+  {
+    code: '08110',
+    description: 'TRANSFORMER 25 KVA',
+    specification: 'Distribution Transformer 25 kVA 11/0.415 kV Copper Wound (WAPDA Code 08110)',
+    unit: 'EA',
+    quantity: 1,
+    unitRate: 309786,
+    materialAmount: 309786,
+    labourRate: 30978.6,
+    labourAmount: 30978.6,
+    totalAmount: 340764.6,
+    category: 'TRANSFORMERS'
+  },
+  {
+    code: '10710',
+    description: 'PLATFORM SINGLE STRUCTURE',
+    specification: 'Platform Single Structure for Transformer Mounting (WAPDA Code 10710)',
+    unit: 'EA',
+    quantity: 1,
+    unitRate: 10890,
+    materialAmount: 10890,
+    labourRate: 1089,
+    labourAmount: 1089,
+    totalAmount: 11979,
+    category: 'HARDWARE'
+  },
+  {
+    code: '11142',
+    description: 'BOLT & HEX.STEEL NUT 1/2"X2"-1 1/2" THREAD',
+    specification: 'Bolt & Hex.Steel Nut 1/2" x 2" - 1 1/2" Thread (WAPDA Code 11142)',
+    unit: 'EA',
+    quantity: 17,
+    unitRate: 2.8888,
+    materialAmount: 49.11,
+    labourRate: 0.28888,
+    labourAmount: 4.91,
+    totalAmount: 54.02,
+    category: 'HARDWARE'
+  },
+  {
+    code: '11143',
+    description: 'BOLT & HEX.STEEL NUT 1/2"X6"-2" THREAD',
+    specification: 'Bolt & Hex.Steel Nut 1/2" x 6" - 2" Thread (WAPDA Code 11143)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 4.6378,
+    materialAmount: 18.55,
+    labourRate: 0.46378,
+    labourAmount: 1.86,
+    totalAmount: 20.41,
+    category: 'HARDWARE'
+  },
+  {
+    code: '11212',
+    description: 'WASHER ROUND 1.25"DIA,BOLT SIZE 0.5"',
+    specification: 'Washer Round 1.25" Dia, Bolt Size 0.5" (WAPDA Code 11212)',
+    unit: 'EA',
+    quantity: 2,
+    unitRate: 1.3,
+    materialAmount: 2.6,
+    labourRate: 0.13,
+    labourAmount: 0.26,
+    totalAmount: 2.86,
+    category: 'HARDWARE'
+  },
+  {
+    code: '11260',
+    description: 'WASHER SQUARE 2" X 2" X .125"',
+    specification: 'Washer Square 2" x 2" x .125" (WAPDA Code 11260)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 2.2356,
+    materialAmount: 8.94,
+    labourRate: 0.22356,
+    labourAmount: 0.89,
+    totalAmount: 9.83,
+    category: 'HARDWARE'
+  },
+  {
+    code: '11510',
+    description: 'ASSEMBLY D-SHACKLE',
+    specification: 'Assembly D-Shackle Galvanized Steel (WAPDA Code 11510)',
+    unit: 'EA',
+    quantity: 4,
+    unitRate: 276,
+    materialAmount: 1104,
+    labourRate: 27.6,
+    labourAmount: 110.4,
+    totalAmount: 1214.4,
+    category: 'HARDWARE'
+  },
+  {
+    code: '13311',
+    description: 'DROP OUT CUT OUT',
+    specification: 'Drop Out Cut Out 11kV Porcelain 100A (WAPDA Code 13311)',
+    unit: 'EA',
+    quantity: 3,
+    unitRate: 30500,
+    materialAmount: 91500,
+    labourRate: 3050,
+    labourAmount: 9150,
+    totalAmount: 100650,
+    category: 'HARDWARE'
+  },
+  {
+    code: '13322',
+    description: 'FUSE LINK 6K',
+    specification: 'Fuse Link 6K for 11kV Drop Out Cut Out (WAPDA Code 13322)',
+    unit: 'EA',
+    quantity: 3,
+    unitRate: 50.622,
+    materialAmount: 151.87,
+    labourRate: 5.0622,
+    labourAmount: 15.19,
+    totalAmount: 167.06,
+    category: 'HARDWARE'
+  },
+  {
+    code: '14253',
+    description: 'CABLE 4-CORE ALUMN. LT PVC 19/.083(70 MM SQ)',
+    specification: 'Cable 4-Core Aluminium LT PVC 19/.083 (70 mm²) (WAPDA Code 14253)',
+    unit: 'MR',
+    quantity: 6,
+    unitRate: 1225,
+    materialAmount: 7350,
+    labourRate: 122.5,
+    labourAmount: 735,
+    totalAmount: 8085,
+    category: 'CONDUCTORS'
+  },
+  {
+    code: '15220',
+    description: 'EARTHING UNIT WELDED TYPE',
+    specification: 'Earthing Unit Welded Type Complete with Earthing Lead (WAPDA Code 15220)',
+    unit: 'EA',
+    quantity: 2,
+    unitRate: 1499,
+    materialAmount: 2998,
+    labourRate: 149.9,
+    labourAmount: 299.8,
+    totalAmount: 3297.8,
+    category: 'HARDWARE'
+  }
+];
+
+export const LUMP_SUM_25KVA_TOTALS = {
+  materialCost: 447128.07,
+  labourPercent: 10.0,
+  labourCost: 44712.81,
+  overheadPercent: 16.0,
+  overheadAmount: 71540.49,
+  netCost: 563381.37
+};
+
+// ==========================================
+// OFFICIAL WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 50 KVA TRANSFORMER INSTALLATION
+// ==========================================
+export const LUMP_SUM_50KVA_TRANSFORMER_ITEMS: LumpSum25KvaItem[] = LUMP_SUM_25KVA_TRANSFORMER_ITEMS.map(item => {
+  if (item.code === '08110') {
+    return {
+      code: '08120',
+      description: 'TRANSFORMER 50 KVA',
+      specification: 'Distribution Transformer 50 kVA 11/0.415 kV Copper Wound (WAPDA Code 08120)',
+      unit: 'EA',
+      quantity: 1,
+      unitRate: 434200,
+      materialAmount: 434200,
+      labourRate: 43420,
+      labourAmount: 43420,
+      totalAmount: 477620,
+      category: 'TRANSFORMERS'
+    };
+  }
+  return item;
+});
+
+export const LUMP_SUM_50KVA_TOTALS = {
+  materialCost: 571542.07,
+  labourPercent: 10.0,
+  labourCost: 57154.21,
+  overheadPercent: 16.0,
+  overheadAmount: 91446.73,
+  netCost: 720143.01
+};
+
 export const STANDARD_TEMPLATES: ConstructionTemplate[] = [
+  {
+    id: 'tmpl-dt-25kva-lump-sum',
+    name: 'Template 0: Installation of 25 KVA Transformer (Lump Sum Package)',
+    type: 'NEW_DISTRIBUTION_TRANSFORMER',
+    description: 'WAPDA Standard 25 KVA 11/0.415 kV Transformer installation with 18-item lump sum material list (Rs. 447,128.07), 10% Labour Cost (Rs. 44,712.81), and 16% Over Heads on material cost (Rs. 71,540.49) = Net Cost Rs. 563,381.37.',
+    standardConductorCode: 'CND-DOG-ACSR',
+    standardPoleCode: 'POL-11-PCC',
+    defaultTransformerKva: 25,
+    defaultAdditionalPercentages: {
+      engineeringPercent: 0.0,
+      contingencyPercent: 0.0,
+      departmentalPercent: 6.0,
+      contractorPercent: 10.0,
+      taxPercent: 0.0
+    }
+  },
+  {
+    id: 'tmpl-dt-50kva-lump-sum',
+    name: 'Template 0B: Installation of 50 KVA Transformer (Lump Sum Package)',
+    type: 'NEW_DISTRIBUTION_TRANSFORMER',
+    description: 'WAPDA Standard 50 KVA 11/0.415 kV Transformer installation with 18-item lump sum material list including Code 08120 (Rs. 571,542.07), 10% Labour Cost (Rs. 57,154.21), and 16% Over Heads on material cost (Rs. 91,446.73) = Net Cost Rs. 720,143.01.',
+    standardConductorCode: 'CND-DOG-ACSR',
+    standardPoleCode: 'POL-11-PCC',
+    defaultTransformerKva: 50,
+    defaultAdditionalPercentages: {
+      engineeringPercent: 0.0,
+      contingencyPercent: 0.0,
+      departmentalPercent: 6.0,
+      contractorPercent: 10.0,
+      taxPercent: 0.0
+    }
+  },
   {
     id: 'tmpl-ht-11kv-line',
     name: 'Template 1: 11kV HT Overhead Line Construction',

@@ -86,6 +86,9 @@ export interface EstimateLineDetails {
   existingPortionKm?: number;
   remainingPortionKm?: number;
   bifurcationType?: 'tee_off' | 'section_split' | 'tap_off' | 'spur_line';
+  // 25 kVA & 50 kVA Transformer Lump Sum Package Flags
+  is25KvaLumpSumPackage?: boolean;
+  is50KvaLumpSumPackage?: boolean;
   // Tracking whether values were auto-calculated or manually overridden
   autoCalculatedFlags?: Record<string, boolean>;
 }
@@ -140,6 +143,8 @@ export interface EstimateCharges {
   subTotal: number;
   grandTotal: number;
   costPerKm: number;
+  overheadBasis?: 'MATERIAL' | 'PRIME_COST';
+  totalOverheadsOnMaterial?: number;
 }
 
 export interface EstimateProjectInfo {

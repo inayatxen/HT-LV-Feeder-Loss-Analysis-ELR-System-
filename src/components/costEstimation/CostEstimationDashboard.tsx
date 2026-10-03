@@ -286,8 +286,16 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
 
                       {/* Length */}
                       <td className="py-3 px-2 text-right">
-                        <span className="font-bold text-slate-900">{km.toFixed(2)}</span>
-                        <span className="text-[11px] text-slate-400 ml-0.5">km</span>
+                        {km > 0 ? (
+                          <>
+                            <span className="font-bold text-slate-900">{km.toFixed(2)}</span>
+                            <span className="text-[11px] text-slate-400 ml-0.5">km</span>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200">
+                            Sub-Stn
+                          </span>
+                        )}
                       </td>
 
                       {/* Grand Total */}
@@ -297,7 +305,13 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
 
                       {/* Cost per km */}
                       <td className="py-3 px-3 text-right text-emerald-700 font-semibold text-xs">
-                        {est.charges.costPerKm.toLocaleString()}
+                        {est.charges.overheadBasis === 'MATERIAL' || km === 0 ? (
+                          <span className="text-[11px] text-slate-500 font-sans font-medium">
+                            Lump Sum Pkg
+                          </span>
+                        ) : (
+                          est.charges.costPerKm.toLocaleString()
+                        )}
                       </td>
 
                       {/* Status */}

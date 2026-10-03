@@ -75,7 +75,22 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     initCostDatabase()
       .then(res => {
         if (mounted) {
-          if (res.estimates) setEstimates(res.estimates);
+          if (res.estimates) {
+            const cleansed = res.estimates.map(e => {
+              if (e.lineDetails.is25KvaLumpSumPackage || (Number(e.lineDetails.transformerCapacityKva) === 25 && (!e.lineDetails.htLengthKm || e.lineDetails.htLengthKm === 0))) {
+                const filteredItems = e.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+                if (filteredItems.length !== e.items.length) {
+                  return {
+                    ...e,
+                    items: filteredItems,
+                    lineDetails: { ...e.lineDetails, staySets: 0 }
+                  };
+                }
+              }
+              return e;
+            });
+            setEstimates(cleansed);
+          }
           if (res.materials) setMaterials(res.materials);
           if (res.designFactors) setDesignFactors(res.designFactors);
           if (res.templates) setTemplates(res.templates);

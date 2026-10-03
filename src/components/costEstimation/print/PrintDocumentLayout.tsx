@@ -31,6 +31,61 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 }) => {
   const totalKm = (estimate.lineDetails.htLengthKm || 0) + (estimate.lineDetails.ltLengthKm || 0);
 
+  // Check whether estimate is 50 kVA Transformer Lump Sum Package
+  const is50KvaPackage = Boolean(
+    estimate.lineDetails?.transformerCapacityKva === 50 ||
+    estimate.lineDetails?.is50KvaLumpSumPackage ||
+    estimate.projectInfo?.schemeProjectName?.includes('50 KVA') ||
+    estimate.projectInfo?.purposeOfWork?.includes('50 KVA') ||
+    estimate.id?.includes('50kva') ||
+    estimate.items?.some(i => i.materialCode === '08120')
+  );
+
+  // If 50 kVA Transformer Lump Sum BOQ, replace any 25 kVA transformer item with 50 kVA Transformer store code=08120 with Material Rate=434200
+  const renderedItems = estimate.items.map(item => {
+    if (is50KvaPackage && (item.materialCode === '08110' || item.description?.includes('25 KVA') || (item.materialCode === '08120' && item.unitRate !== 434200))) {
+      return {
+        ...item,
+        id: 'item-08120',
+        materialId: 'mat-trf-50kva',
+        materialCode: '08120',
+        description: 'TRANSFORMER 50 KVA',
+        specification: 'Distribution Transformer 50 kVA 11/0.415 kV Copper Wound (WAPDA Code 08120)',
+        unit: 'EA',
+        quantity: 1,
+        unitRate: 434200,
+        materialAmount: 434200,
+        labourRate: 43420,
+        labourAmount: 43420,
+        totalAmount: 477620,
+        calculationNotes: '50 kVA Transformer Installation Schedule item: 10% Labour Cost applied'
+      };
+    }
+    return item;
+  }).filter(item => {
+    if ((is50KvaPackage || estimate.charges.overheadBasis === 'MATERIAL') && ((estimate.lineDetails.htLengthKm || 0) === 0 && (estimate.lineDetails.ltLengthKm || 0) === 0)) {
+      return item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD');
+    }
+    return true;
+  });
+
+  const materialCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
+  const labourCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+  
+  const isLumpSumOverhead = estimate.charges.overheadBasis === 'MATERIAL' || is50KvaPackage;
+  const deptPercent = estimate.charges.departmentalOverheadPercent || 6.0;
+  const contPercent = estimate.charges.contractorOverheadPercent || 10.0;
+  const deptOverhead = isLumpSumOverhead
+    ? Number((materialCost * (deptPercent / 100)).toFixed(2))
+    : estimate.charges.departmentalOverheadAmount;
+  const contOverhead = isLumpSumOverhead
+    ? Number((materialCost * (contPercent / 100)).toFixed(2))
+    : estimate.charges.contractorOverheadAmount;
+  const totalOverheads = Number((deptOverhead + contOverhead).toFixed(2));
+  const grandTotal = isLumpSumOverhead
+    ? Number((materialCost + labourCost + totalOverheads + (estimate.charges.transportationCost || 0) + (estimate.charges.taxGstAmount || 0)).toFixed(2))
+    : estimate.charges.grandTotal;
+
   const paddingClass = 
     marginSize === 'narrow' ? 'p-4 sm:p-6' :
     marginSize === 'wide' ? 'p-8 sm:p-12' : 
@@ -259,7 +314,11 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
            ======================================================== */}
         <section className="space-y-2">
           <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-100 p-2 border-l-4 border-emerald-600 flex items-center justify-between">
-            <span>3. Detailed Bill of Quantities (BOQ) & Erection Schedule</span>
+            <span>
+              {estimate.charges.overheadBasis === 'MATERIAL' 
+                ? '3. Detailed Bill of Quantities (BOQ) Materials Schedule' 
+                : '3. Detailed Bill of Quantities (BOQ) & Erection Schedule'}
+            </span>
             <span className="text-[10px] font-mono text-slate-600 font-semibold">Standard WAPDA Schedule of Rates (AUP 2026)</span>
           </h2>
 
@@ -280,7 +339,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 font-mono tabular-nums text-[11px]">
-                {estimate.items.map((item, idx) => (
+                {renderedItems.map((item, idx) => (
                   <tr key={item.id} className="hover:bg-slate-50/70">
                     <td className="py-2 px-2 text-center text-slate-500 font-sans">{idx + 1}</td>
                     <td className="py-2 px-2.5 font-bold text-slate-900">
@@ -319,13 +378,13 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                     Subtotal (Material & Labour Prime Cost):
                   </td>
                   <td className="py-2.5 px-3 text-right font-mono font-black">
-                    PKR {estimate.charges.materialCost.toLocaleString()}
+                    PKR {materialCost.toLocaleString()}
                   </td>
                   <td className="py-2.5 px-3 text-right font-mono font-bold" colSpan={2}>
-                    PKR {estimate.charges.labourCost.toLocaleString()}
+                    PKR {labourCost.toLocaleString()}
                   </td>
                   <td className="py-2.5 px-3 text-right text-blue-950 font-black text-xs font-mono">
-                    PKR {(estimate.charges.materialCost + estimate.charges.labourCost).toLocaleString()}
+                    PKR {(materialCost + labourCost).toLocaleString()}
                   </td>
                 </tr>
               </tbody>
@@ -339,79 +398,141 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
         <section className="space-y-2 break-inside-avoid" style={{ pageBreakInside: 'avoid' }}>
           <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider bg-slate-100 p-2 border-l-4 border-slate-800 flex items-center justify-between">
             <span>4. Abstract of Cost & Departmental Overheads</span>
-            <span className="text-[10px] font-mono text-slate-500 font-normal">Section D</span>
+            <span className="text-[10px] font-mono text-slate-500 font-normal">
+              {isLumpSumOverhead ? 'WAPDA Lump Sum Schedule Basis' : 'Section D'}
+            </span>
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Prime Cost Elements */}
-            <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-white">
-              <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1">
-                Direct Work Execution Costs:
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">A. Total Material Cost:</span>
-                <span className="font-bold text-slate-900">PKR {estimate.charges.materialCost.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">B. Total Labour / Erection Charges:</span>
-                <span className="font-bold text-slate-900">PKR {estimate.charges.labourCost.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">C. Transportation, Hauling & Loading:</span>
-                <span className="font-bold text-slate-900">PKR {estimate.charges.transportationCost.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between border-t border-slate-200 pt-1.5 font-black text-slate-950 text-xs">
-                <span className="font-sans">Base Prime Cost (A + B + C):</span>
-                <span>PKR {(estimate.charges.materialCost + estimate.charges.labourCost + estimate.charges.transportationCost).toLocaleString()}</span>
-              </div>
-            </div>
-
-            {/* Overheads, Engineering & Taxes */}
-            <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-slate-50/70">
-              <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1">
-                Statutory & Departmental Overheads:
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">D. Engineering & Supervision ({estimate.charges.engineeringChargesPercent}%):</span>
-                <span>PKR {estimate.charges.engineeringChargesAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">E. Contingency Allowance ({estimate.charges.contingencyPercent}%):</span>
-                <span>PKR {estimate.charges.contingencyAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">F. Departmental Overhead ({estimate.charges.departmentalOverheadPercent}%):</span>
-                <span>PKR {estimate.charges.departmentalOverheadAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600 font-sans">G. Contractor Profit & Overhead ({estimate.charges.contractorOverheadPercent}%):</span>
-                <span>PKR {estimate.charges.contractorOverheadAmount.toLocaleString()}</span>
-              </div>
-              {estimate.charges.taxGstAmount > 0 && (
-                <div className="flex justify-between font-bold text-slate-900">
-                  <span className="font-sans">H. Applicable Taxes / GST:</span>
-                  <span>PKR {estimate.charges.taxGstAmount.toLocaleString()}</span>
+          {isLumpSumOverhead ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Direct Material & 10% Labour Costs */}
+              <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-white">
+                <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1 flex items-center justify-between">
+                  <span>Direct Package Costs (WAPDA CSR):</span>
+                  <span className="text-[10px] text-blue-700 font-bold">18 Schedule Items</span>
                 </div>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">A. Total Material Cost (18 Items):</span>
+                  <span className="font-bold text-slate-900">PKR {materialCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">B. Total Labour Cost (10% on Material Cost):</span>
+                  <span className="font-bold text-rose-700">PKR {labourCost.toLocaleString()}</span>
+                </div>
+                {estimate.charges.transportationCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 font-sans">C. Transportation & Hauling:</span>
+                    <span className="font-bold text-slate-900">PKR {estimate.charges.transportationCost.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-slate-200 pt-1.5 font-black text-slate-950 text-xs">
+                  <span className="font-sans">Subtotal (Material + 10% Labour):</span>
+                  <span>PKR {(materialCost + labourCost).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* 16% Over Heads on Material Cost */}
+              <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-slate-50/70">
+                <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1 flex items-center justify-between">
+                  <span>Departmental & Contractor Overheads:</span>
+                  <span className="text-[10px] text-amber-700 font-bold">16% on Material Cost</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">C. Departmental Overhead ({deptPercent}% on Material):</span>
+                  <span>PKR {deptOverhead.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">D. Contractor Overhead ({contPercent}% on Material):</span>
+                  <span>PKR {contOverhead.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-1.5 font-bold text-blue-900">
+                  <span className="font-sans">Total Over Heads (16% on Material Cost):</span>
+                  <span>PKR {totalOverheads.toLocaleString()}</span>
+                </div>
+                {estimate.charges.taxGstAmount > 0 && (
+                  <div className="flex justify-between font-bold text-slate-900">
+                    <span className="font-sans">E. Applicable Taxes / GST:</span>
+                    <span>PKR {estimate.charges.taxGstAmount.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Prime Cost Elements */}
+              <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-white">
+                <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1">
+                  Direct Work Execution Costs:
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">A. Total Material Cost:</span>
+                  <span className="font-bold text-slate-900">PKR {estimate.charges.materialCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">B. Total Labour / Erection Charges:</span>
+                  <span className="font-bold text-slate-900">PKR {estimate.charges.labourCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">C. Transportation, Hauling & Loading:</span>
+                  <span className="font-bold text-slate-900">PKR {estimate.charges.transportationCost.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between border-t border-slate-200 pt-1.5 font-black text-slate-950 text-xs">
+                  <span className="font-sans">Base Prime Cost (A + B + C):</span>
+                  <span>PKR {(estimate.charges.materialCost + estimate.charges.labourCost + estimate.charges.transportationCost).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Overheads, Engineering & Taxes */}
+              <div className="border border-slate-300 rounded-lg p-3 text-xs space-y-2 font-mono bg-slate-50/70">
+                <div className="font-bold text-slate-800 font-sans border-b border-slate-200 pb-1">
+                  Statutory & Departmental Overheads:
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">D. Engineering & Supervision ({estimate.charges.engineeringChargesPercent}%):</span>
+                  <span>PKR {estimate.charges.engineeringChargesAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">E. Contingency Allowance ({estimate.charges.contingencyPercent}%):</span>
+                  <span>PKR {estimate.charges.contingencyAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">F. Departmental Overhead ({estimate.charges.departmentalOverheadPercent}%):</span>
+                  <span>PKR {estimate.charges.departmentalOverheadAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-600 font-sans">G. Contractor Profit & Overhead ({estimate.charges.contractorOverheadPercent}%):</span>
+                  <span>PKR {estimate.charges.contractorOverheadAmount.toLocaleString()}</span>
+                </div>
+                {estimate.charges.taxGstAmount > 0 && (
+                  <div className="flex justify-between font-bold text-slate-900">
+                    <span className="font-sans">H. Applicable Taxes / GST:</span>
+                    <span>PKR {estimate.charges.taxGstAmount.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Grand Total Sanction Banner */}
           <div className="bg-slate-900 text-white p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3 shadow-xs">
             <div>
               <span className="text-[10px] uppercase tracking-wider text-amber-400 font-extrabold block">
-                SANCTIONED ESTIMATE GRAND TOTAL
+                {isLumpSumOverhead ? 'NET ESTIMATED COST (GRAND TOTAL)' : 'SANCTIONED ESTIMATE GRAND TOTAL'}
               </span>
               <span className="text-xs text-slate-300">
-                Total Route Length: <strong>{totalKm.toFixed(2)} km</strong> ({((estimate.lineDetails.htLengthKm || 0) * 10).toFixed(0)} spans HT)
+                {isLumpSumOverhead
+                  ? `${is50KvaPackage ? '50' : (estimate.lineDetails.transformerCapacityKva || 25)} KVA Transformer Sub-Station Installation · Material + 10% Labour + 16% Over Heads`
+                  : <>Total Route Length: <strong>{totalKm.toFixed(2)} km</strong> ({((estimate.lineDetails.htLengthKm || 0) * 10).toFixed(0)} spans HT)</>}
               </span>
             </div>
             <div className="text-left sm:text-right">
               <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
-                PKR {estimate.charges.grandTotal.toLocaleString()}
+                PKR {grandTotal.toLocaleString()}
               </div>
               <span className="text-[11px] text-emerald-400 font-mono font-bold block">
-                Average Rate: PKR {estimate.charges.costPerKm.toLocaleString()} / km
+                {isLumpSumOverhead
+                  ? `Net Sanctioned Package Cost: PKR ${grandTotal.toLocaleString()}`
+                  : `Average Rate: PKR ${estimate.charges.costPerKm.toLocaleString()} / km`}
               </span>
             </div>
           </div>

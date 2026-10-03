@@ -13,6 +13,12 @@ import {
   EstimateCharges, 
   CostEstimateRecord 
 } from '../types/costEstimation';
+import { 
+  LUMP_SUM_25KVA_TRANSFORMER_ITEMS, 
+  LUMP_SUM_25KVA_TOTALS,
+  LUMP_SUM_50KVA_TRANSFORMER_ITEMS,
+  LUMP_SUM_50KVA_TOTALS
+} from '../data/materialMaster';
 import * as XLSX from 'xlsx';
 
 /**
@@ -113,24 +119,40 @@ export function calculateQuantitiesForLine(
     });
   }
 
-  // 4. Stay Sets Calculation (3 sets per km + terminal, exactly 2 for 4-span lines)
-  const isFourSpans = Math.abs(htKm - 0.4) < 0.01 && (!details.ltLengthKm || details.ltLengthKm === 0);
-  const calculatedStaySets = isFourSpans ? 2 : (
-    Math.ceil(htKm * factors.staySetsPerKm) + 
-    Math.ceil(ltKm * 2) + 
-    factors.terminalStaySets + 
-    (Number(details.roadCrossings || 0) * 2)
+  // 4. Stay Sets Calculation (3 sets per km + terminal, exactly 2 for 4-span lines; 0 for 25kVA/50kVA transformer or line-less sub-station)
+  const is25Kva = Boolean(
+    details.is25KvaLumpSumPackage || 
+    (type === 'NEW_DISTRIBUTION_TRANSFORMER' && details.transformerCapacityKva === 25) ||
+    (Number(details.transformerCapacityKva) === 25 && htKm === 0 && ltKm === 0)
   );
 
-  steps.push({
-    component: 'Guy & Stay Sets',
-    parameter: 'Stay Set Complete 7/8 SWG',
-    formula: isFourSpans ? '4 Spans HT Line = 2 Stay Sets' : '(HT km × 3) + (LT km × 2) + 4 Terminal + (Road Crossings × 2)',
-    calculation: isFourSpans ? `Terminal guy sets = 2 sets` : `(${htKm.toFixed(2)} × 3) + (${ltKm.toFixed(2)} × 2) + 4 + (${details.roadCrossings || 0} × 2) = ${calculatedStaySets} sets`,
-    resultQuantity: calculatedStaySets,
-    unit: 'Sets',
-    notes: 'Provides mechanical stability at angles, dead-ends, and terminal structures.'
-  });
+  const is50Kva = Boolean(
+    details.is50KvaLumpSumPackage || 
+    (type === 'NEW_DISTRIBUTION_TRANSFORMER' && details.transformerCapacityKva === 50) ||
+    (Number(details.transformerCapacityKva) === 50 && htKm === 0 && ltKm === 0)
+  );
+
+  const isFourSpans = Math.abs(htKm - 0.4) < 0.01 && (!details.ltLengthKm || details.ltLengthKm === 0);
+  const calculatedStaySets = (is25Kva || is50Kva || (htKm === 0 && ltKm === 0)) ? 0 : (
+    isFourSpans ? 2 : (
+      Math.ceil(htKm * factors.staySetsPerKm) + 
+      Math.ceil(ltKm * 2) + 
+      factors.terminalStaySets + 
+      (Number(details.roadCrossings || 0) * 2)
+    )
+  );
+
+  if (calculatedStaySets > 0) {
+    steps.push({
+      component: 'Guy & Stay Sets',
+      parameter: 'Stay Set Complete 7/8 SWG',
+      formula: isFourSpans ? '4 Spans HT Line = 2 Stay Sets' : '(HT km × 3) + (LT km × 2) + 4 Terminal + (Road Crossings × 2)',
+      calculation: isFourSpans ? `Terminal guy sets = 2 sets` : `(${htKm.toFixed(2)} × 3) + (${ltKm.toFixed(2)} × 2) + 4 + (${details.roadCrossings || 0} × 2) = ${calculatedStaySets} sets`,
+      resultQuantity: calculatedStaySets,
+      unit: 'Sets',
+      notes: 'Provides mechanical stability at angles, dead-ends, and terminal structures.'
+    });
+  }
 
   // Effective quantities used (respect manual override flag if locked by user)
   const actualHtPoles = details.autoCalculatedFlags?.htPoles === false ? details.htPoles : calculatedHtPoles;
@@ -523,8 +545,8 @@ export function calculateQuantitiesForLine(
     }
   }
 
-  // 13. Stay Sets for pure LT line (if not already added in HT section)
-  if (actualStaySets > 0 && actualHtPoles === 0) {
+  // 13. Stay Sets for pure LT line (if not already added in HT section, and not for 25kVA/50kVA transformer or line-less schemes)
+  if (actualStaySets > 0 && actualHtPoles === 0 && !is25Kva && !is50Kva && (htKm > 0 || ltKm > 0)) {
     const stayMat = findMat('15310') || findMat('mat-hw-stay-set') || findMat('HW-STAY-SET') || findMat('03140');
     if (stayMat && !itemMap.has(stayMat.code)) {
       itemMap.set(stayMat.code, {
@@ -555,132 +577,236 @@ export function calculateQuantitiesForLine(
 
   if (hasTransformer) {
     const targetKva = trfKva > 0 ? trfKva : 100;
-    const trfCode = targetKva === 25 ? '08110' :
-                    targetKva === 50 ? '08120' :
-                    targetKva === 200 ? '08140' :
-                    targetKva === 400 ? '08150' :
-                    targetKva === 630 ? '08160' : '08130';
-    const trfMat = findMat(trfCode) || findMat(`TRF-${targetKva}-11KV`);
     const count = Math.max(1, trfCount);
 
-    if (trfMat) {
-      itemMap.set(trfMat.code, {
-        id: `item-${trfMat.code}`,
-        materialId: trfMat.id,
-        materialCode: trfMat.code,
-        description: trfMat.name,
-        specification: trfMat.specification,
-        unit: trfMat.unit,
-        quantity: count,
-        unitRate: trfMat.materialRate,
-        materialAmount: count * trfMat.materialRate,
-        labourRate: trfMat.labourRate,
-        labourAmount: count * trfMat.labourRate,
-        totalAmount: count * (trfMat.materialRate + trfMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `Distribution Transformer (${targetKva} kVA)`
-      });
-    }
+    if (targetKva === 50 || details.is50KvaLumpSumPackage || is50Kva) {
+      // -------------------------------------------------------------
+      // OFFICIAL 18-ITEM WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 50 KVA TRANSFORMER
+      // Total Material: Rs. 571,542.07 | 10% Labour: Rs. 57,154.21 | 16% Over Heads on Material: Rs. 91,446.73
+      // Net Cost: Rs. 720,143.01
+      // -------------------------------------------------------------
+      itemMap.delete('15310');
+      itemMap.delete('mat-code-15310');
+      itemMap.delete('HW-STAY-SET');
+      itemMap.delete('mat-hw-stay-set');
 
-    // Transformer Sub-station Protection & Platform
-    const laMat = findMat('07110') || findMat('7110') || findMat('SW-LA-11KV');
-    if (laMat) {
-      itemMap.set(laMat.code, {
-        id: `item-${laMat.code}`,
-        materialId: laMat.id,
-        materialCode: laMat.code,
-        description: laMat.name,
-        specification: laMat.specification,
-        unit: laMat.unit,
-        quantity: count,
-        unitRate: laMat.materialRate,
-        materialAmount: count * laMat.materialRate,
-        labourRate: laMat.labourRate,
-        labourAmount: count * laMat.labourRate,
-        totalAmount: count * (laMat.materialRate + laMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `1 set of 3 surge arresters per transformer`
-      });
-    }
+      if (htKm === 0 && ltKm === 0) {
+        itemMap.clear();
+      }
 
-    const dofMat = findMat('13311') || findMat('10740') || findMat('SW-DOF-11KV');
-    if (dofMat) {
-      itemMap.set(dofMat.code, {
-        id: `item-${dofMat.code}`,
-        materialId: dofMat.id,
-        materialCode: dofMat.code,
-        description: dofMat.name,
-        specification: dofMat.specification,
-        unit: dofMat.unit,
-        quantity: count,
-        unitRate: dofMat.materialRate,
-        materialAmount: count * dofMat.materialRate,
-        labourRate: dofMat.labourRate,
-        labourAmount: count * dofMat.labourRate,
-        totalAmount: count * (dofMat.materialRate + dofMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `1 set of 3 drop-out cutouts for transformer protection`
+      steps.push({
+        component: '50 KVA Distribution Transformer Sub-Station',
+        parameter: '18-Item Official WAPDA / PESCO Lump Sum Material Schedule',
+        formula: 'Lump Sum Materials (Rs. 571,542.07) + 10% Labour Cost (Rs. 57,154.21) + 16% Over Heads on Material Cost (Rs. 91,446.73)',
+        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. 571,542.07 (Transformer 50 kVA Code 08120 @ Rs. 434,200), Labour (10%) = Rs. 57,154.21, Over Heads (16% on Material) = Rs. 91,446.73. Net Cost = Rs. 720,143.01`,
+        resultQuantity: count,
+        unit: 'Job / Set',
+        notes: 'Includes 50 KVA Copper Transformer (08120 @ Rs. 434,200), 11kV Drop Out Cut Outs (13311), Single Structure Platform (10710), 11kV Lattice Cross Arm (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable, PG Connectors, Fuse Links & Fasteners (Stay Rods 15310 excluded).'
       });
-    }
 
-    const platMat = findMat('10720') || findMat('10710') || findMat('STR-TRF-PLAT');
-    if (platMat) {
-      itemMap.set(platMat.code, {
-        id: `item-${platMat.code}`,
-        materialId: platMat.id,
-        materialCode: platMat.code,
-        description: platMat.name,
-        specification: platMat.specification,
-        unit: platMat.unit,
-        quantity: count,
-        unitRate: platMat.materialRate,
-        materialAmount: count * platMat.materialRate,
-        labourRate: platMat.labourRate,
-        labourAmount: count * platMat.labourRate,
-        totalAmount: count * (platMat.materialRate + platMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `H-Frame platform structure with clamps`
-      });
-    }
+      LUMP_SUM_50KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+        const itemMat = findMat(lsItem.code);
+        const itemQty = lsItem.quantity * count;
+        const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
+        const itemLabourRate = lsItem.labourRate;
+        const itemLabourAmount = Number((lsItem.labourRate * itemQty).toFixed(2));
+        const itemTotal = Number((itemMatAmount + itemLabourAmount).toFixed(2));
 
-    const distBoxMat = findMat('PNL-LT-DIST');
-    if (distBoxMat) {
-      itemMap.set(distBoxMat.code, {
-        id: `item-${distBoxMat.code}`,
-        materialId: distBoxMat.id,
-        materialCode: distBoxMat.code,
-        description: distBoxMat.name,
-        specification: distBoxMat.specification,
-        unit: distBoxMat.unit,
-        quantity: count,
-        unitRate: distBoxMat.materialRate,
-        materialAmount: count * distBoxMat.materialRate,
-        labourRate: distBoxMat.labourRate,
-        labourAmount: count * distBoxMat.labourRate,
-        totalAmount: count * (distBoxMat.materialRate + distBoxMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `LT distribution box with circuit breakers`
+        itemMap.set(lsItem.code, {
+          id: `item-${lsItem.code}`,
+          materialId: itemMat ? itemMat.id : `mat-code-${lsItem.code}`,
+          materialCode: lsItem.code,
+          description: lsItem.description,
+          specification: lsItem.specification,
+          unit: lsItem.unit,
+          quantity: itemQty,
+          unitRate: lsItem.unitRate,
+          materialAmount: itemMatAmount,
+          labourRate: itemLabourRate,
+          labourAmount: itemLabourAmount,
+          totalAmount: itemTotal,
+          isAutoCalculated: true,
+          calculationNotes: `50 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+        });
       });
-    }
+    } else if (targetKva === 25 || details.is25KvaLumpSumPackage || is25Kva) {
+      // -------------------------------------------------------------
+      // OFFICIAL 18-ITEM WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 25 KVA TRANSFORMER
+      // Total Material: Rs. 447,128.07 | 10% Labour: Rs. 44,712.81 | 16% Over Heads on Material: Rs. 71,540.49
+      // Net Cost: Rs. 563,381.37
+      // -------------------------------------------------------------
+      // Exclude Stay Rod 15310 from 25 kVA Transformer Installation BOQ
+      itemMap.delete('15310');
+      itemMap.delete('mat-code-15310');
+      itemMap.delete('HW-STAY-SET');
+      itemMap.delete('mat-hw-stay-set');
 
-    const civilMat = findMat('STR-CIVIL-PAD');
-    if (civilMat) {
-      itemMap.set(civilMat.code, {
-        id: `item-${civilMat.code}`,
-        materialId: civilMat.id,
-        materialCode: civilMat.code,
-        description: civilMat.name,
-        specification: civilMat.specification,
-        unit: civilMat.unit,
-        quantity: count,
-        unitRate: civilMat.materialRate,
-        materialAmount: count * civilMat.materialRate,
-        labourRate: civilMat.labourRate,
-        labourAmount: count * civilMat.labourRate,
-        totalAmount: count * (civilMat.materialRate + civilMat.labourRate),
-        isAutoCalculated: true,
-        calculationNotes: `Civil foundation and pole muffling works`
+      if (htKm === 0 && ltKm === 0) {
+        // Pure transformer installation package contains ONLY the official 18 items
+        itemMap.clear();
+      }
+
+      steps.push({
+        component: '25 KVA Distribution Transformer Sub-Station',
+        parameter: '18-Item Official WAPDA / PESCO Lump Sum Material Schedule',
+        formula: 'Lump Sum Materials (Rs. 447,128.07) + 10% Labour Cost (Rs. 44,712.81) + 16% Over Heads on Material Cost (Rs. 71,540.49)',
+        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. 447,128.07, Labour (10%) = Rs. 44,712.81, Over Heads (16% on Material) = Rs. 71,540.49. Net Cost = Rs. 563,381.37`,
+        resultQuantity: count,
+        unit: 'Job / Set',
+        notes: 'Includes 25 KVA Copper Transformer (08110), 11kV Drop Out Cut Outs (13311), Single Structure Platform (10710), 11kV Lattice Cross Arm (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable, PG Connectors, Fuse Links & Fasteners (Stay Rods 15310 excluded).'
       });
+
+      LUMP_SUM_25KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+        const itemMat = findMat(lsItem.code);
+        const itemQty = lsItem.quantity * count;
+        const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
+        const itemLabourRate = lsItem.labourRate;
+        const itemLabourAmount = Number((lsItem.labourRate * itemQty).toFixed(2));
+        const itemTotal = Number((itemMatAmount + itemLabourAmount).toFixed(2));
+
+        itemMap.set(lsItem.code, {
+          id: `item-${lsItem.code}`,
+          materialId: itemMat ? itemMat.id : `mat-code-${lsItem.code}`,
+          materialCode: lsItem.code,
+          description: lsItem.description,
+          specification: lsItem.specification,
+          unit: lsItem.unit,
+          quantity: itemQty,
+          unitRate: lsItem.unitRate,
+          materialAmount: itemMatAmount,
+          labourRate: itemLabourRate,
+          labourAmount: itemLabourAmount,
+          totalAmount: itemTotal,
+          isAutoCalculated: true,
+          calculationNotes: `25 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+        });
+      });
+    } else {
+      const trfCode = targetKva === 50 ? '08120' :
+                      targetKva === 200 ? '08140' :
+                      targetKva === 400 ? '08150' :
+                      targetKva === 630 ? '08160' : '08130';
+      const trfMat = findMat(trfCode) || findMat(`TRF-${targetKva}-11KV`);
+
+      if (trfMat) {
+        itemMap.set(trfMat.code, {
+          id: `item-${trfMat.code}`,
+          materialId: trfMat.id,
+          materialCode: trfMat.code,
+          description: trfMat.name,
+          specification: trfMat.specification,
+          unit: trfMat.unit,
+          quantity: count,
+          unitRate: trfMat.materialRate,
+          materialAmount: count * trfMat.materialRate,
+          labourRate: trfMat.labourRate,
+          labourAmount: count * trfMat.labourRate,
+          totalAmount: count * (trfMat.materialRate + trfMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `Distribution Transformer (${targetKva} kVA)`
+        });
+      }
+
+      // Transformer Sub-station Protection & Platform
+      const laMat = findMat('07110') || findMat('7110') || findMat('SW-LA-11KV');
+      if (laMat) {
+        itemMap.set(laMat.code, {
+          id: `item-${laMat.code}`,
+          materialId: laMat.id,
+          materialCode: laMat.code,
+          description: laMat.name,
+          specification: laMat.specification,
+          unit: laMat.unit,
+          quantity: count,
+          unitRate: laMat.materialRate,
+          materialAmount: count * laMat.materialRate,
+          labourRate: laMat.labourRate,
+          labourAmount: count * laMat.labourRate,
+          totalAmount: count * (laMat.materialRate + laMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `1 set of 3 surge arresters per transformer`
+        });
+      }
+
+      const dofMat = findMat('13311') || findMat('10740') || findMat('SW-DOF-11KV');
+      if (dofMat) {
+        itemMap.set(dofMat.code, {
+          id: `item-${dofMat.code}`,
+          materialId: dofMat.id,
+          materialCode: dofMat.code,
+          description: dofMat.name,
+          specification: dofMat.specification,
+          unit: dofMat.unit,
+          quantity: count,
+          unitRate: dofMat.materialRate,
+          materialAmount: count * dofMat.materialRate,
+          labourRate: dofMat.labourRate,
+          labourAmount: count * dofMat.labourRate,
+          totalAmount: count * (dofMat.materialRate + dofMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `1 set of 3 drop-out cutouts for transformer protection`
+        });
+      }
+
+      const platMat = findMat('10720') || findMat('10710') || findMat('STR-TRF-PLAT');
+      if (platMat) {
+        itemMap.set(platMat.code, {
+          id: `item-${platMat.code}`,
+          materialId: platMat.id,
+          materialCode: platMat.code,
+          description: platMat.name,
+          specification: platMat.specification,
+          unit: platMat.unit,
+          quantity: count,
+          unitRate: platMat.materialRate,
+          materialAmount: count * platMat.materialRate,
+          labourRate: platMat.labourRate,
+          labourAmount: count * platMat.labourRate,
+          totalAmount: count * (platMat.materialRate + platMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `H-Frame platform structure with clamps`
+        });
+      }
+
+      const distBoxMat = findMat('PNL-LT-DIST');
+      if (distBoxMat) {
+        itemMap.set(distBoxMat.code, {
+          id: `item-${distBoxMat.code}`,
+          materialId: distBoxMat.id,
+          materialCode: distBoxMat.code,
+          description: distBoxMat.name,
+          specification: distBoxMat.specification,
+          unit: distBoxMat.unit,
+          quantity: count,
+          unitRate: distBoxMat.materialRate,
+          materialAmount: count * distBoxMat.materialRate,
+          labourRate: distBoxMat.labourRate,
+          labourAmount: count * distBoxMat.labourRate,
+          totalAmount: count * (distBoxMat.materialRate + distBoxMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `LT distribution box with circuit breakers`
+        });
+      }
+
+      const civilMat = findMat('STR-CIVIL-PAD');
+      if (civilMat) {
+        itemMap.set(civilMat.code, {
+          id: `item-${civilMat.code}`,
+          materialId: civilMat.id,
+          materialCode: civilMat.code,
+          description: civilMat.name,
+          specification: civilMat.specification,
+          unit: civilMat.unit,
+          quantity: count,
+          unitRate: civilMat.materialRate,
+          materialAmount: count * civilMat.materialRate,
+          labourRate: civilMat.labourRate,
+          labourAmount: count * civilMat.labourRate,
+          totalAmount: count * (civilMat.materialRate + civilMat.labourRate),
+          isAutoCalculated: true,
+          calculationNotes: `Civil foundation and pole muffling works`
+        });
+      }
     }
   }
 
@@ -708,8 +834,13 @@ export function calculateQuantitiesForLine(
     }
   }
 
+  let finalItems = Array.from(itemMap.values());
+  if (is25Kva || is50Kva || details.is25KvaLumpSumPackage || details.is50KvaLumpSumPackage || ((Number(details.transformerCapacityKva) === 25 || Number(details.transformerCapacityKva) === 50) && htKm === 0 && ltKm === 0)) {
+    finalItems = finalItems.filter(item => item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD'));
+  }
+
   return {
-    items: Array.from(itemMap.values()),
+    items: finalItems,
     steps,
     updatedLineDetails: {
       htPoles: calculatedHtPoles,
@@ -738,14 +869,26 @@ export function computeEstimateCharges(
     contractorPercent: number;
     taxPercent: number;
     otherChargesFixed?: number;
+    overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   }
 ): EstimateCharges {
-  const materialCost = items.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0);
-  const labourCost = items.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0);
+  const materialCost = Number(items.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
+  const labourCost = Number(items.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+
+  // Detect whether this estimate is the 25 kVA or 50 kVA Transformer lump sum package
+  const isLumpSumPackage = Boolean(
+    percentages?.overheadBasis === 'MATERIAL' ||
+    (items.some(i => i.materialCode === '08110') && Math.abs(materialCost - LUMP_SUM_25KVA_TOTALS.materialCost) < 5) ||
+    (items.some(i => i.materialCode === '08120') && Math.abs(materialCost - LUMP_SUM_50KVA_TOTALS.materialCost) < 5)
+  );
+
+  const overheadBasis = isLumpSumPackage || percentages?.overheadBasis === 'MATERIAL' ? 'MATERIAL' : 'PRIME_COST';
 
   // Transportation Cost calculation
   let transportationCost = 0;
-  if (transportSettings) {
+  if (isLumpSumPackage && (!transportSettings || transportSettings.loadingUnloadingFixed === 0)) {
+    transportationCost = 0; // Pure lump sum package has transportation inclusive
+  } else if (transportSettings) {
     if (transportSettings.method === 'PER_KM') {
       transportationCost = (transportSettings.distanceKm * transportSettings.ratePerKm) + (transportSettings.loadingUnloadingFixed || 0);
     } else if (transportSettings.method === 'PERCENT_OF_MATERIAL') {
@@ -763,23 +906,35 @@ export function computeEstimateCharges(
     .filter(i => i.materialCode.includes('CIVIL'))
     .reduce((sum, i) => sum + i.totalAmount, 0);
 
-  const basePrimeCost = materialCost + labourCost + transportationCost;
+  const basePrimeCost = Number((materialCost + labourCost + transportationCost).toFixed(2));
 
-  const engPercent = percentages?.engineeringPercent ?? 2.0;
-  const contPercent = percentages?.contingencyPercent ?? 3.0;
-  const deptPercent = percentages?.departmentalPercent ?? 5.0;
+  const engPercent = percentages?.engineeringPercent ?? (overheadBasis === 'MATERIAL' ? 0.0 : 2.0);
+  const contPercent = percentages?.contingencyPercent ?? (overheadBasis === 'MATERIAL' ? 0.0 : 3.0);
+  const deptPercent = percentages?.departmentalPercent ?? (overheadBasis === 'MATERIAL' ? 6.0 : 5.0);
   const contOverheadPercent = percentages?.contractorPercent ?? 10.0;
   const taxPercent = percentages?.taxPercent ?? 0.0;
   const otherCharges = percentages?.otherChargesFixed ?? 0;
 
-  const engineeringChargesAmount = Math.round(basePrimeCost * (engPercent / 100));
-  const contingencyAmount = Math.round(basePrimeCost * (contPercent / 100));
-  const departmentalOverheadAmount = Math.round(basePrimeCost * (deptPercent / 100));
-  const contractorOverheadAmount = Math.round(basePrimeCost * (contOverheadPercent / 100));
-  const taxGstAmount = Math.round(basePrimeCost * (taxPercent / 100));
+  // Overhead calculation basis: on Material Cost for 25 kVA Lump Sum Package, or on Base Prime Cost for general line extensions
+  const overheadBasisAmount = overheadBasis === 'MATERIAL' ? materialCost : basePrimeCost;
 
-  const subTotal = basePrimeCost + engineeringChargesAmount + contingencyAmount;
-  const grandTotal = subTotal + departmentalOverheadAmount + contractorOverheadAmount + taxGstAmount + otherCharges;
+  const engineeringChargesAmount = Math.round((overheadBasis === 'MATERIAL' ? 0 : basePrimeCost) * (engPercent / 100));
+  const contingencyAmount = Math.round((overheadBasis === 'MATERIAL' ? 0 : basePrimeCost) * (contPercent / 100));
+  const departmentalOverheadAmount = Number((overheadBasisAmount * (deptPercent / 100)).toFixed(2));
+  const contractorOverheadAmount = Number((overheadBasisAmount * (contOverheadPercent / 100)).toFixed(2));
+  const taxGstAmount = Math.round((overheadBasis === 'MATERIAL' ? materialCost : basePrimeCost) * (taxPercent / 100));
+
+  const totalOverheadsOnMaterial = overheadBasis === 'MATERIAL'
+    ? Number((departmentalOverheadAmount + contractorOverheadAmount).toFixed(2))
+    : undefined;
+
+  const subTotal = overheadBasis === 'MATERIAL'
+    ? Number((materialCost + labourCost).toFixed(2))
+    : Number((basePrimeCost + engineeringChargesAmount + contingencyAmount).toFixed(2));
+
+  const grandTotal = overheadBasis === 'MATERIAL'
+    ? Number((materialCost + labourCost + departmentalOverheadAmount + contractorOverheadAmount + transportationCost + taxGstAmount + otherCharges).toFixed(2))
+    : Number((subTotal + departmentalOverheadAmount + contractorOverheadAmount + taxGstAmount + otherCharges).toFixed(2));
 
   const effectiveKm = Math.max(0.01, lineKm);
   const costPerKm = Math.round(grandTotal / effectiveKm);
@@ -802,7 +957,9 @@ export function computeEstimateCharges(
     otherChargesAmount: otherCharges,
     subTotal,
     grandTotal,
-    costPerKm
+    costPerKm,
+    overheadBasis,
+    totalOverheadsOnMaterial
   };
 }
 
@@ -848,17 +1005,23 @@ export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): voi
     [],
     ['ESTIMATE COST BREAKDOWN', 'AMOUNT (PKR)'],
     ['Material Cost', estimate.charges.materialCost],
-    ['Labour / Erection Cost', estimate.charges.labourCost],
-    ['Transportation & Handling Charges', estimate.charges.transportationCost],
-    ['Civil Works & Foundation Works', estimate.charges.civilWorksCost],
-    [`Engineering Charges (${estimate.charges.engineeringChargesPercent}%)`, estimate.charges.engineeringChargesAmount],
-    [`Contingency Allowance (${estimate.charges.contingencyPercent}%)`, estimate.charges.contingencyAmount],
-    [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}%)`, estimate.charges.departmentalOverheadAmount],
-    [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}%)`, estimate.charges.contractorOverheadAmount],
-    [`Taxes / GST (${estimate.charges.taxGstPercent}%)`, estimate.charges.taxGstAmount],
-    ['Other Applicable Charges', estimate.charges.otherChargesAmount],
+    [`Labour / Erection Cost ${estimate.charges.overheadBasis === 'MATERIAL' ? '(10% on Material Cost)' : ''}`, estimate.charges.labourCost],
+    ...(estimate.charges.overheadBasis === 'MATERIAL' ? [
+      [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}% on Material Cost)`, estimate.charges.departmentalOverheadAmount],
+      [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}% on Material Cost)`, estimate.charges.contractorOverheadAmount],
+      [`Total Overheads (${estimate.charges.departmentalOverheadPercent + estimate.charges.contractorOverheadPercent}% on Material Cost)`, (estimate.charges.departmentalOverheadAmount + estimate.charges.contractorOverheadAmount)]
+    ] : [
+      ['Transportation & Handling Charges', estimate.charges.transportationCost],
+      ['Civil Works & Foundation Works', estimate.charges.civilWorksCost],
+      [`Engineering Charges (${estimate.charges.engineeringChargesPercent}%)`, estimate.charges.engineeringChargesAmount],
+      [`Contingency Allowance (${estimate.charges.contingencyPercent}%)`, estimate.charges.contingencyAmount],
+      [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}%)`, estimate.charges.departmentalOverheadAmount],
+      [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}%)`, estimate.charges.contractorOverheadAmount],
+      [`Taxes / GST (${estimate.charges.taxGstPercent}%)`, estimate.charges.taxGstAmount],
+      ['Other Applicable Charges', estimate.charges.otherChargesAmount]
+    ]),
     ['----------------------------------------', '---------------------'],
-    ['GRAND TOTAL ESTIMATE COST (PKR)', estimate.charges.grandTotal],
+    ['NET / GRAND TOTAL ESTIMATE COST (PKR)', estimate.charges.grandTotal],
     ['Total Project Line Length (km)', (estimate.lineDetails.htLengthKm + estimate.lineDetails.ltLengthKm).toFixed(2)],
     ['COST PER KILOMETER (PKR / km)', estimate.charges.costPerKm]
   ];
