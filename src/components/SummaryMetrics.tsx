@@ -27,9 +27,12 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   feeder,
   isProposedScenario = false
 }) => {
-  const isOverloaded = summary.isTransformerOverloaded;
+  const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || summary.baseVoltage >= 1000;
+  const isOverloaded = isHtLine ? summary.worstVoltageDropPercent > 5.0 : summary.isTransformerOverloaded;
   const tariff = feeder.tariffPerKwh || 38.5;
   const annualLossCost = Math.round(summary.annualEnergyLossKwh * tariff);
+  const injectedKv = ((summary.injectedVoltageAtNode0 || summary.baseVoltage) / 1000).toFixed(2);
+  const totalHtKva = summary.totalNodeKva || summary.totalSystemDemandKva;
 
   return (
     <div className="space-y-4">
@@ -38,17 +41,23 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
         <div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className={`font-bold font-mono text-[11px] ${
-              feeder.category === 'HV' || feeder.type === 'HT' 
-                ? 'text-sky-700' 
-                : 'text-amber-800'
+              isHtLine 
+                ? 'text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200' 
+                : 'text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200'
             }`}>
-              {feeder.category === 'HV' || feeder.type === 'HT' ? '11kV HT Network' : '400V LT Network'}
+              {isHtLine ? '11kV HT Network (From/To Nodes · Node KVA · Conductor)' : '400V LT Network'}
             </span>
             <span aria-hidden="true" className="text-slate-300">·</span>
             <span className="font-medium text-slate-700">{feeder.substationName}</span>
             <span aria-hidden="true" className="text-slate-300">·</span>
-            <span>Base Voltage: <strong className="font-mono text-slate-800">{summary.baseVoltage >= 1000 ? `${summary.baseVoltage / 1000} kV` : `${summary.baseVoltage} V`}</strong></span>
+            <span>Node 0 Injected: <strong className="font-mono text-blue-700">{injectedKv} kV ({(summary.injectedVoltageAtNode0 || summary.baseVoltage).toLocaleString()} V)</strong></span>
             <span aria-hidden="true" className="text-slate-300">·</span>
+            {isHtLine && (
+              <>
+                <span>Total Node Load: <strong className="font-mono text-slate-800">{totalHtKva.toLocaleString()} kVA</strong></span>
+                <span aria-hidden="true" className="text-slate-300">·</span>
+              </>
+            )}
             <span>PF: <strong className="font-mono text-slate-800">{summary.operatingPowerFactor}</strong></span>
             <span aria-hidden="true" className="text-slate-300">·</span>
             <span className="text-emerald-800 font-medium">LF: <strong className="font-mono">{(summary.loadFactor * 100).toFixed(0)}%</strong> (LLF: {summary.lossLoadFactor})</span>
@@ -62,7 +71,25 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
 
         {/* Feeder Health State Indicator */}
         <div className="flex items-center gap-3 w-full lg:w-auto">
-          {isOverloaded ? (
+          {isHtLine ? (
+            summary.worstVoltageDropPercent > 5.0 ? (
+              <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-900 px-3 py-2 rounded-lg text-xs font-medium w-full lg:w-auto">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <div>
+                  <span className="font-bold">HT Line Voltage Drop Alert ({summary.worstVoltageDropPercent}% at Node {summary.worstVoltageDropNodeId})</span>
+                  <span className="block text-[11px] text-amber-700">Voltage drop exceeds 5% WAPDA threshold from Node 0 injection ({injectedKv} kV)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-sky-50 border border-sky-200 text-sky-900 px-3 py-2 rounded-lg text-xs font-medium w-full lg:w-auto">
+                <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
+                <div>
+                  <span className="font-bold">11 kV HT Line Operating Optimally (Max Drop: {summary.worstVoltageDropPercent}%)</span>
+                  <span className="block text-[11px] text-sky-700">Healthy line voltage profile maintained from Node 0 ({injectedKv} kV) to tail nodes</span>
+                </div>
+              </div>
+            )
+          ) : isOverloaded ? (
             <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-800 px-3 py-2 rounded-lg text-xs font-medium w-full lg:w-auto">
               <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
               <div>
@@ -84,58 +111,76 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
 
       {/* Primary KPI Grid (60-30-10 palette, single-elevation) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        {/* Metric 1: Transformer Overloading */}
-        <div className={`p-4 rounded-xl border transition-all ${
-          isOverloaded 
-            ? 'bg-rose-50/50 border-rose-200' 
-            : 'bg-white border-slate-200'
-        }`}>
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
-            <span>Transformer Loading</span>
-            <Zap className={`w-4 h-4 ${isOverloaded ? 'text-rose-500' : 'text-slate-400'}`} />
+        {/* Metric 1: Source Current in Amps (HT) or Transformer Overloading (LT) */}
+        {isHtLine ? (
+          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+              <span>Source Current (I_s)</span>
+              <Zap className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold font-mono tabular-nums text-blue-900">
+                {summary.totalSourceCurrentAmps}
+              </span>
+              <span className="text-xs font-bold text-blue-600">Amps (A)</span>
+            </div>
+            <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2 font-mono">
+              <span>Injected Voltage:</span>
+              <span className="font-bold text-slate-800">{injectedKv} kV</span>
+            </div>
           </div>
-          {/* Transformer Loading or Dual Substation Loading */}
-          {summary.bifurcationActive ? (
-            <div className="flex items-baseline gap-2">
-              <span className={`text-xl font-bold font-mono tabular-nums ${
-                summary.isTransformer1Overloaded ? 'text-rose-700' : 'text-emerald-700'
-              }`}>
-                T1: {summary.transformer1LoadingPercent}%
-              </span>
-              <span className="text-xs font-mono font-bold text-purple-700">
-                T2: {summary.transformer2LoadingPercent}%
-              </span>
+        ) : (
+          <div className={`p-4 rounded-xl border transition-all ${
+            isOverloaded 
+              ? 'bg-rose-50/50 border-rose-200' 
+              : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+              <span>Transformer Loading</span>
+              <Zap className={`w-4 h-4 ${isOverloaded ? 'text-rose-500' : 'text-slate-400'}`} />
             </div>
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className={`text-2xl font-bold font-mono tabular-nums ${
-                isOverloaded ? 'text-rose-700' : 'text-slate-900'
-              }`}>
-                {summary.existingTransformerLoadingPercent}%
-              </span>
-              <span className="text-xs text-slate-500">
-                ({summary.totalSystemDemandKva} / {summary.existingTransformerKva} kVA)
-              </span>
-            </div>
-          )}
-          <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
             {summary.bifurcationActive ? (
-              <>
-                <span className="text-purple-900 font-semibold">T2 Added @ Node {summary.bifurcationNodeId}:</span>
-                <span className="font-mono font-semibold text-purple-700">
-                  {summary.additionalTransformerKva} kVA
+              <div className="flex items-baseline gap-2">
+                <span className={`text-xl font-bold font-mono tabular-nums ${
+                  summary.isTransformer1Overloaded ? 'text-rose-700' : 'text-emerald-700'
+                }`}>
+                  T1: {summary.transformer1LoadingPercent}%
                 </span>
-              </>
+                <span className="text-xs font-mono font-bold text-purple-700">
+                  T2: {summary.transformer2LoadingPercent}%
+                </span>
+              </div>
             ) : (
-              <>
-                <span>Proposed ({summary.proposedTransformerKva} kVA):</span>
-                <span className="font-mono font-semibold text-emerald-600">
-                  {summary.proposedTransformerLoadingPercent}%
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl font-bold font-mono tabular-nums ${
+                  isOverloaded ? 'text-rose-700' : 'text-slate-900'
+                }`}>
+                  {summary.existingTransformerLoadingPercent}%
                 </span>
-              </>
+                <span className="text-xs text-slate-500">
+                  ({summary.totalSystemDemandKva} / {summary.existingTransformerKva} kVA)
+                </span>
+              </div>
             )}
+            <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
+              {summary.bifurcationActive ? (
+                <>
+                  <span className="text-purple-900 font-semibold">T2 Added @ Node {summary.bifurcationNodeId}:</span>
+                  <span className="font-mono font-semibold text-purple-700">
+                    {summary.additionalTransformerKva} kVA
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>Proposed ({summary.proposedTransformerKva} kVA):</span>
+                  <span className="font-mono font-semibold text-emerald-600">
+                    {summary.proposedTransformerLoadingPercent}%
+                  </span>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Metric 2: Total Feeder Line Losses */}
         <div className="bg-white p-4 rounded-xl border border-slate-200">
@@ -200,7 +245,9 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
           <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
             <span>Tail Terminal Voltage:</span>
             <span className="font-mono font-semibold text-slate-800">
-              {summary.worstVoltageVolts} V
+              {isHtLine 
+                ? `${(summary.worstVoltageVolts / 1000).toFixed(3)} kV (${summary.worstVoltageVolts.toFixed(0)} V)`
+                : `${summary.worstVoltageVolts} V`}
             </span>
           </div>
         </div>

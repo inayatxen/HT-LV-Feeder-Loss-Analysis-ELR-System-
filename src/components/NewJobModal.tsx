@@ -46,7 +46,8 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
   const [category, setCategory] = useState<FeederCategory>(activeCategory);
   const [substation, setSubstation] = useState('132kV Peshawar City Substation');
   const [officerTitle, setOfficerTitle] = useState(currentJobTitle || 'Sub-Divisional Officer (SDO)');
-  const [transformerKva, setTransformerKva] = useState<number>(category === 'LV' ? 100 : 5000);
+  const [transformerKva, setTransformerKva] = useState<number>(category === 'LV' ? 100 : 1200);
+  const [sourceCurrentAmps, setSourceCurrentAmps] = useState<number>(180);
   const [baseVoltage, setBaseVoltage] = useState<number>(category === 'LV' ? 400 : 11000);
   const [loadFactor, setLoadFactor] = useState<number>(0.60);
   const [templateType, setTemplateType] = useState<'blank' | 'wapda_lt' | 'wapda_ht'>('blank');
@@ -150,8 +151,8 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
       annualGrowthRatePercent: 5.0,
       tariffPerKwh: 38.5,
       currencySymbol: 'PKR',
-      existingTransformerKva: transformerKva,
-      proposedTransformerKva: category === 'LV' ? (transformerKva >= 200 ? transformerKva + 100 : 200) : transformerKva,
+      existingTransformerKva: category === 'LV' ? transformerKva : Math.round(sourceCurrentAmps * Math.sqrt(3) * (baseVoltage / 1000) * 0.85),
+      proposedTransformerKva: category === 'LV' ? (transformerKva >= 200 ? transformerKva + 100 : 200) : Math.round(sourceCurrentAmps * Math.sqrt(3) * (baseVoltage / 1000) * 0.85 * 1.3),
       nodes: initialNodes,
       segments: initialSegments
     };
@@ -290,31 +291,36 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
 
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Transformer ({category === 'LV' ? 'kVA' : 'kVA / MVA'})
+                {category === 'LV' ? 'Transformer (kVA)' : 'Input Source Current (Amps)'}
               </label>
-              <select
-                value={transformerKva}
-                onChange={(e) => setTransformerKva(Number(e.target.value))}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 font-mono font-bold cursor-pointer"
-              >
-                {category === 'LV' ? (
-                  <>
-                    <option value={25}>25 kVA (Single-Phase/Rural)</option>
-                    <option value={50}>50 kVA (Standard LT)</option>
-                    <option value={100}>100 kVA (WAPDA Benchmark)</option>
-                    <option value={200}>200 kVA (Commercial/Dense)</option>
-                    <option value={400}>400 kVA (High Density)</option>
-                    <option value={630}>630 kVA (Industrial / Bulk)</option>
-                  </>
-                ) : (
-                  <>
-                    <option value={2500}>2,500 kVA (2.5 MVA)</option>
-                    <option value={5000}>5,000 kVA (5 MVA - WAPDA Standard)</option>
-                    <option value={10000}>10,000 kVA (10 MVA)</option>
-                    <option value={20000}>20,000 kVA (20 MVA)</option>
-                  </>
-                )}
-              </select>
+              {category === 'LV' ? (
+                <select
+                  value={transformerKva}
+                  onChange={(e) => setTransformerKva(Number(e.target.value))}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 font-mono font-bold cursor-pointer"
+                >
+                  <option value={25}>25 kVA (Single-Phase/Rural)</option>
+                  <option value={50}>50 kVA (Standard LT)</option>
+                  <option value={100}>100 kVA (WAPDA Benchmark)</option>
+                  <option value={200}>200 kVA (Commercial/Dense)</option>
+                  <option value={400}>400 kVA (High Density)</option>
+                  <option value={630}>630 kVA (Industrial / Bulk)</option>
+                </select>
+              ) : (
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="10"
+                    max="2000"
+                    step="5"
+                    value={sourceCurrentAmps}
+                    onChange={(e) => setSourceCurrentAmps(parseFloat(e.target.value) || 180)}
+                    placeholder="e.g. 180 Amps"
+                    className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500 outline-none text-slate-900 font-mono font-bold"
+                  />
+                  <span className="absolute right-3 top-2 text-[11px] font-mono text-slate-400">Amps (A)</span>
+                </div>
+              )}
             </div>
 
             <div>

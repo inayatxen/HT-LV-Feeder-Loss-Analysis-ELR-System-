@@ -40,6 +40,7 @@ interface ExcelImportModalProps {
     lengthMeters: number;
     threePhaseCust: number;
     singlePhaseCust: number;
+    nodeKva?: number;
     conductorCode: string;
   }[], feederOverrides?: { name?: string; transformerKva?: number; voltage?: number }) => void;
   feeder: FeederData;
@@ -93,6 +94,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
   const handleApply = () => {
     if (!parsedResult || parsedResult.rows.length === 0) return;
 
+    const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
     const validRows = parsedResult.rows
       .filter(r => r.isValid)
       .map(r => ({
@@ -102,6 +104,7 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
         lengthMeters: r.lengthMeters,
         threePhaseCust: r.threePhaseCust,
         singlePhaseCust: r.singlePhaseCust,
+        nodeKva: r.nodeKva || (isHt ? 100 : 0),
         conductorCode: r.conductorCode
       }));
 
@@ -457,7 +460,11 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
               <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                 <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-xs font-semibold text-slate-700">
                   <span>Data Preview ({parsedResult.rows.length} Spans)</span>
-                  <span className="font-mono text-slate-500">image1.png Columns</span>
+                  <span className="font-mono text-slate-500">
+                    {feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000 
+                      ? 'HT Line Columns (From, To, Length, Node KVA, Conductor)' 
+                      : 'image1.png Columns'}
+                  </span>
                 </div>
                 <div className="overflow-x-auto max-h-56 overflow-y-auto">
                   <table className="w-full text-left text-xs border-collapse font-mono tabular-nums">
@@ -468,8 +475,14 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                         <th className="py-2 px-3 text-center">To Node</th>
                         <th className="py-2 px-3 text-right">Length (km)</th>
                         <th className="py-2 px-3 text-right">Length (m)</th>
-                        <th className="py-2 px-3 text-right">3-Ph Cust</th>
-                        <th className="py-2 px-3 text-right">1-Ph Cust</th>
+                        {(feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000) ? (
+                          <th className="py-2 px-3 text-right bg-blue-100/80 text-blue-950 font-extrabold">Node KVA</th>
+                        ) : (
+                          <>
+                            <th className="py-2 px-3 text-right">3-Ph Cust</th>
+                            <th className="py-2 px-3 text-right">1-Ph Cust</th>
+                          </>
+                        )}
                         <th className="py-2 px-3 text-left">Conductor Code</th>
                         <th className="py-2 px-3 text-center">Status</th>
                       </tr>
@@ -482,8 +495,16 @@ export const ExcelImportModal: React.FC<ExcelImportModalProps> = ({
                           <td className="py-1.5 px-3 text-center font-bold text-slate-900">{row.toNode}</td>
                           <td className="py-1.5 px-3 text-right">{row.lengthKm.toFixed(3)}</td>
                           <td className="py-1.5 px-3 text-right">{row.lengthMeters}</td>
-                          <td className="py-1.5 px-3 text-right text-purple-700 font-bold">{row.threePhaseCust}</td>
-                          <td className="py-1.5 px-3 text-right font-bold text-slate-900">{row.singlePhaseCust}</td>
+                          {(feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000) ? (
+                            <td className="py-1.5 px-3 text-right font-bold text-blue-900 bg-blue-50/40">
+                              {(row.nodeKva || 0).toLocaleString()} kVA
+                            </td>
+                          ) : (
+                            <>
+                              <td className="py-1.5 px-3 text-right text-purple-700 font-bold">{row.threePhaseCust}</td>
+                              <td className="py-1.5 px-3 text-right font-bold text-slate-900">{row.singlePhaseCust}</td>
+                            </>
+                          )}
                           <td className="py-1.5 px-3 text-left font-sans font-semibold text-slate-800">{row.conductorCode}</td>
                           <td className="py-1.5 px-3 text-center font-sans">
                             {row.isValid ? (

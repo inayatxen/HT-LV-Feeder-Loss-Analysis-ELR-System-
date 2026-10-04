@@ -127,13 +127,21 @@ export function calculateFeederAnalysis(
 
     if (isGulbhar) {
       directKva = (singleCust * 0.675) + (threeCust * 2.0);
+    } else if (feeder.type === 'HT' || feeder.category === 'HV' || nominalVoltage >= 1000) {
+      // In HT line analysis: Node KVA (DTR rating or spot load at node) is the primary load
+      if (node.spotLoadKva !== undefined && node.spotLoadKva > 0) {
+        directKva = node.spotLoadKva;
+      } else if (singleCust > 0 || threeCust > 0) {
+        const kvaPer1Ph = feeder.loadPerSinglePhaseCustomerKva || 2.5;
+        directKva = (singleCust * kvaPer1Ph * 0.65) + (threeCust * (kvaPer1Ph * 2.5) * 0.65);
+      }
     } else {
       const kvaPer1Ph = feeder.loadPerSinglePhaseCustomerKva || 2.0;
       const diversity = feeder.type === 'LT' ? 0.50 : 0.65;
       directKva = (singleCust * kvaPer1Ph * diversity) + (threeCust * (kvaPer1Ph * 2.5) * diversity);
     }
 
-    if (node.spotLoadKva) {
+    if ((feeder.type !== 'HT' && feeder.category !== 'HV' && nominalVoltage < 1000) && node.spotLoadKva) {
       directKva += node.spotLoadKva;
     }
     if (node.spotLoadAmps) {
@@ -282,6 +290,7 @@ export function calculateFeederAnalysis(
           lengthMeters: Math.round(seg.lengthKm * 1000),
           threePhaseCustomers: toNode.threePhaseCustomers,
           singlePhaseCustomers: toNode.singlePhaseCustomers,
+          toNodeKva: toNode.spotLoadKva || 0,
           conductor,
           currentAmps: 0,
           percentLoading: 0,
@@ -359,6 +368,7 @@ export function calculateFeederAnalysis(
         lengthMeters: Math.round(seg.lengthKm * 1000),
         threePhaseCustomers: toNode.threePhaseCustomers,
         singlePhaseCustomers: toNode.singlePhaseCustomers,
+        toNodeKva: toNode.spotLoadKva || 0,
         conductor,
         currentAmps: Number(currentAmps.toFixed(1)),
         percentLoading,
@@ -428,6 +438,7 @@ export function calculateFeederAnalysis(
           lengthMeters: Math.round(seg.lengthKm * 1000),
           threePhaseCustomers: toNode.threePhaseCustomers,
           singlePhaseCustomers: toNode.singlePhaseCustomers,
+          toNodeKva: toNode.spotLoadKva || 0,
           conductor,
           currentAmps: Number(currentAmps.toFixed(1)),
           percentLoading,
@@ -542,11 +553,14 @@ export function calculateFeederAnalysis(
   const totalCircuitLengthKm = feeder.segments.reduce((acc, s) => acc + s.lengthKm, 0);
   const totalSinglePhaseCustomers = feeder.nodes.reduce((acc, n) => acc + n.singlePhaseCustomers, 0);
   const totalThreePhaseCustomers = feeder.nodes.reduce((acc, n) => acc + n.threePhaseCustomers, 0);
+  const totalNodeKva = feeder.nodes.reduce((acc, n) => acc + (n.spotLoadKva || 0), 0);
 
   return {
     feederName: feeder.name,
     feederType: feeder.type,
     baseVoltage: nominalVoltage,
+    injectedVoltageAtNode0: nominalVoltage,
+    totalNodeKva: Number(totalNodeKva.toFixed(1)),
     loadPerSinglePhaseKva: feeder.loadPerSinglePhaseCustomerKva,
     operatingPowerFactor: powerFactor,
     loadFactor,

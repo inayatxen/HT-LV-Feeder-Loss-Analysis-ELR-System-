@@ -71,7 +71,7 @@ export const HAYATABAD_11KV_HT_FEEDER: FeederData = {
   existingTransformerKva: 1200,
   proposedTransformerKva: 1600,
   nodes: [
-    { id: '0.0', label: '11kV Substation Outgoing Breaker', poleNumber: 'CB-01', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 150 },
+    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'CB-01', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150 },
     { id: '1.0', label: 'Section 1 (Grid Exit Tower)', poleNumber: 'T-1', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 100, x: 190, y: 150 },
     { id: '2.0', label: 'Section 2 (Industrial Block DTR)', poleNumber: 'T-2', threePhaseCustomers: 2, singlePhaseCustomers: 10, spotLoadKva: 200, x: 320, y: 150 },
     { id: '3.0', label: 'Section 3 (T-Off Junction)', poleNumber: 'T-3', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 50, x: 450, y: 150 },
@@ -111,7 +111,7 @@ export const WARSAK_11KV_HT_FEEDER: FeederData = {
   existingTransformerKva: 1800,
   proposedTransformerKva: 2500,
   nodes: [
-    { id: '0.0', label: 'Warsak Grid 11kV Outgoing Panel', poleNumber: 'VCB-04', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 150 },
+    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'VCB-04', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150 },
     { id: '1.0', label: 'Section 1 (Warsak Canal Crossing)', poleNumber: 'P-1', threePhaseCustomers: 1, singlePhaseCustomers: 10, spotLoadKva: 150, x: 210, y: 150 },
     { id: '2.0', label: 'Section 2 (Babu Garhi Market DTR)', poleNumber: 'P-2', threePhaseCustomers: 4, singlePhaseCustomers: 50, spotLoadKva: 300, x: 360, y: 150 },
     { id: '3.0', label: 'Section 3 (Sardar Garhi T-Off)', poleNumber: 'P-3', threePhaseCustomers: 2, singlePhaseCustomers: 25, spotLoadKva: 200, x: 500, y: 150 },

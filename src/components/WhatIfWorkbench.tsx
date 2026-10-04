@@ -40,6 +40,8 @@ interface WhatIfWorkbenchProps {
   proposedSummary: FeederAnalysisSummary;
   activeTransformerKva: number;
   setActiveTransformerKva: (kva: number) => void;
+  activeInjectedVoltage?: number;
+  onUpdateInjectedVoltage?: (volts: number) => void;
   activeConductors: Record<string, string>;
   onSetConductor: (segmentId: string, conductorCode: string) => void;
   activeCapacitors: Record<string, number>;
@@ -59,6 +61,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   proposedSummary,
   activeTransformerKva,
   setActiveTransformerKva,
+  activeInjectedVoltage,
+  onUpdateInjectedVoltage,
   activeConductors,
   onSetConductor,
   activeCapacitors,
@@ -71,6 +75,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   onReset,
   onOpenPrintReport
 }) => {
+  const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+  const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
   const tariff = feeder.tariffPerKwh || 38.5;
   const kwSaved = Math.max(0, existingSummary.totalLineLossKw - proposedSummary.totalLineLossKw);
   const kwhSaved = Math.max(0, existingSummary.annualEnergyLossKwh - proposedSummary.annualEnergyLossKwh);
@@ -88,7 +94,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   }, [feeder, bifurcationConfig, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor]);
 
   const hasChanges = 
-    activeTransformerKva !== feeder.existingTransformerKva ||
+    (!isHtLine && activeTransformerKva !== feeder.existingTransformerKva) ||
+    (isHtLine && activeInjectedVoltage !== undefined && activeInjectedVoltage !== feeder.nominalVoltage) ||
     Object.keys(activeConductors).length > 0 ||
     Object.keys(activeCapacitors).length > 0 ||
     (activeLoadFactor !== undefined && activeLoadFactor !== feeder.loadFactor) ||
@@ -346,45 +353,94 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           </div>
         </div>
 
-        {/* Panel 2: Transformer Capacity */}
+        {/* Panel 2: Injected Voltage (HT Line) or Transformer Capacity (LT Line) */}
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-500" />
-                2. Main Transformer (T-1)
+                {isHtLine ? '2. Injected Voltage @ Node 0' : '2. Main Transformer (T-1)'}
               </span>
               <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-bold text-[11px]">
-                {activeTransformerKva} kVA
+                {isHtLine ? `${(currentInjectedVoltage / 1000).toFixed(2)} kV` : `${activeTransformerKva} kVA`}
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mb-2.5">
-              Augment main source transformer capacity to eliminate thermal overloading.
+              {isHtLine 
+                ? 'Adjust line voltage injected at Node 0 grid substation bus to observe impact on tail drops & losses.'
+                : 'Augment main source transformer capacity to eliminate thermal overloading.'}
             </p>
 
-            <label className="text-[10px] font-semibold text-slate-600 block mb-1">Select T-1 Rating:</label>
-            <select
-              value={activeTransformerKva}
-              onChange={(e) => setActiveTransformerKva(Number(e.target.value))}
-              className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-            >
-              {TRANSFORMER_CAPACITIES.map(cap => (
-                <option key={cap} value={cap}>
-                  {cap} kVA {cap === feeder.existingTransformerKva ? '(Installed)' : (cap === feeder.proposedTransformerKva ? '(Proposed)' : '')}
-                </option>
-              ))}
-            </select>
+            {isHtLine ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-slate-600">Injected kV:</span>
+                  <input
+                    type="number"
+                    min="1.0"
+                    max="132"
+                    step="0.05"
+                    value={Number((currentInjectedVoltage / 1000).toFixed(2))}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value) || 11.0;
+                      if (onUpdateInjectedVoltage) {
+                        onUpdateInjectedVoltage(Math.round(val * 1000));
+                      }
+                    }}
+                    className="w-20 bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs font-mono font-bold text-slate-800 text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <span className="text-xs font-mono font-semibold text-slate-500">kV ({currentInjectedVoltage.toLocaleString()} V)</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-1 pt-1">
+                  {[
+                    { label: '11.0 kV', val: 11000 },
+                    { label: '11.2 kV', val: 11200 },
+                    { label: '11.4 kV', val: 11400 },
+                    { label: '11.5 kV', val: 11500 }
+                  ].map(p => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => onUpdateInjectedVoltage && onUpdateInjectedVoltage(p.val)}
+                      className={`px-2 py-0.5 text-[10px] font-mono rounded font-bold transition-all cursor-pointer ${
+                        Math.abs(currentInjectedVoltage - p.val) < 10
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <label className="text-[10px] font-semibold text-slate-600 block mb-1">Select T-1 Rating:</label>
+                <select
+                  value={activeTransformerKva}
+                  onChange={(e) => setActiveTransformerKva(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-semibold font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                >
+                  {TRANSFORMER_CAPACITIES.map(cap => (
+                    <option key={cap} value={cap}>
+                      {cap} kVA {cap === feeder.existingTransformerKva ? '(Installed)' : (cap === feeder.proposedTransformerKva ? '(Proposed)' : '')}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">T-1 Loading:</span>
+            <span className="text-slate-500">{isHtLine ? 'Source Current:' : 'T-1 Loading:'}</span>
             <span className={`font-mono font-bold ${
-              (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) > 100 
-                ? 'text-rose-600' 
-                : 'text-emerald-700'
+              isHtLine 
+                ? 'text-blue-700' 
+                : ((proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) > 100 ? 'text-rose-600' : 'text-emerald-700')
             }`}>
-              {proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%
-              {(proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) <= 100 && ' (Safe)'}
+              {isHtLine 
+                ? `${proposedSummary.totalSourceCurrentAmps} A` 
+                : `${proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}% ${((proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) <= 100) ? '(Safe)' : ''}`}
             </span>
           </div>
         </div>
@@ -402,39 +458,46 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mb-2.5">
-              Upgrade high-loss segments from 7/0.122" to heavier ACSR "Dog" or "Rabbit".
+              {isHtLine 
+                ? 'Upgrade HT feeder spans to heavier ACSR Dog or Panther conductors.' 
+                : 'Upgrade high-loss segments from 7/0.122" to heavier ACSR "Dog" or "Rabbit".'}
             </p>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                <span className="font-semibold text-slate-700">1.0 → 2.0:</span>
-                <select
-                  value={activeConductors['s-1-2'] || 'A'}
-                  onChange={(e) => onSetConductor('s-1-2', e.target.value)}
-                  className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] text-slate-800 focus:outline-none cursor-pointer"
-                >
-                  <option value="A">7/0.122" (Original)</option>
-                  <option value="WASP">7/0.170" ACSR Wasp (80 mm²)</option>
-                  <option value="DOG">ACSR Dog (100mm²)</option>
-                  <option value="RABBIT">ACSR Rabbit</option>
-                  <option value="PU3">PVC 37/0.083"</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] bg-slate-50 p-1.5 rounded-lg border border-slate-200">
-                <span className="font-semibold text-slate-700">2.0 → 3.0:</span>
-                <select
-                  value={activeConductors['s-2-3'] || 'A'}
-                  onChange={(e) => onSetConductor('s-2-3', e.target.value)}
-                  className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] text-slate-800 focus:outline-none cursor-pointer"
-                >
-                  <option value="A">7/0.122" (Original)</option>
-                  <option value="WASP">7/0.170" ACSR Wasp (80 mm²)</option>
-                  <option value="DOG">ACSR Dog (100mm²)</option>
-                  <option value="RABBIT">ACSR Rabbit</option>
-                  <option value="PU3">PVC 37/0.083"</option>
-                </select>
-              </div>
+            <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {feeder.segments.slice(0, 3).map(seg => {
+                const currentCode = activeConductors[seg.id] || seg.conductorCode;
+                return (
+                  <div key={seg.id} className="flex items-center justify-between text-[11px] bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                    <span className="font-semibold text-slate-700">
+                      {seg.fromNodeId.replace('.0', '')} → {seg.toNodeId.replace('.0', '')}:
+                    </span>
+                    <select
+                      value={currentCode}
+                      onChange={(e) => onSetConductor(seg.id, e.target.value)}
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11px] font-mono text-slate-800 focus:outline-none cursor-pointer"
+                    >
+                      {isHtLine ? (
+                        <>
+                          <option value="DOG">DOG (100 mm²)</option>
+                          <option value="PANTHER">PANTHER (200 mm²)</option>
+                          <option value="RABBIT">RABBIT (50 mm²)</option>
+                          <option value="WASP">WASP (80 mm²)</option>
+                          <option value="OSPREY">OSPREY (200 mm²)</option>
+                          <option value="A">A (7/0.122")</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="A">7/0.122" (Original)</option>
+                          <option value="WASP">7/0.170" ACSR Wasp (80 mm²)</option>
+                          <option value="DOG">ACSR Dog (100mm²)</option>
+                          <option value="RABBIT">ACSR Rabbit</option>
+                          <option value="PU3">PVC 37/0.083"</option>
+                        </>
+                      )}
+                    </select>
+                  </div>
+                );
+              })}
             </div>
           </div>
 

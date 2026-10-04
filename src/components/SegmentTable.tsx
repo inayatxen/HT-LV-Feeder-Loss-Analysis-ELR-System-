@@ -39,6 +39,8 @@ interface SegmentTableProps {
   activeCapacitors?: Record<string, number>;
   activeTransformerKva: number;
   onUpdateTransformerKva?: (kva: number) => void;
+  activeInjectedVoltage?: number;
+  onUpdateInjectedVoltage?: (volts: number) => void;
   onUpdateSegmentInput?: (segmentId: string, updates: { lengthKm?: number; singlePhaseCust?: number; threePhaseCust?: number; conductorCode?: string }) => void;
   onResetToImage1?: () => void;
 }
@@ -51,6 +53,8 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
   activeCapacitors = {},
   activeTransformerKva,
   onUpdateTransformerKva,
+  activeInjectedVoltage,
+  onUpdateInjectedVoltage,
   onUpdateSegmentInput,
   onResetToImage1
 }) => {
@@ -61,7 +65,10 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
   const [viewMode, setViewMode] = useState<'combined' | 'image1_input' | 'image2_output' | 'dual_side_by_side'>('combined');
   const [showFormulas, setShowFormulas] = useState<boolean>(true);
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
-  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
+  const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+  const totalNodeKva = segmentResults.reduce((acc, r) => acc + (r.toNodeKva || 0), 0);
 
   // Check if bifurcation is active
   const hasBifurcation = segmentResults.some(r => r.fedByTransformer === 'T2');
@@ -73,11 +80,13 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
   const t1LossKw = t1Spans.reduce((acc, r) => acc + r.lineLossKw, 0);
   const t1SingleCust = t1Spans.reduce((acc, r) => acc + r.singlePhaseCustomers, 0);
   const t1ThreeCust = t1Spans.reduce((acc, r) => acc + r.threePhaseCustomers, 0);
+  const t1NodeKva = t1Spans.reduce((acc, r) => acc + (r.toNodeKva || 0), 0);
 
   const t2LengthKm = t2Spans.reduce((acc, r) => acc + r.lengthKm, 0);
   const t2LossKw = t2Spans.reduce((acc, r) => acc + r.lineLossKw, 0);
   const t2SingleCust = t2Spans.reduce((acc, r) => acc + r.singlePhaseCustomers, 0);
   const t2ThreeCust = t2Spans.reduce((acc, r) => acc + r.threePhaseCustomers, 0);
+  const t2NodeKva = t2Spans.reduce((acc, r) => acc + (r.toNodeKva || 0), 0);
 
   // Filter and sort
   const filteredRows = segmentResults
@@ -172,46 +181,119 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
         {/* ROW 1: Transformer Rating & Sub-Network Selector */}
         <div className="p-3.5 sm:px-5 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3 bg-white">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
-                <Zap className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-slate-700 block leading-tight">
-                  T-1 Transformer Rating:
-                </span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <select
-                    value={activeTransformerKva}
-                    onChange={(e) => onUpdateTransformerKva?.(Number(e.target.value))}
-                    className="bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
-                  >
-                    {TRANSFORMER_CAPACITIES.map(cap => (
-                      <option key={cap} value={cap}>
-                        {cap} kVA {cap === 100 ? '(image1.png Default)' : (cap === 200 ? '(WAPDA Proposed)' : '')}
-                      </option>
-                    ))}
-                  </select>
+            {isHtLine ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-600 flex items-center justify-center shrink-0">
+                    <Zap className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-700 block leading-tight">
+                      Injected Line Voltage at Node 0:
+                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {onUpdateInjectedVoltage ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            step="0.05"
+                            min="1.0"
+                            max="132"
+                            value={Number(((activeInjectedVoltage || feeder.nominalVoltage) / 1000).toFixed(2))}
+                            onChange={(e) => {
+                              const val = parseFloat(e.target.value) || 11.0;
+                              onUpdateInjectedVoltage(Math.round(val * 1000));
+                            }}
+                            className="w-18 bg-blue-50/70 border border-blue-300 rounded px-1.5 py-0.5 text-xs font-mono font-black text-blue-900 text-center focus:ring-1 focus:ring-blue-500"
+                          />
+                          <span className="text-xs font-mono font-bold text-blue-700">kV ({((activeInjectedVoltage || feeder.nominalVoltage)).toLocaleString()} V)</span>
+                        </div>
+                      ) : (
+                        <span className="font-mono font-black text-sm text-blue-700">
+                          {((activeInjectedVoltage || feeder.nominalVoltage) / 1000).toFixed(2)} kV ({((activeInjectedVoltage || feeder.nominalVoltage)).toLocaleString()} V)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                  <div className="flex items-center gap-1">
-                    {[100, 200].map(cap => (
-                      <button
-                        key={cap}
-                        type="button"
-                        onClick={() => onUpdateTransformerKva?.(cap)}
-                        className={`px-2 py-0.5 text-[11px] font-mono rounded cursor-pointer ${
-                          activeTransformerKva === cap
-                            ? 'bg-amber-500 text-slate-950 font-bold'
-                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                        }`}
-                      >
-                        {cap} kVA
-                      </button>
-                    ))}
+                {onUpdateInjectedVoltage && (
+                  <div className="flex flex-wrap items-center gap-1 border-l border-slate-200 pl-3">
+                    <span className="text-[11px] text-slate-500 font-semibold mr-0.5">Quick Inject:</span>
+                    {[
+                      { label: '11.0 kV', v: 11000 },
+                      { label: '11.2 kV', v: 11200 },
+                      { label: '11.4 kV', v: 11400 },
+                      { label: '11.5 kV', v: 11500 },
+                      { label: '11.8 kV', v: 11800 }
+                    ].map(p => {
+                      const isSel = Math.abs((activeInjectedVoltage || feeder.nominalVoltage) - p.v) < 10;
+                      return (
+                        <button
+                          key={p.v}
+                          type="button"
+                          onClick={() => onUpdateInjectedVoltage(p.v)}
+                          className={`px-2 py-0.5 text-[11px] font-mono rounded cursor-pointer font-bold transition-all ${
+                            isSel
+                              ? 'bg-blue-600 text-white shadow-xs'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {p.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-50 text-blue-900 border border-blue-200 font-bold">
+                    Total HT Load: {totalNodeKva.toLocaleString()} kVA
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-semibold text-slate-700 block leading-tight">
+                    T-1 Transformer Rating:
+                  </span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <select
+                      value={activeTransformerKva}
+                      onChange={(e) => onUpdateTransformerKva?.(Number(e.target.value))}
+                      className="bg-slate-50 border border-slate-300 rounded-md px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+                    >
+                      {TRANSFORMER_CAPACITIES.map(cap => (
+                        <option key={cap} value={cap}>
+                          {cap} kVA {cap === 100 ? '(image1.png Default)' : (cap === 200 ? '(WAPDA Proposed)' : '')}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="flex items-center gap-1">
+                      {[100, 200].map(cap => (
+                        <button
+                          key={cap}
+                          type="button"
+                          onClick={() => onUpdateTransformerKva?.(cap)}
+                          className={`px-2 py-0.5 text-[11px] font-mono rounded cursor-pointer ${
+                            activeTransformerKva === cap
+                              ? 'bg-amber-500 text-slate-950 font-bold'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                          }`}
+                        >
+                          {cap} kVA
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {hasBifurcation && (
               <div className="h-6 w-px bg-slate-200 mx-1 hidden sm:block" />
@@ -427,11 +509,15 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
             <div className="flex items-center gap-2">
               <Calculator className="w-4 h-4 text-amber-400" />
               <h3 className="text-sm font-bold text-amber-400">
-                Inserted Electrical Engineering Formulas & Dual-Network Engine
+                {isHtLine 
+                  ? 'HT Line Electrical Engineering Formulas (Node 0 Line Voltage Injection & Backward-Forward Sweep)' 
+                  : 'Inserted Electrical Engineering Formulas & Dual-Network Engine'}
               </h3>
             </div>
             <span className="text-[11px] text-slate-400 font-mono">
-              Base Voltage: 400 V · 3-Phase Balanced Distribution
+              {isHtLine 
+                ? `Node 0 Injected Line Voltage: ${((activeInjectedVoltage || feeder.nominalVoltage) / 1000).toFixed(2)} kV · 3-Phase HT Network` 
+                : 'Base Voltage: 400 V · 3-Phase Balanced Distribution'}
             </span>
           </div>
 
@@ -439,42 +525,52 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
             {/* Formula 1 */}
             <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between font-semibold text-slate-300">
-                <span>1. Segment Current (Amps)</span>
+                <span>{isHtLine ? '1. Node KVA & Backward Sweep' : '1. Segment Current (Amps)'}</span>
                 <span className="text-[10px] font-mono text-amber-400">Current (A)</span>
               </div>
               <div className="font-mono text-amber-300 bg-slate-900/90 p-2 rounded text-[11px]">
-                I_s = S_downstream / (√3 · V_kV)
+                {isHtLine 
+                  ? 'S_branch = Σ S_node (kVA); I_s = S_branch / (√3 · V_inj_kV)' 
+                  : 'I_s = S_downstream / (√3 · V_kV)'}
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Aggregated downstream apparent power: for T1 spans, only T1 customer branches are summed. For T2 spans, power starts fresh from T2 transformer source.
+                {isHtLine 
+                  ? 'Backward sweep accumulates downstream Node KVA loads (DTRs). Line current I_s is derived from apparent load and injected line voltage at Node 0.' 
+                  : 'Aggregated downstream apparent power: for T1 spans, only T1 customer branches are summed. For T2 spans, power starts fresh from T2 transformer source.'}
               </p>
             </div>
 
             {/* Formula 2 */}
             <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between font-semibold text-slate-300">
-                <span>2. Ohmic Line Loss (kW)</span>
+                <span>{isHtLine ? '2. HT Ohmic Line Losses (kW)' : '2. Ohmic Line Loss (kW)'}</span>
                 <span className="text-[10px] font-mono text-amber-400">Loss (kW)</span>
               </div>
               <div className="font-mono text-amber-300 bg-slate-900/90 p-2 rounded text-[11px]">
                 Loss (kW) = ( 3 · I_s² · R · L · 1.15 ) / 1000
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                Joule dissipation: R is conductor resistance per km, L is span length in km. Line losses drop quadratically with reduced current.
+                {isHtLine 
+                  ? 'Joule dissipation across HT conductor (DOG, PANTHER, RABBIT). R is conductor resistance (Ω/km) and L is span length in km.' 
+                  : 'Joule dissipation: R is conductor resistance per km, L is span length in km. Line losses drop quadratically with reduced current.'}
               </p>
             </div>
 
             {/* Formula 3 */}
             <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
               <div className="flex items-center justify-between font-semibold text-slate-300">
-                <span>3. Voltage Drop & Restoration</span>
+                <span>{isHtLine ? '3. Voltage Drop from Node 0 Injection' : '3. Voltage Drop & Restoration'}</span>
                 <span className="text-[10px] font-mono text-amber-400">Volt Drop %</span>
               </div>
               <div className="font-mono text-amber-300 bg-slate-900/90 p-2 rounded text-[11px]">
-                % VD_cum = % VD_parent + ( ΔV_seg / 400 ) · 100
+                {isHtLine 
+                  ? 'ΔV = √3 · I_s · (R·cosΦ + X·sinΦ); V_rx = V_from - ΔV' 
+                  : '% VD_cum = % VD_parent + ( ΔV_seg / 400 ) · 100'}
               </div>
               <p className="text-slate-400 text-[11px] leading-relaxed">
-                T2 bifurcated spans reset voltage drop to 0% at the new transformer injection node, eliminating terminal low-voltage violations.
+                {isHtLine 
+                  ? 'Line drop reduces the injected Node 0 voltage downstream. %VD is calculated from initial injected line voltage at Node 0.' 
+                  : 'T2 bifurcated spans reset voltage drop to 0% at the new transformer injection node, eliminating terminal low-voltage violations.'}
               </p>
             </div>
           </div>
@@ -487,7 +583,11 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
           <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Combined Feeder Schedule (image1.png Inputs + image2.png Calculated Outputs)</span>
+                <span>
+                  {isHtLine 
+                    ? 'Combined HT Feeder Schedule (From, To, Length, Node KVA, Conductor → Calculated 11 kV Outputs)' 
+                    : 'Combined Feeder Schedule (image1.png Inputs + image2.png Calculated Outputs)'}
+                </span>
                 {subNetworkFilter !== 'ALL' && (
                   <span className={`text-[10px] px-2 py-0.5 rounded font-mono font-bold ${
                     subNetworkFilter === 'T1' ? 'bg-blue-100 text-blue-900' : 'bg-purple-100 text-purple-900'
@@ -497,7 +597,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                 )}
               </h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                Every output column (Current, Loading, Volt Drop, Voltage, Loss) is dynamically derived using the inserted electrical formulas.
+                {isHtLine 
+                  ? `Injected line voltage at Node 0: ${((activeInjectedVoltage || feeder.nominalVoltage) / 1000).toFixed(2)} kV. Direct Node KVA determines branch loads.` 
+                  : 'Every output column (Current, Loading, Volt Drop, Voltage, Loss) is dynamically derived using the inserted electrical formulas.'}
               </p>
             </div>
 
@@ -534,11 +636,13 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th colSpan={8} className="bg-blue-50/70 text-blue-900 text-center py-1.5 px-3 border-r border-blue-200 font-bold uppercase tracking-wider text-[11px]">
-                    INPUT DATA (image1.png)
+                  <th colSpan={isHtLine ? 7 : 8} className="bg-blue-50/70 text-blue-900 text-center py-1.5 px-3 border-r border-blue-200 font-bold uppercase tracking-wider text-[11px]">
+                    {isHtLine 
+                      ? `HT LINE INPUT PARAMETERS (From Node, To Node, Length, Node KVA, Conductor · Node 0 Inj: ${((activeInjectedVoltage || feeder.nominalVoltage)/1000).toFixed(2)} kV)` 
+                      : 'INPUT DATA (image1.png)'}
                   </th>
                   <th colSpan={5} className="bg-emerald-50/70 text-emerald-950 text-center py-1.5 px-3 font-bold uppercase tracking-wider text-[11px]">
-                    CALCULATED OUTPUTS (image2.png)
+                    {isHtLine ? 'CALCULATED OUTPUTS (11 kV Load Flow)' : 'CALCULATED OUTPUTS (image2.png)'}
                   </th>
                 </tr>
                 <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
@@ -547,14 +651,24 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                   <th className="py-2.5 px-2.5 text-center">To Node</th>
                   <th className="py-2.5 px-2.5 text-right">Length (km)</th>
                   <th className="py-2.5 px-2.5 text-right">Length (m)</th>
-                  <th className="py-2.5 px-2.5 text-right">3-Ph Cust</th>
-                  <th className="py-2.5 px-2.5 text-right">1-Ph Cust</th>
+                  {isHtLine ? (
+                    <th className="py-2.5 px-2.5 text-right bg-blue-100/80 text-blue-950 font-extrabold">
+                      Node KVA (Load)
+                    </th>
+                  ) : (
+                    <>
+                      <th className="py-2.5 px-2.5 text-right">3-Ph Cust</th>
+                      <th className="py-2.5 px-2.5 text-right">1-Ph Cust</th>
+                    </>
+                  )}
                   <th className="py-2.5 px-2.5 text-left border-r border-slate-200">Conductor Code</th>
 
                   <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">Current (A)</th>
                   <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">Loading %</th>
                   <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">Volt Drop %</th>
-                  <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">Voltage (V)</th>
+                  <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">
+                    {isHtLine ? 'Voltage (kV / V)' : 'Voltage (V)'}
+                  </th>
                   <th className="py-2.5 px-3 text-right bg-emerald-50/30 text-slate-900">Loss (kW)</th>
                 </tr>
               </thead>
@@ -586,7 +700,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                             </span>
                           ) : (
                             <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900 border border-blue-200">
-                              T-1 Main
+                              {isHtLine ? 'Main 11kV' : 'T-1 Main'}
                             </span>
                           )}
                         </td>
@@ -604,12 +718,22 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                         <td className="py-2.5 px-2.5 text-right text-slate-700">
                           {row.lengthMeters}
                         </td>
-                        <td className="py-2.5 px-2.5 text-right text-slate-800">
-                          {row.threePhaseCustomers}
-                        </td>
-                        <td className="py-2.5 px-2.5 text-right text-slate-800">
-                          {row.singlePhaseCustomers}
-                        </td>
+                        {isHtLine ? (
+                          <td className="py-2.5 px-2.5 text-right font-bold text-blue-900 bg-blue-50/30">
+                            <span className="px-2 py-0.5 rounded bg-blue-100/80 border border-blue-200 text-blue-900 text-[11px]">
+                              {(row.toNodeKva || 0).toLocaleString()} kVA
+                            </span>
+                          </td>
+                        ) : (
+                          <>
+                            <td className="py-2.5 px-2.5 text-right text-slate-800">
+                              {row.threePhaseCustomers}
+                            </td>
+                            <td className="py-2.5 px-2.5 text-right text-slate-800">
+                              {row.singlePhaseCustomers}
+                            </td>
+                          </>
+                        )}
                         <td className="py-2.5 px-2.5 text-left border-r border-slate-200">
                           <span className="px-1.5 py-0.5 rounded font-mono text-[11px] bg-slate-100 text-slate-800 font-semibold">
                             {row.conductor.code}
@@ -633,7 +757,13 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-right text-slate-800 bg-emerald-50/20">
-                          {row.receivingVoltage.toFixed(1)} V
+                          {isHtLine ? (
+                            <span className="font-semibold text-slate-900">
+                              {(row.receivingVoltage / 1000).toFixed(3)} kV <span className="text-[10px] text-slate-500 font-normal">({row.receivingVoltage.toFixed(0)} V)</span>
+                            </span>
+                          ) : (
+                            `${row.receivingVoltage.toFixed(1)} V`
+                          )}
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold bg-emerald-50/20">
                           <span className={row.lineLossKw > 0.8 ? 'text-rose-600 text-sm' : 'text-slate-900'}>
@@ -656,12 +786,20 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                   <td className="py-2.5 px-2.5 text-right">
                     {currentViewLengthM} m
                   </td>
-                  <td className="py-2.5 px-2.5 text-right text-purple-300">
-                    {currentView3PhCust}
-                  </td>
-                  <td className="py-2.5 px-2.5 text-right text-amber-300">
-                    {currentView1PhCust}
-                  </td>
+                  {isHtLine ? (
+                    <td className="py-2.5 px-2.5 text-right text-blue-300 font-extrabold">
+                      {totalNodeKva.toLocaleString()} kVA
+                    </td>
+                  ) : (
+                    <>
+                      <td className="py-2.5 px-2.5 text-right text-purple-300">
+                        {currentView3PhCust}
+                      </td>
+                      <td className="py-2.5 px-2.5 text-right text-amber-300">
+                        {currentView1PhCust}
+                      </td>
+                    </>
+                  )}
                   <td className="py-2.5 px-2.5 text-slate-400 font-sans text-xs border-r border-slate-700">
                     {filteredRows.length} Spans
                   </td>
@@ -684,10 +822,14 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-4 border-b border-slate-200 bg-blue-50/60 flex items-center justify-between">
             <h3 className="text-sm font-bold text-blue-950 flex items-center gap-2">
-              <span>Form Display A: Feeder Spans Input Data Table (image1.png)</span>
+              <span>
+                {isHtLine 
+                  ? 'Form Display A: HT Line Spans Input Data Table (From, To, Length, Node KVA, Conductor)' 
+                  : 'Form Display A: Feeder Spans Input Data Table (image1.png)'}
+              </span>
             </h3>
             <span className="text-xs font-mono text-blue-800 bg-blue-100 px-2 py-0.5 rounded font-semibold">
-              {filteredRows.length} Spans Displayed
+              {filteredRows.length} Spans Displayed · {isHtLine ? `Total Load: ${totalNodeKva.toLocaleString()} kVA` : ''}
             </span>
           </div>
 
@@ -700,8 +842,14 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                   <th className="py-2.5 px-3 text-center">To Node</th>
                   <th className="py-2.5 px-3 text-right">Length (km)</th>
                   <th className="py-2.5 px-3 text-right">Length (m)</th>
-                  <th className="py-2.5 px-3 text-right">3-Ph Customer</th>
-                  <th className="py-2.5 px-3 text-right">1-Ph Customer</th>
+                  {isHtLine ? (
+                    <th className="py-2.5 px-3 text-right bg-blue-100/90 text-blue-950 font-extrabold">Node KVA (Load)</th>
+                  ) : (
+                    <>
+                      <th className="py-2.5 px-3 text-right">3-Ph Customer</th>
+                      <th className="py-2.5 px-3 text-right">1-Ph Customer</th>
+                    </>
+                  )}
                   <th className="py-2.5 px-3 text-left">Conductor Code</th>
                 </tr>
               </thead>
@@ -715,7 +863,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900">
-                          T-1 Main
+                          {isHtLine ? 'Main 11kV' : 'T-1 Main'}
                         </span>
                       )}
                     </td>
@@ -723,8 +871,18 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     <td className="py-2 px-3 text-center font-bold text-slate-900">{row.toNodeId.replace('.0', '')}</td>
                     <td className="py-2 px-3 text-right">{row.lengthKm.toFixed(3)}</td>
                     <td className="py-2 px-3 text-right">{row.lengthMeters}</td>
-                    <td className="py-2 px-3 text-right font-bold text-purple-700">{row.threePhaseCustomers}</td>
-                    <td className="py-2 px-3 text-right font-bold text-slate-900">{row.singlePhaseCustomers}</td>
+                    {isHtLine ? (
+                      <td className="py-2 px-3 text-right font-bold text-blue-900 bg-blue-50/40">
+                        <span className="px-2 py-0.5 rounded bg-blue-100 border border-blue-200 font-bold">
+                          {(row.toNodeKva || 0).toLocaleString()} kVA
+                        </span>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="py-2 px-3 text-right font-bold text-purple-700">{row.threePhaseCustomers}</td>
+                        <td className="py-2 px-3 text-right font-bold text-slate-900">{row.singlePhaseCustomers}</td>
+                      </>
+                    )}
                     <td className="py-2 px-3 text-left font-semibold text-slate-800 font-sans">{row.conductor.code}</td>
                   </tr>
                 ))}
@@ -736,8 +894,14 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                   </td>
                   <td className="py-2.5 px-3 text-right text-amber-300">{currentViewLengthKm.toFixed(3)} km</td>
                   <td className="py-2.5 px-3 text-right">{currentViewLengthM} m</td>
-                  <td className="py-2.5 px-3 text-right text-purple-300">{currentView3PhCust}</td>
-                  <td className="py-2.5 px-3 text-right text-amber-300">{currentView1PhCust}</td>
+                  {isHtLine ? (
+                    <td className="py-2.5 px-3 text-right text-blue-300 font-extrabold">{totalNodeKva.toLocaleString()} kVA</td>
+                  ) : (
+                    <>
+                      <td className="py-2.5 px-3 text-right text-purple-300">{currentView3PhCust}</td>
+                      <td className="py-2.5 px-3 text-right text-amber-300">{currentView1PhCust}</td>
+                    </>
+                  )}
                   <td className="py-2.5 px-3 text-slate-400 font-sans text-xs">{filteredRows.length} Spans</td>
                 </tr>
               </tfoot>
@@ -751,7 +915,11 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="p-4 border-b border-slate-200 bg-emerald-50/60 flex items-center justify-between">
             <h3 className="text-sm font-bold text-emerald-950 flex items-center gap-2">
-              <span>Form Display B: Calculated Output Schedule (image2.png)</span>
+              <span>
+                {isHtLine 
+                  ? 'Form Display B: Calculated 11 kV Output Schedule' 
+                  : 'Form Display B: Calculated Output Schedule (image2.png)'}
+              </span>
             </h3>
             <span className="text-xs font-mono text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded font-semibold">
               Total Loss: {currentViewLossKw.toFixed(3)} kW
@@ -770,7 +938,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                   <th className="py-2.5 px-3 text-right bg-blue-50 font-bold text-blue-950">Current (A)</th>
                   <th className="py-2.5 px-3 text-right bg-purple-50 font-bold text-purple-950">Loading %</th>
                   <th className="py-2.5 px-3 text-right bg-rose-50 font-bold text-rose-950">Volt Drop %</th>
-                  <th className="py-2.5 px-3 text-right">Voltage (V)</th>
+                  <th className="py-2.5 px-3 text-right">
+                    {isHtLine ? 'Voltage (kV / V)' : 'Voltage (V)'}
+                  </th>
                   <th className="py-2.5 px-3 text-right bg-amber-50 font-bold text-amber-950">Loss (kW)</th>
                 </tr>
               </thead>
@@ -784,7 +954,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-900">
-                          T-1
+                          {isHtLine ? 'Main 11kV' : 'T-1'}
                         </span>
                       )}
                     </td>
@@ -795,7 +965,11 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     <td className="py-2 px-3 text-right font-bold text-blue-700 bg-blue-50/30">{row.currentAmps.toFixed(1)}</td>
                     <td className="py-2 px-3 text-right font-bold bg-purple-50/30">{row.percentLoading}%</td>
                     <td className="py-2 px-3 text-right font-bold bg-rose-50/30 text-rose-700">{row.percentVoltDrop.toFixed(1)}%</td>
-                    <td className="py-2 px-3 text-right font-semibold">{row.receivingVoltage.toFixed(1)}</td>
+                    <td className="py-2 px-3 text-right font-semibold">
+                      {isHtLine 
+                        ? `${(row.receivingVoltage / 1000).toFixed(3)} kV (${row.receivingVoltage.toFixed(0)} V)` 
+                        : row.receivingVoltage.toFixed(1)}
+                    </td>
                     <td className="py-2 px-3 text-right font-bold text-amber-700 bg-amber-50/30">{row.lineLossKw.toFixed(3)}</td>
                   </tr>
                 ))}
@@ -823,7 +997,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
           {/* Table A: Input Data */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-3 border-b border-slate-200 bg-blue-50 font-bold text-blue-950 text-xs">
-              Form Display A: Input Data (image1.png)
+              {isHtLine 
+                ? 'Form Display A: HT Line Input Data (From, To, Length, Node KVA, Conductor)' 
+                : 'Form Display A: Input Data (image1.png)'}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -832,7 +1008,11 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     <th className="py-2 px-2 text-center">Zone</th>
                     <th className="py-2 px-2 text-center">Span</th>
                     <th className="py-2 px-2 text-right">Length (m)</th>
-                    <th className="py-2 px-2 text-right">3Φ / 1Φ</th>
+                    {isHtLine ? (
+                      <th className="py-2 px-2 text-right bg-blue-100 text-blue-950 font-extrabold">Node KVA</th>
+                    ) : (
+                      <th className="py-2 px-2 text-right">3Φ / 1Φ</th>
+                    )}
                     <th className="py-2 px-2 text-left">Code</th>
                   </tr>
                 </thead>
@@ -841,12 +1021,18 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     <tr key={r.segment.id} className="hover:bg-slate-50">
                       <td className="py-1.5 px-2 text-center font-sans">
                         <span className={`px-1 py-0.2 rounded text-[9px] font-bold ${r.fedByTransformer === 'T2' ? 'bg-purple-100 text-purple-900' : 'bg-blue-100 text-blue-900'}`}>
-                          {r.fedByTransformer || 'T1'}
+                          {r.fedByTransformer || (isHtLine ? 'Main' : 'T1')}
                         </span>
                       </td>
                       <td className="py-1.5 px-2 text-center font-bold">{r.fromNodeId.replace('.0', '')} → {r.toNodeId.replace('.0', '')}</td>
                       <td className="py-1.5 px-2 text-right">{r.lengthMeters}</td>
-                      <td className="py-1.5 px-2 text-right">{r.threePhaseCustomers} / {r.singlePhaseCustomers}</td>
+                      {isHtLine ? (
+                        <td className="py-1.5 px-2 text-right font-bold text-blue-900 bg-blue-50/40">
+                          {(r.toNodeKva || 0).toLocaleString()} kVA
+                        </td>
+                      ) : (
+                        <td className="py-1.5 px-2 text-right">{r.threePhaseCustomers} / {r.singlePhaseCustomers}</td>
+                      )}
                       <td className="py-1.5 px-2 text-left font-sans">{r.conductor.code}</td>
                     </tr>
                   ))}
@@ -858,7 +1044,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
           {/* Table B: Calculated Output */}
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-3 border-b border-slate-200 bg-emerald-50 font-bold text-emerald-950 text-xs">
-              Form Display B: Calculated Output (image2.png)
+              {isHtLine 
+                ? 'Form Display B: Calculated Output (11 kV Load Flow)' 
+                : 'Form Display B: Calculated Output (image2.png)'}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
@@ -867,7 +1055,9 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                     <th className="py-2 px-2 text-center">Span</th>
                     <th className="py-2 px-2 text-right">Current (A)</th>
                     <th className="py-2 px-2 text-right">Volt Drop %</th>
-                    <th className="py-2 px-2 text-right">Voltage (V)</th>
+                    <th className="py-2 px-2 text-right">
+                      {isHtLine ? 'Voltage (kV / V)' : 'Voltage (V)'}
+                    </th>
                     <th className="py-2 px-2 text-right">Loss (kW)</th>
                   </tr>
                 </thead>
@@ -877,7 +1067,11 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                       <td className="py-1.5 px-2 text-center font-bold">{r.fromNodeId.replace('.0', '')} → {r.toNodeId.replace('.0', '')}</td>
                       <td className="py-1.5 px-2 text-right font-bold text-blue-700">{r.currentAmps.toFixed(1)}</td>
                       <td className="py-1.5 px-2 text-right text-rose-700 font-semibold">{r.percentVoltDrop.toFixed(1)}%</td>
-                      <td className="py-1.5 px-2 text-right">{r.receivingVoltage.toFixed(1)}</td>
+                      <td className="py-1.5 px-2 text-right">
+                        {isHtLine 
+                          ? `${(r.receivingVoltage / 1000).toFixed(3)} kV` 
+                          : r.receivingVoltage.toFixed(1)}
+                      </td>
                       <td className="py-1.5 px-2 text-right font-bold text-amber-700">{r.lineLossKw.toFixed(3)}</td>
                     </tr>
                   ))}

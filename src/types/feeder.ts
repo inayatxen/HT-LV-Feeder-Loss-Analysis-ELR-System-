@@ -151,6 +151,7 @@ export interface SegmentAnalysisResult {
   lengthMeters: number;
   threePhaseCustomers: number;
   singlePhaseCustomers: number;
+  toNodeKva?: number;       // Direct Node KVA connected at To Node (for HT Line Analysis)
   conductor: Conductor;
   currentAmps: number;
   percentLoading: number;  // Current / Conductor Ampacity * 100
@@ -173,6 +174,8 @@ export interface FeederAnalysisSummary {
   feederName: string;
   feederType: FeederType;
   baseVoltage: number;            // 400V for LT, 11000V for HT
+  injectedVoltageAtNode0?: number; // Injected line voltage at Node 0 (e.g. 11000, 11200, 11500 V)
+  totalNodeKva?: number;          // Total connected node load in kVA across all HT nodes
   loadPerSinglePhaseKva: number;  // e.g. 2.0 kVA
   operatingPowerFactor: number;   // e.g. 0.85
   loadFactor: number;             // e.g. 0.60

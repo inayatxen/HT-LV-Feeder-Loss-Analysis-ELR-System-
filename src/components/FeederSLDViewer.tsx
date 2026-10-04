@@ -44,6 +44,8 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
     return calculateNonOverlappingSLDLayout(feeder);
   }, [feeder]);
 
+  const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+
   // Use appropriate summary for segment results
   const effectiveSummary = scheme === 'exist' && existingSummary ? existingSummary : summary;
 
@@ -362,44 +364,57 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
 
               return (
                 <g key={node.id} transform={`translate(${x}, ${y})`} opacity={isNodeMuted ? 0.3 : 1.0}>
-                  {/* Transformer Node (T-1 @ Node 0.0) */}
-                  {node.isTransformerNode && !isProp2 ? (
+                  {/* Transformer Node / Node 0 Substation Bus */}
+                  {(node.isTransformerNode || node.id === '0.0') && !isProp2 ? (
                     <g>
                       <rect
-                        x="-22"
-                        y="-22"
-                        width="44"
-                        height="44"
+                        x="-24"
+                        y="-24"
+                        width="48"
+                        height="48"
                         rx="6"
-                        fill="#065f46"
-                        stroke="#047857"
+                        fill={isHt ? "#1e3a8a" : "#065f46"}
+                        stroke={isHt ? "#3b82f6" : "#047857"}
                         strokeWidth="2"
                       />
-                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-12" />
+                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-14" />
                       <text
                         x="0"
-                        y="10"
+                        y="6"
                         textAnchor="middle"
                         fill="#ffffff"
-                        fontSize="7.5"
+                        fontSize="7"
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        T-1: {summary.existingTransformerKva}kVA
+                        {isHt ? `Grid Bay (Node 0)` : `T-1: ${summary.existingTransformerKva}kVA`}
                       </text>
                       <text
                         x="0"
-                        y="17"
+                        y="14"
                         textAnchor="middle"
-                        fill="#a7f3d0"
-                        fontSize="6.5"
+                        fill={isHt ? "#bfdbfe" : "#a7f3d0"}
+                        fontSize="6"
                         fontFamily="monospace"
                       >
-                        {isExist ? `${summary.existingTransformerLoadingPercent}%` : `${summary.transformer1LoadingPercent || summary.existingTransformerLoadingPercent}%`} Load
+                        {isHt ? `Inj: ${(summary.baseVoltage / 1000).toFixed(2)} kV` : (isExist ? `${summary.existingTransformerLoadingPercent}%` : `${summary.transformer1LoadingPercent || summary.existingTransformerLoadingPercent}%`) + ' Load'}
                       </text>
+                      {isHt && (
+                        <text
+                          x="0"
+                          y="20"
+                          textAnchor="middle"
+                          fill="#fef08a"
+                          fontSize="5.5"
+                          fontFamily="monospace"
+                          fontWeight="bold"
+                        >
+                          {summary.totalSourceCurrentAmps} A
+                        </text>
+                      )}
                     </g>
                   ) : isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? (
-                    /* Transformer Node (T-2 @ Injection Node) */
+                    /* Second HT Line Extension (Grid-fed) or Transformer Node (T-2) */
                     <g>
                       <rect
                         x="-22"
@@ -417,21 +432,21 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                         y="10"
                         textAnchor="middle"
                         fill="#ffffff"
-                        fontSize="7.5"
+                        fontSize="7"
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        T-2: {summary.additionalTransformerKva}kVA
+                        {isHt ? '2nd HT Line' : `T-2: ${summary.additionalTransformerKva}kVA`}
                       </text>
                       <text
                         x="0"
                         y="17"
                         textAnchor="middle"
                         fill="#e9d5ff"
-                        fontSize="6.5"
+                        fontSize="6"
                         fontFamily="monospace"
                       >
-                        {summary.transformer2LoadingPercent || 48}% Load
+                        {isHt ? 'Grid Extension' : `${summary.transformer2LoadingPercent || 48}% Load`}
                       </text>
                     </g>
                   ) : (
@@ -486,17 +501,20 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                     Node {node.id.replace('.0', '')}
                   </text>
 
-                  {/* Customer count */}
+                  {/* Customer / Node KVA readout */}
                   {!isNodeMuted && (
                     <text
                       x="0"
                       y={node.isTransformerNode && !isProp2 ? 40 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 40 : 28)}
                       textAnchor="middle"
-                      fill="#475569"
+                      fill={isHt ? "#1e40af" : "#475569"}
                       fontSize="7"
                       fontFamily="monospace"
+                      fontWeight={isHt && node.spotLoadKva ? "bold" : "normal"}
                     >
-                      {node.singlePhaseCustomers} (1Φ) {node.threePhaseCustomers ? `+ ${node.threePhaseCustomers}(3Φ)` : ''}
+                      {isHt 
+                        ? (node.spotLoadKva ? `${node.spotLoadKva} kVA (DTR)` : (node.singlePhaseCustomers ? `${node.singlePhaseCustomers} cust` : 'Pass'))
+                        : `${node.singlePhaseCustomers} (1Φ)${node.threePhaseCustomers ? ` + ${node.threePhaseCustomers}(3Φ)` : ''}`}
                     </text>
                   )}
 
@@ -506,12 +524,14 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                       x="0"
                       y={node.isTransformerNode && !isProp2 ? 48 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 48 : 36)}
                       textAnchor="middle"
-                      fill={incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#0284c7'}
+                      fill={incomingSegResult.percentVoltDrop > 5.0 && isHt ? '#d97706' : (incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#0284c7')}
                       fontSize="7"
                       fontFamily="monospace"
                       fontWeight="bold"
                     >
-                      -{incomingSegResult.percentVoltDrop.toFixed(1)}% ({incomingSegResult.receivingVoltage.toFixed(1)}V)
+                      {isHt 
+                        ? `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${(incomingSegResult.receivingVoltage / 1000).toFixed(3)} kV)`
+                        : `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${incomingSegResult.receivingVoltage.toFixed(1)}V)`}
                     </text>
                   )}
                 </g>

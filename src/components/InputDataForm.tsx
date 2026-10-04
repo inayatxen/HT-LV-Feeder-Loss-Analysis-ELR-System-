@@ -8,7 +8,8 @@ import {
   FeederData, 
   FeederNode, 
   FeederSegment, 
-  FeederAnalysisSummary 
+  FeederAnalysisSummary,
+  FeederCategory
 } from '../types/feeder';
 import { 
   Plus, 
@@ -48,6 +49,7 @@ interface InputDataFormProps {
   activeTransformerKva: number;
   onUpdateTransformerKva: (kva: number) => void;
   onOpenDatabase?: () => void;
+  onSelectCategory?: (category: FeederCategory) => void;
 }
 
 export const InputDataForm: React.FC<InputDataFormProps> = ({
@@ -57,7 +59,8 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   onNavigateToSchedule,
   activeTransformerKva,
   onUpdateTransformerKva,
-  onOpenDatabase
+  onOpenDatabase,
+  onSelectCategory
 }) => {
   // Local editable state for feeder parameters
   const [feederName, setFeederName] = useState(feeder.name);
@@ -68,16 +71,24 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [loadFactor, setLoadFactor] = useState(feeder.loadFactor);
   const [annualGrowthRate, setAnnualGrowthRate] = useState(feeder.annualGrowthRatePercent);
   const [proposedTrfKva, setProposedTrfKva] = useState(feeder.proposedTransformerKva);
+  const [sourceCurrentInput, setSourceCurrentInput] = useState<number>(summary.totalSourceCurrentAmps || 180);
   const [showFormulas, setShowFormulas] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Segments input table state matching image1.png
+  // Analysis Mode: HT Line (11kV) vs LT Line (400V)
+  const [analysisMode, setAnalysisMode] = useState<'HT' | 'LT'>(() => {
+    return feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000 ? 'HT' : 'LT';
+  });
+  const isHtLine = analysisMode === 'HT';
+
+  // Segments input table state matching image1.png + HT Line Analysis (Node kVA)
   interface InputRow {
     id: string;
     fromNode: string;
     toNode: string;
     lengthKm: number;
     lengthMeters: number;
+    nodeKva?: number; // For HT Line Analysis: Node KVA connected at To Node (DTR load)
     threePhaseCust: number;
     singlePhaseCust: number;
     conductorCode: string;
@@ -86,12 +97,18 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [rows, setRows] = useState<InputRow[]>(() => {
     return feeder.segments.map(s => {
       const toNode = feeder.nodes.find(n => n.id === s.toNodeId);
+      const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+      let kva = toNode?.spotLoadKva || 0;
+      if (isHt && !kva) {
+        kva = toNode?.threePhaseCustomers ? toNode.threePhaseCustomers * 50 : (toNode?.singlePhaseCustomers ? Math.round(toNode.singlePhaseCustomers * 2.5) : 50);
+      }
       return {
         id: s.id,
         fromNode: s.fromNodeId.replace('.0', ''),
         toNode: s.toNodeId.replace('.0', ''),
         lengthKm: s.lengthKm,
         lengthMeters: Math.round(s.lengthKm * 1000),
+        nodeKva: kva,
         threePhaseCust: toNode?.threePhaseCustomers || 0,
         singlePhaseCust: toNode?.singlePhaseCustomers || 0,
         conductorCode: s.conductorCode
@@ -114,6 +131,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       lengthMeters: number;
       threePhaseCust: number;
       singlePhaseCust: number;
+      nodeKva?: number;
       conductorCode: string;
     }[],
     overrides?: { name?: string; transformerKva?: number }
@@ -124,6 +142,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       toNode: r.toNode,
       lengthKm: r.lengthKm,
       lengthMeters: r.lengthMeters,
+      nodeKva: r.nodeKva || (isHtLine ? 100 : 0),
       threePhaseCust: r.threePhaseCust,
       singlePhaseCust: r.singlePhaseCust,
       conductorCode: r.conductorCode
@@ -154,6 +173,8 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
         const km = Math.max(0.001, parseFloat(value) || 0);
         target.lengthKm = km;
         target.lengthMeters = Math.round(km * 1000);
+      } else if (field === 'nodeKva') {
+        target.nodeKva = Math.max(0, parseFloat(value) || 0);
       } else if (field === 'singlePhaseCust') {
         target.singlePhaseCust = Math.max(0, parseInt(value) || 0);
       } else if (field === 'threePhaseCust') {
@@ -177,11 +198,12 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       id: `s-${Date.now()}`,
       fromNode: nextFrom,
       toNode: nextTo,
-      lengthKm: 0.040,
-      lengthMeters: 40,
+      lengthKm: isHtLine ? 0.500 : 0.040,
+      lengthMeters: isHtLine ? 500 : 40,
+      nodeKva: isHtLine ? 100 : 0,
       threePhaseCust: 0,
-      singlePhaseCust: 10,
-      conductorCode: 'A'
+      singlePhaseCust: isHtLine ? 0 : 10,
+      conductorCode: isHtLine ? 'DOG' : 'A'
     };
     setRows([...rows, newRow]);
   };
@@ -253,28 +275,42 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
     const nodeMap = new Map<string, FeederNode>();
 
     // Source node (Node 0)
+    const sourceLabel = isHtLine
+      ? `Node 0 (Substation Bus - Injected ${nominalVoltage >= 1000 ? `${(nominalVoltage/1000).toFixed(2)} kV` : `${nominalVoltage} V`})`
+      : `Node 0 (${activeTransformerKva} kVA Transformer)`;
+
     nodeMap.set('0.0', {
       id: '0.0',
-      label: `Node 0 (${activeTransformerKva} kVA Transformer)`,
-      poleNumber: 'T-0',
+      label: sourceLabel,
+      poleNumber: isHtLine ? 'CB-01' : 'T-0',
       threePhaseCustomers: 0,
       singlePhaseCustomers: 0,
-      isTransformerNode: true,
+      isTransformerNode: !isHtLine,
+      spotLoadVoltage: nominalVoltage,
       x: 80,
       y: 160
     });
 
+    const targetDemandKva = isHtLine ? (sourceCurrentInput * Math.sqrt(3) * (nominalVoltage / 1000) * powerFactor) : 0;
+    const currentTotalNodeKva = rows.reduce((sum, r) => sum + (r.nodeKva || 0), 0) || 1;
+    const scaleFactor = isHtLine ? (targetDemandKva / currentTotalNodeKva) : 1;
+
+    const adjustedRows = isHtLine ? rows.map(r => ({
+      ...r,
+      nodeKva: Math.max(10, Math.round((r.nodeKva || 50) * scaleFactor))
+    })) : rows;
+
     const segments: FeederSegment[] = [];
 
-    rows.forEach((r, idx) => {
+    adjustedRows.forEach((r, idx) => {
       const fromId = r.fromNode.includes('.') ? r.fromNode : `${r.fromNode}.0`;
       const toId = r.toNode.includes('.') ? r.toNode : `${r.toNode}.0`;
 
       if (!nodeMap.has(fromId)) {
         nodeMap.set(fromId, {
           id: fromId,
-          label: `Pole ${r.fromNode}`,
-          poleNumber: `P-${r.fromNode}`,
+          label: isHtLine ? `Node ${r.fromNode}` : `Pole ${r.fromNode}`,
+          poleNumber: isHtLine ? `T-${r.fromNode}` : `P-${r.fromNode}`,
           threePhaseCustomers: 0,
           singlePhaseCustomers: 0,
           x: 100 + (idx * 70),
@@ -284,10 +320,11 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
 
       nodeMap.set(toId, {
         id: toId,
-        label: `Pole ${r.toNode}`,
-        poleNumber: `P-${r.toNode}`,
+        label: isHtLine && r.nodeKva ? `Node ${r.toNode} (${r.nodeKva} kVA DTR)` : (isHtLine ? `Node ${r.toNode}` : `Pole ${r.toNode}`),
+        poleNumber: isHtLine ? `T-${r.toNode}` : `P-${r.toNode}`,
         threePhaseCustomers: r.threePhaseCust,
         singlePhaseCustomers: r.singlePhaseCust,
+        spotLoadKva: isHtLine ? r.nodeKva : (r.nodeKva || undefined),
         x: 170 + (idx * 70),
         y: 160
       });
@@ -301,16 +338,21 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       });
     });
 
+    const totalCalculatedNodeKva = adjustedRows.reduce((acc, r) => acc + (r.nodeKva || 0), 0);
+
     const rawFeeder: FeederData = {
       ...feeder,
+      type: isHtLine ? 'HT' : 'LT',
+      category: isHtLine ? 'HV' : 'LV',
       name: feederName,
       substationName,
       nominalVoltage,
+      gridVoltageKv: nominalVoltage >= 1000 ? Number((nominalVoltage / 1000).toFixed(2)) : feeder.gridVoltageKv,
       loadPerSinglePhaseCustomerKva: loadPerSinglePhase,
       operatingPowerFactor: powerFactor,
       loadFactor,
       annualGrowthRatePercent: annualGrowthRate,
-      existingTransformerKva: activeTransformerKva,
+      existingTransformerKva: isHtLine ? (totalCalculatedNodeKva || 1200) : activeTransformerKva,
       proposedTransformerKva: proposedTrfKva,
       nodes: Array.from(nodeMap.values()),
       segments
@@ -660,102 +702,246 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
         </div>
       )}
 
+      {/* Feeder Analysis Mode Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-amber-400" />
+            Analysis Engine:
+          </span>
+          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setAnalysisMode('HT');
+                if (nominalVoltage < 1000) setNominalVoltage(11000);
+                onSelectCategory?.('HV');
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                isHtLine 
+                  ? 'bg-blue-600 text-white shadow-sm ring-1 ring-blue-400 font-extrabold' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>⚡ HT Line Analysis (From, To, Length, Node KVA, Conductor)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAnalysisMode('LT');
+                if (nominalVoltage >= 1000) setNominalVoltage(400);
+                onSelectCategory?.('LV');
+              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                !isHtLine 
+                  ? 'bg-amber-500 text-slate-950 shadow-sm ring-1 ring-amber-300 font-extrabold' 
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>LT Line Analysis (Consumers)</span>
+            </button>
+          </div>
+        </div>
+
+        <span className="text-[11px] font-mono text-slate-400 font-semibold">
+          {isHtLine ? 'Primary 11 kV Feeder Model · Node 0 Injected Voltage' : 'Secondary 400V Distribution Model'}
+        </span>
+      </div>
+
       {/* ========================================================
-          SECTION 1: TRANSFORMER RATING & SYSTEM PARAMETERS
+          SECTION 1: INJECTED VOLTAGE / TRANSFORMER RATING & ELECTRICAL PARAMETERS
          ======================================================== */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Zap className="w-4 h-4 text-amber-500" />
             <h3 className="text-sm font-bold text-slate-900">
-              1. Transformer Rating Input & Electrical Parameters
+              {isHtLine 
+                ? '1. Injected Line Voltage at Node 0 & Electrical Parameters' 
+                : '1. Transformer Rating Input & Electrical Parameters'}
             </h3>
           </div>
           <span className="text-[11px] text-slate-500 font-mono">
-            Direct Transformer kVA Input
+            {isHtLine ? 'Node 0 Grid Voltage Injection' : 'Direct Transformer kVA Input'}
           </span>
         </div>
 
-        {/* Transformer Rating Interactive Bar */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-800 block">
-                Fed Transformer Rating (kVA):
-              </label>
-              <span className="text-[11px] text-slate-500">
-                Change capacity to observe immediate impact on loading % and overload status.
-              </span>
+        {/* HT Injected Line Voltage at Node 0 Panel */}
+        {isHtLine ? (
+          <div className="bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 text-white p-4 sm:p-5 rounded-xl border border-blue-800 space-y-3.5 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                    Node 0 Injected Line Voltage
+                  </span>
+                  <span className="text-xs font-bold text-blue-200">
+                    Grid Substation 11kV Outgoing Breaker Bus
+                  </span>
+                </div>
+                <p className="text-[11px] text-blue-200/80 mt-1">
+                  Analysis begins through injection of line voltage at Node 0, propagating downstream backward-forward sweep load flow and voltage drops.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="px-3.5 py-1.5 rounded-lg bg-blue-900/80 border border-blue-700/60 text-right shadow-xs">
+                  <span className="text-[10px] text-blue-300 block font-semibold">Total Connected HT Node Load:</span>
+                  <span className="font-mono text-base font-extrabold text-amber-300">
+                    {rows.reduce((sum, r) => sum + (r.nodeKva || 0), 0).toLocaleString()} kVA
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 ${
-                isOverloaded 
-                  ? 'bg-rose-100 text-rose-800 border border-rose-200' 
-                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-              }`}>
-                {isOverloaded ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                <span>Loading: {currentLoadingPercent}% ({isOverloaded ? 'OVERLOADED' : 'NORMAL'})</span>
-              </span>
+            <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-blue-800/60">
+              {/* Direct Number Input for Injected Voltage */}
+              <div className="flex items-center gap-1.5 bg-blue-900/60 px-3 py-1.5 rounded-lg border border-blue-700/70">
+                <span className="text-xs font-semibold text-blue-200">Injected Voltage:</span>
+                <input
+                  type="number"
+                  min="1.0"
+                  max="132"
+                  step="0.05"
+                  value={nominalVoltage >= 1000 ? Number((nominalVoltage / 1000).toFixed(2)) : nominalVoltage}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value) || 11.0;
+                    setNominalVoltage(Math.round(val * 1000));
+                  }}
+                  className="w-20 bg-slate-900 border border-blue-400 rounded px-2 py-1 text-xs font-mono font-bold text-amber-300 text-center focus:outline-none focus:ring-1 focus:ring-amber-400"
+                />
+                <span className="text-xs font-mono font-bold text-blue-300">kV ({nominalVoltage.toLocaleString()} V)</span>
+              </div>
+
+              <span className="text-blue-700 hidden sm:inline">|</span>
+
+              {/* Quick Injected Voltage Presets */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-blue-300 mr-1">Quick Injected Voltage:</span>
+                {[
+                  { label: '11.0 kV (Nominal)', kv: 11.0 },
+                  { label: '11.2 kV (+1.8%)', kv: 11.2 },
+                  { label: '11.4 kV (+3.6%)', kv: 11.4 },
+                  { label: '11.5 kV (+4.5%)', kv: 11.5 },
+                  { label: '11.8 kV (+7.3%)', kv: 11.8 }
+                ].map(preset => {
+                  const isSelected = Math.abs(nominalVoltage - preset.kv * 1000) < 10;
+                  return (
+                    <button
+                      key={preset.kv}
+                      type="button"
+                      onClick={() => setNominalVoltage(Math.round(preset.kv * 1000))}
+                      className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-all cursor-pointer font-bold ${
+                        isSelected
+                          ? 'bg-amber-400 text-slate-950 font-black shadow-sm ring-2 ring-amber-300 scale-102'
+                          : 'bg-blue-900/80 hover:bg-blue-800 text-blue-100 border border-blue-700'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
+        ) : (
+          /* LT Transformer Rating Interactive Bar */
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-800 block">
+                  Fed Transformer Rating (kVA):
+                </label>
+                <span className="text-[11px] text-slate-500">
+                  Change capacity to observe immediate impact on loading % and overload status.
+                </span>
+              </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Direct Number Input */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-600">Custom kVA:</span>
-              <input
-                type="number"
-                min="10"
-                max="5000"
-                step="5"
-                value={activeTransformerKva}
-                onChange={(e) => onUpdateTransformerKva(Math.max(10, parseFloat(e.target.value) || 100))}
-                className="w-24 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
-              />
+              <div className="flex items-center gap-2">
+                <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 ${
+                  isOverloaded 
+                    ? 'bg-rose-100 text-rose-800 border border-rose-200' 
+                    : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                }`}>
+                  {isOverloaded ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                  <span>Loading: {currentLoadingPercent}% ({isOverloaded ? 'OVERLOADED' : 'NORMAL'})</span>
+                </span>
+              </div>
             </div>
 
-            <span className="text-slate-300">|</span>
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Direct Number Input */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-600">Custom kVA:</span>
+                <input
+                  type="number"
+                  min="10"
+                  max="5000"
+                  step="5"
+                  value={activeTransformerKva}
+                  onChange={(e) => onUpdateTransformerKva(Math.max(10, parseFloat(e.target.value) || 100))}
+                  className="w-24 bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                />
+              </div>
 
-            {/* Quick Standard Rating Pills */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-semibold text-slate-500 mr-1">Quick Select:</span>
-              {[25, 50, 100, 200, 400, 630].map(cap => (
-                <button
-                  key={cap}
-                  type="button"
-                  onClick={() => onUpdateTransformerKva(cap)}
-                  className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-colors cursor-pointer ${
-                    activeTransformerKva === cap
-                      ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
-                      : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  {cap} kVA {cap === 100 ? '(image1)' : (cap === 200 ? '(Upgrade)' : '')}
-                </button>
-              ))}
+              <span className="text-slate-300">|</span>
+
+              {/* Quick Standard Rating Pills */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-slate-500 mr-1">Quick Select:</span>
+                {[25, 50, 100, 200, 400, 630].map(cap => (
+                  <button
+                    key={cap}
+                    type="button"
+                    onClick={() => onUpdateTransformerKva(cap)}
+                    className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-colors cursor-pointer ${
+                      activeTransformerKva === cap
+                        ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    {cap} kVA {cap === 100 ? '(image1)' : (cap === 200 ? '(Upgrade)' : '')}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Secondary Parameters Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs pt-1">
-          {/* Field 1: Proposed Transformer */}
+          {/* Field 1: Proposed Transformer (LT) or Input Source Current (HT) */}
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
             <label className="font-semibold text-slate-800 block mb-1">
-              Proposed Upgrade Transformer:
+              {isHtLine ? 'Input Source Current (Amps):' : 'Proposed Upgrade Transformer:'}
             </label>
-            <select
-              value={proposedTrfKva}
-              onChange={(e) => setProposedTrfKva(Number(e.target.value))}
-              className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900"
-            >
-              {TRANSFORMER_CAPACITIES.map(cap => (
-                <option key={cap} value={cap}>
-                  {cap} kVA {cap === 200 ? '(Recommended 200 kVA)' : ''}
-                </option>
-              ))}
-            </select>
+            {isHtLine ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min="10"
+                  max="2000"
+                  step="1"
+                  value={sourceCurrentInput}
+                  onChange={(e) => setSourceCurrentInput(parseFloat(e.target.value) || 180)}
+                  className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900"
+                  title="Enter total source current in Amps injected at Node 0"
+                />
+                <span className="text-[10px] font-mono text-slate-500 font-bold">A</span>
+              </div>
+            ) : (
+              <select
+                value={proposedTrfKva}
+                onChange={(e) => setProposedTrfKva(Number(e.target.value))}
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900"
+              >
+                {TRANSFORMER_CAPACITIES.map(cap => (
+                  <option key={cap} value={cap}>
+                    {cap} kVA {cap === 200 ? '(Recommended 200 kVA)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* Field 2: Nominal Line Voltage */}
@@ -842,20 +1028,32 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       </div>
 
       {/* ========================================================
-          SECTION 2: SPANS DATA INPUT FORM (EXACT MATCH OF image1.png)
+          SECTION 2: SPANS DATA INPUT FORM (HT LINE / LT LINE)
          ======================================================== */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Layers className="w-4 h-4 text-blue-600" />
-              <span>2. Feeder Spans Input Table (image1.png Columns)</span>
+              <span>
+                {isHtLine 
+                  ? '2. HT Line Spans Input Table (From Node, To Node, Length, Node KVA, Conductor Type)' 
+                  : '2. Feeder Spans Input Table (image1.png Columns)'}
+              </span>
               <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-bold">
                 {rows.length} Spans
               </span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Columns correspond directly to <strong>image1.png</strong>: From Node, To Node, Length (km), Length (m), 3-Ph Customers, 1-Ph Customers, Conductor Code.
+              {isHtLine ? (
+                <>
+                  HT Line Analysis Parameters: <strong>From Node</strong>, <strong>To Node</strong>, <strong>Length (km / m)</strong>, <strong>Node KVA (Connected DTR Load)</strong>, and <strong>Conductor Type</strong> with line voltage injected at Node 0.
+                </>
+              ) : (
+                <>
+                  Columns correspond directly to <strong>image1.png</strong>: From Node, To Node, Length (km), Length (m), 3-Ph Customers, 1-Ph Customers, Conductor Code.
+                </>
+              )}
             </p>
           </div>
 
@@ -886,9 +1084,17 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                 <th className="py-2.5 px-3 text-center">To Node</th>
                 <th className="py-2.5 px-3 text-right">Length (km)</th>
                 <th className="py-2.5 px-3 text-right">Length (m)</th>
-                <th className="py-2.5 px-3 text-right">3-Ph Customer</th>
-                <th className="py-2.5 px-3 text-right">1-Ph Customer</th>
-                <th className="py-2.5 px-3 text-left">Conductor Code</th>
+                {isHtLine ? (
+                  <th className="py-2.5 px-3 text-right bg-blue-100/90 text-blue-950 font-extrabold border-x border-blue-200">
+                    Node KVA (Load)
+                  </th>
+                ) : (
+                  <>
+                    <th className="py-2.5 px-3 text-right">3-Ph Customer</th>
+                    <th className="py-2.5 px-3 text-right">1-Ph Customer</th>
+                  </>
+                )}
+                <th className="py-2.5 px-3 text-left">Conductor Type</th>
                 <th className="py-2.5 px-3 text-center w-24">Actions</th>
               </tr>
             </thead>
@@ -943,27 +1149,47 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                     />
                   </td>
 
-                  {/* 3-Ph Customer */}
-                  <td className="py-2 px-2 text-right">
-                    <input
-                      type="number"
-                      min="0"
-                      value={row.threePhaseCust}
-                      onChange={(e) => handleUpdateRow(idx, 'threePhaseCust', e.target.value)}
-                      className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-right font-bold text-purple-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </td>
+                  {/* HT Mode: Node KVA vs LT Mode: Customers */}
+                  {isHtLine ? (
+                    <td className="py-2 px-2 text-right bg-blue-50/40 border-x border-blue-100">
+                      <div className="flex items-center justify-end gap-1">
+                        <input
+                          type="number"
+                          min="0"
+                          step="5"
+                          value={row.nodeKva || 0}
+                          onChange={(e) => handleUpdateRow(idx, 'nodeKva', e.target.value)}
+                          className="w-20 bg-white border border-blue-300 rounded px-2 py-1 text-right font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                          title="Connected Transformer / Spot Load at To Node in kVA"
+                        />
+                        <span className="text-[10px] text-slate-400 font-mono">kVA</span>
+                      </div>
+                    </td>
+                  ) : (
+                    <>
+                      {/* 3-Ph Customer */}
+                      <td className="py-2 px-2 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.threePhaseCust}
+                          onChange={(e) => handleUpdateRow(idx, 'threePhaseCust', e.target.value)}
+                          className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-right font-bold text-purple-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
 
-                  {/* 1-Ph Customer */}
-                  <td className="py-2 px-2 text-right">
-                    <input
-                      type="number"
-                      min="0"
-                      value={row.singlePhaseCust}
-                      onChange={(e) => handleUpdateRow(idx, 'singlePhaseCust', e.target.value)}
-                      className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-right font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </td>
+                      {/* 1-Ph Customer */}
+                      <td className="py-2 px-2 text-right">
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.singlePhaseCust}
+                          onChange={(e) => handleUpdateRow(idx, 'singlePhaseCust', e.target.value)}
+                          className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-right font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                    </>
+                  )}
 
                   {/* Conductor Code */}
                   <td className="py-2 px-2 text-left font-sans">
@@ -972,15 +1198,30 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                       onChange={(e) => handleUpdateRow(idx, 'conductorCode', e.target.value)}
                       className="bg-white border border-slate-300 rounded px-2 py-1 text-xs font-mono font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
-                      <option value="A">A (7/0.122" ACSR)</option>
-                      <option value="WASP">WASP (7/0.170" ACSR)</option>
-                      <option value="PU3">PU3 (PVC 37/0.083")</option>
-                      <option value="PU2">PU2 (PVC 19/0.083")</option>
-                      <option value="RABBIT">RABBIT (50 mm²)</option>
-                      <option value="DOG">DOG (100 mm²)</option>
-                      <option value="PANTHER">PANTHER (200 mm²)</option>
-                      <option value="ABC-70">ABC-70 (70 mm²)</option>
-                      <option value="ABC-120">ABC-120 (120 mm²)</option>
+                      {isHtLine ? (
+                        <>
+                          <option value="DOG">DOG (100 mm² ACSR)</option>
+                          <option value="RABBIT">RABBIT (50 mm² ACSR)</option>
+                          <option value="PANTHER">PANTHER (200 mm² ACSR)</option>
+                          <option value="WASP">WASP (7/0.170" ACSR)</option>
+                          <option value="OSPREY">OSPREY (200 mm² ACSR)</option>
+                          <option value="GOPHER">GOPHER (25 mm² ACSR)</option>
+                          <option value="ANT">ANT (50 mm² AAC)</option>
+                          <option value="A">A (7/0.122" ACSR)</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="A">A (7/0.122" ACSR)</option>
+                          <option value="WASP">WASP (7/0.170" ACSR)</option>
+                          <option value="PU3">PU3 (PVC 37/0.083")</option>
+                          <option value="PU2">PU2 (PVC 19/0.083")</option>
+                          <option value="RABBIT">RABBIT (50 mm²)</option>
+                          <option value="DOG">DOG (100 mm²)</option>
+                          <option value="PANTHER">PANTHER (200 mm²)</option>
+                          <option value="ABC-70">ABC-70 (70 mm²)</option>
+                          <option value="ABC-120">ABC-120 (120 mm²)</option>
+                        </>
+                      )}
                     </select>
                   </td>
 
@@ -1018,14 +1259,22 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                 <td className="py-3 px-2 text-right">
                   {totalLengthM} m
                 </td>
-                <td className="py-3 px-2 text-right text-purple-300">
-                  {total3Ph}
-                </td>
-                <td className="py-3 px-2 text-right text-amber-300">
-                  {total1Ph}
-                </td>
+                {isHtLine ? (
+                  <td className="py-3 px-2 text-right text-amber-300 font-mono font-black text-sm">
+                    {rows.reduce((sum, r) => sum + (r.nodeKva || 0), 0).toLocaleString()} kVA
+                  </td>
+                ) : (
+                  <>
+                    <td className="py-3 px-2 text-right text-purple-300">
+                      {total3Ph}
+                    </td>
+                    <td className="py-3 px-2 text-right text-amber-300">
+                      {total1Ph}
+                    </td>
+                  </>
+                )}
                 <td colSpan={2} className="py-3 px-3 text-slate-400 font-sans text-xs">
-                  {rows.length} Feeder Segments Configured
+                  {rows.length} Feeder Segments Configured {isHtLine ? `· Injected: ${(nominalVoltage/1000).toFixed(2)} kV at Node 0` : ''}
                 </td>
               </tr>
             </tfoot>

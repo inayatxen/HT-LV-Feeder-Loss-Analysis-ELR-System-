@@ -141,34 +141,38 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* 3. LV / HV Selector (Visible when in Feeder Loss Analysis mode) */}
-          {activeSystemModule === 'elr_loss_analysis' && (
-            <div className="hidden sm:flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
-              <button
-                onClick={() => onSelectCategory('LV')}
-                title="Switch to Low Voltage / Low Tension 400V Feeder Analysis"
-                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                  activeCategory === 'LV'
-                    ? 'bg-amber-500 text-slate-950 shadow-sm font-extrabold'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span>400V LT</span>
-              </button>
+          {/* 3. LV / HV Selector (400V LT vs 11kV HT Feeder Analysis Mode) */}
+          <div 
+            className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0"
+            role="group"
+            aria-label="Feeder Voltage Category"
+          >
+            <button
+              type="button"
+              onClick={() => onSelectCategory('LV')}
+              title="Switch to Low Voltage / Low Tension 400V Feeder Analysis (Secondary Distribution)"
+              className={`flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                activeCategory === 'LV'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm font-black ring-1 ring-amber-400 scale-[1.02]'
+                  : 'text-amber-400 font-bold hover:text-amber-300 hover:bg-slate-900/80'
+              }`}
+            >
+              <span>400V LT</span>
+            </button>
 
-              <button
-                onClick={() => onSelectCategory('HV')}
-                title="Switch to High Voltage / High Tension 11kV Feeder Analysis"
-                className={`flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                  activeCategory === 'HV'
-                    ? 'bg-sky-500 text-slate-950 shadow-sm font-extrabold'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span>11kV HT</span>
-              </button>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => onSelectCategory('HV')}
+              title="Switch to High Voltage / High Tension 11kV Feeder Analysis (Primary Feeder & Node 0 Voltage Injection)"
+              className={`flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                activeCategory === 'HV'
+                  ? 'bg-sky-500 text-slate-950 shadow-sm font-black ring-1 ring-sky-400 scale-[1.02]'
+                  : 'text-sky-400 font-bold hover:text-sky-300 hover:bg-slate-900/80'
+              }`}
+            >
+              <span>11kV HT</span>
+            </button>
+          </div>
 
           {/* 3. Job Title Writing, Feeder Dropdown & Action Buttons */}
           <div className="flex items-center gap-2 shrink-0">

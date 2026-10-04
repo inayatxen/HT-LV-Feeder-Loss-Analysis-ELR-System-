@@ -15,6 +15,7 @@ export interface ParsedSpanRow {
   lengthMeters: number;
   threePhaseCust: number;
   singlePhaseCust: number;
+  nodeKva?: number; // For HT Line Analysis: Direct Node KVA (DTR load)
   conductorCode: string;
   isValid: boolean;
   warning?: string;
@@ -30,6 +31,7 @@ export interface ParsedExcelResult {
   totalLengthMeters: number;
   totalThreePhaseCust: number;
   totalSinglePhaseCust: number;
+  totalNodeKva?: number;
   detectedConductors: string[];
   feederName?: string;
   transformerKva?: number;
@@ -83,6 +85,7 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
   let toIdx = -1;
   let lengthKmIdx = -1;
   let lengthMIdx = -1;
+  let nodeKvaIdx = -1;
   let threePhIdx = -1;
   let singlePhIdx = -1;
   let conductorIdx = -1;
@@ -103,6 +106,8 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
         if (lengthKmIdx === -1) lengthKmIdx = idx;
       } else if (/length.*m/i.test(lower) || /meter/i.test(lower) || /length/i.test(lower) || /distance/i.test(lower)) {
         if (lengthMIdx === -1) lengthMIdx = idx;
+      } else if (/node.*kva/i.test(lower) || /dtr/i.test(lower) || /kva/i.test(lower) || /spot/i.test(lower) || (/load/i.test(lower) && !/factor/i.test(lower))) {
+        if (nodeKvaIdx === -1) nodeKvaIdx = idx;
       } else if (/3.*ph/i.test(lower) || /three/i.test(lower) || /3p/i.test(lower)) {
         if (threePhIdx === -1) threePhIdx = idx;
       } else if (/1.*ph/i.test(lower) || /single/i.test(lower) || /1p/i.test(lower) || /cust/i.test(lower)) {
@@ -184,6 +189,13 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
       if (!isNaN(parsed)) singleCust = Math.max(0, parsed);
     }
 
+    // Direct Node KVA (for HT Line Analysis)
+    let nodeKva = 0;
+    if (nodeKvaIdx !== -1 && row[nodeKvaIdx] !== undefined && row[nodeKvaIdx] !== null && String(row[nodeKvaIdx]).trim() !== '') {
+      const parsedKva = parseFloat(String(row[nodeKvaIdx]).replace(/,/g, ''));
+      if (!isNaN(parsedKva)) nodeKva = Math.max(0, parsedKva);
+    }
+
     // Conductor Code
     let rawConductor = 'A';
     if (conductorIdx !== -1 && row[conductorIdx] !== undefined && row[conductorIdx] !== null) {
@@ -224,6 +236,7 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
       lengthMeters,
       threePhaseCust: threeCust,
       singlePhaseCust: singleCust,
+      nodeKva,
       conductorCode,
       isValid,
       warning
@@ -235,6 +248,7 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
   const totalLengthMeters = parsedRows.reduce((acc, r) => acc + r.lengthMeters, 0);
   const totalThreePhaseCust = parsedRows.reduce((acc, r) => acc + r.threePhaseCust, 0);
   const totalSinglePhaseCust = parsedRows.reduce((acc, r) => acc + r.singlePhaseCust, 0);
+  const totalNodeKva = Number(parsedRows.reduce((acc, r) => acc + (r.nodeKva || 0), 0).toFixed(1));
 
   return {
     fileName,
@@ -245,6 +259,7 @@ export function parseExcelRowsData(dataRows: any[][], fileName?: string): Parsed
     totalLengthMeters,
     totalThreePhaseCust,
     totalSinglePhaseCust,
+    totalNodeKva,
     detectedConductors: Array.from(conductorsSet),
     errors
   };
@@ -302,13 +317,24 @@ export function parsePastedClipboardText(clipboardText: string): ParsedExcelResu
 }
 
 /**
- * Generates and downloads a clean Excel (.xlsx) template matching image1.png columns
+ * Generates and downloads a clean Excel (.xlsx) template matching image1.png columns (or HT Line columns)
  */
 export function downloadExcelTemplate(feeder?: FeederData): void {
   const wb = XLSX.utils.book_new();
+  const isHt = feeder?.type === 'HT' || feeder?.category === 'HV' || (feeder?.nominalVoltage !== undefined && feeder.nominalVoltage >= 1000);
 
-  // Benchmark / Sample Spans matching image1.png
-  const sampleData = [
+  // Benchmark / Sample Spans matching image1.png or HT Line
+  const sampleData = isHt ? [
+    ['From Node', 'To Node', 'Length (km)', 'Length (m)', 'Node KVA', 'Conductor Type'],
+    ['0.0', '1.0', 0.850, 850, 100, 'PANTHER'],
+    ['1.0', '2.0', 0.900, 900, 200, 'DOG'],
+    ['2.0', '3.0', 0.650, 650, 50, 'DOG'],
+    ['3.0', '4.0', 0.700, 700, 200, 'RABBIT'],
+    ['4.0', '5.0', 0.550, 550, 250, 'RABBIT'],
+    ['5.0', '6.0', 0.400, 400, 200, 'RABBIT'],
+    ['3.0', '7.0', 0.600, 600, 100, 'RABBIT'],
+    ['7.0', '8.0', 0.500, 500, 100, 'RABBIT']
+  ] : [
     ['From Node', 'To Node', 'Length (km)', 'Length (m)', '3-Ph Customer', '1-Ph Customer', 'Conductor Code'],
     ['0.0', '1.0', 0.005, 5, 0, 0, 'A'],
     ['1.0', '2.0', 0.054, 54, 4, 18, 'A'],
@@ -327,7 +353,14 @@ export function downloadExcelTemplate(feeder?: FeederData): void {
   const ws = XLSX.utils.aoa_to_sheet(sampleData);
 
   // Set column widths
-  ws['!cols'] = [
+  ws['!cols'] = isHt ? [
+    { wch: 14 }, // From Node
+    { wch: 14 }, // To Node
+    { wch: 14 }, // Length km
+    { wch: 14 }, // Length m
+    { wch: 16 }, // Node KVA
+    { wch: 18 }  // Conductor Type
+  ] : [
     { wch: 14 }, // From Node
     { wch: 14 }, // To Node
     { wch: 14 }, // Length km
@@ -337,7 +370,7 @@ export function downloadExcelTemplate(feeder?: FeederData): void {
     { wch: 18 }  // Conductor Code
   ];
 
-  XLSX.utils.book_append_sheet(wb, ws, 'Feeder Spans (image1.png)');
+  XLSX.utils.book_append_sheet(wb, ws, isHt ? 'HT Line Spans (11kV)' : 'Feeder Spans (image1.png)');
 
   // Conductor reference sheet
   const conductorRef = [
@@ -362,7 +395,7 @@ export function downloadExcelTemplate(feeder?: FeederData): void {
   ];
   XLSX.utils.book_append_sheet(wb, wsConduct, 'Conductor Database');
 
-  const fileName = feeder ? `${feeder.id}_image1_template.xlsx` : 'wapda_feeder_spans_template.xlsx';
+  const fileName = feeder ? `${feeder.id}_${isHt ? 'ht_spans' : 'image1'}_template.xlsx` : 'feeder_spans_template.xlsx';
   XLSX.writeFile(wb, fileName);
 }
 
@@ -371,9 +404,28 @@ export function downloadExcelTemplate(feeder?: FeederData): void {
  */
 export function exportFullFeederToExcel(feeder: FeederData, summary: FeederAnalysisSummary): void {
   const wb = XLSX.utils.book_new();
+  const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+  const totalNodeKva = summary.segmentResults.reduce((acc, r) => acc + (r.toNodeKva || 0), 0);
 
-  // Sheet 1: Input Data Form (image1.png)
-  const inputData = [
+  // Sheet 1: Input Data Form
+  const inputData = isHt ? [
+    ['FORM DISPLAY A: HT LINE SPANS INPUT DATA TABLE (From, To, Length, Node KVA, Conductor)'],
+    [`Feeder Name: ${feeder.name}`, `Substation: ${feeder.substationName}`, `Injected Line Voltage at Node 0: ${summary.baseVoltage >= 1000 ? `${(summary.baseVoltage/1000).toFixed(2)} kV` : `${summary.baseVoltage} V`}`, `Total HT Load: ${totalNodeKva} kVA`],
+    [],
+    ['#', 'Zone', 'From Node', 'To Node', 'Length (km)', 'Length (m)', 'Node KVA (kVA)', 'Conductor Type'],
+    ...summary.segmentResults.map((r, idx) => [
+      idx + 1,
+      r.fedByTransformer === 'T2' ? 'T-2 Added' : 'Main 11kV',
+      r.fromNodeId.replace('.0', ''),
+      r.toNodeId.replace('.0', ''),
+      r.lengthKm,
+      r.lengthMeters,
+      r.toNodeKva || 0,
+      r.conductor.code
+    ]),
+    [],
+    ['TOTALS', '', '', '', summary.totalCircuitLengthKm, Math.round(summary.totalCircuitLengthKm * 1000), totalNodeKva, `${summary.segmentResults.length} Spans`]
+  ] : [
     ['FORM DISPLAY A: FEEDER SPANS INPUT DATA TABLE (image1.png Columns)'],
     [`Feeder Name: ${feeder.name}`, `Substation: ${feeder.substationName}`, `Base Voltage: ${feeder.nominalVoltage}V`, `Transformer: ${summary.existingTransformerKva} kVA`],
     [],
@@ -393,11 +445,34 @@ export function exportFullFeederToExcel(feeder: FeederData, summary: FeederAnaly
     ['TOTALS', '', '', '', summary.totalCircuitLengthKm, Math.round(summary.totalCircuitLengthKm * 1000), summary.totalThreePhaseCustomers, summary.totalSinglePhaseCustomers, `${summary.segmentResults.length} Spans`]
   ];
   const wsInput = XLSX.utils.aoa_to_sheet(inputData);
-  wsInput['!cols'] = [{ wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
-  XLSX.utils.book_append_sheet(wb, wsInput, 'Input Data (image1)');
+  wsInput['!cols'] = isHt 
+    ? [{ wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 18 }]
+    : [{ wch: 6 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, wsInput, isHt ? 'HT Input Spans' : 'Input Data (image1)');
 
-  // Sheet 2: Calculated Schedule (image2.png)
-  const outputData = [
+  // Sheet 2: Calculated Schedule
+  const outputData = isHt ? [
+    ['FORM DISPLAY B: CALCULATED 11 kV LOAD FLOW & LINE LOSS SCHEDULE'],
+    [`Total Line Loss: ${summary.totalLineLossKw} kW`, `Total Source Current: ${summary.totalSourceCurrentAmps} A`, `Injected Line Voltage at Node 0: ${(summary.baseVoltage / 1000).toFixed(2)} kV`, `Annual Energy Loss: ${summary.annualEnergyLossKwh} kWh`],
+    [],
+    ['#', 'Zone', 'From', 'To', 'Length (km)', 'Code', 'Current (A)', 'Loading %', 'Volt Drop %', 'Voltage (kV)', 'Voltage (V)', 'Loss (kW)'],
+    ...summary.segmentResults.map((r, idx) => [
+      idx + 1,
+      r.fedByTransformer === 'T2' ? 'T-2' : 'Main 11kV',
+      r.fromNodeId.replace('.0', ''),
+      r.toNodeId.replace('.0', ''),
+      r.lengthKm,
+      r.conductor.code,
+      r.currentAmps,
+      r.percentLoading,
+      r.percentVoltDrop,
+      (r.receivingVoltage / 1000).toFixed(3),
+      r.receivingVoltage,
+      r.lineLossKw
+    ]),
+    [],
+    ['TOTALS & PEAKS', '', '', '', summary.totalCircuitLengthKm, '', summary.totalSourceCurrentAmps, '', `${summary.worstVoltageDropPercent}% Worst`, `${(summary.worstVoltageVolts/1000).toFixed(3)} kV Min`, `${summary.worstVoltageVolts}V Min`, summary.totalLineLossKw]
+  ] : [
     ['FORM DISPLAY B: CALCULATED LOAD FLOW & LINE LOSS SCHEDULE (image2.png Columns)'],
     [`Total Line Loss: ${summary.totalLineLossKw} kW`, `Total Demand: ${summary.totalSystemDemandKva} kVA (${summary.totalSourceCurrentAmps} A)`, `Annual Energy Loss: ${summary.annualEnergyLossKwh} kWh`],
     [],
@@ -419,8 +494,8 @@ export function exportFullFeederToExcel(feeder: FeederData, summary: FeederAnaly
     ['TOTALS & PEAKS', '', '', '', summary.totalCircuitLengthKm, '', summary.totalSourceCurrentAmps, `${summary.existingTransformerLoadingPercent}% Trf`, `${summary.worstVoltageDropPercent}% Worst`, `${summary.worstVoltageVolts}V Min`, summary.totalLineLossKw]
   ];
   const wsOutput = XLSX.utils.aoa_to_sheet(outputData);
-  wsOutput['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(wb, wsOutput, 'Calculated Schedule (image2)');
+  wsOutput['!cols'] = [{ wch: 6 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, wsOutput, isHt ? '11kV Load Flow Schedule' : 'Calculated Schedule (image2)');
 
   // Sheet 3: Summary & Upgradation Matrix
   const matrixData = [
@@ -437,7 +512,7 @@ export function exportFullFeederToExcel(feeder: FeederData, summary: FeederAnaly
     ['Power Loss Ratio', `${summary.percentPowerLoss}%`, `${summary.percentPowerLoss}%`],
     ['Annual Energy Loss', `${summary.annualEnergyLossKwh} kWh/yr`, `${summary.annualEnergyLossKwh} kWh/yr`],
     ['Worst Voltage Drop', `${summary.worstVoltageDropPercent}%`, `${summary.worstVoltageDropPercent}%`],
-    ['Minimum Voltage', `${summary.worstVoltageVolts} V`, `${summary.worstVoltageVolts} V`],
+    ['Minimum Voltage', isHt ? `${(summary.worstVoltageVolts/1000).toFixed(3)} kV (${summary.worstVoltageVolts} V)` : `${summary.worstVoltageVolts} V`, isHt ? `${(summary.worstVoltageVolts/1000).toFixed(3)} kV (${summary.worstVoltageVolts} V)` : `${summary.worstVoltageVolts} V`],
     ['Annual Financial Loss', `Rs. ${Math.round(summary.annualEnergyLossKwh * (feeder.tariffPerKwh || 38.5)).toLocaleString()}`, `Rs. ${Math.round(summary.annualEnergyLossKwh * (feeder.tariffPerKwh || 38.5)).toLocaleString()}`]
   ];
   const wsMatrix = XLSX.utils.aoa_to_sheet(matrixData);

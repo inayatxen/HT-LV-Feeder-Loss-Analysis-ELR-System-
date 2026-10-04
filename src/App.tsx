@@ -115,6 +115,7 @@ export default function App() {
 
   // What-If Interventions State
   const [activeTransformerKva, setActiveTransformerKva] = useState<number>(activeFeeder.existingTransformerKva);
+  const [activeInjectedVoltage, setActiveInjectedVoltage] = useState<number>(activeFeeder.nominalVoltage);
   const [activeConductors, setActiveConductors] = useState<Record<string, string>>({});
   const [activeCapacitors, setActiveCapacitors] = useState<Record<string, number>>({});
   const [activeLoadFactor, setActiveLoadFactor] = useState<number | undefined>(undefined);
@@ -143,6 +144,9 @@ export default function App() {
   // Category switch handler (LV vs HV)
   const handleSelectCategory = (category: FeederCategory) => {
     setActiveCategory(category);
+    if (activeSystemModule !== 'elr_loss_analysis') {
+      setActiveSystemModule('elr_loss_analysis');
+    }
     const matching = Object.values(customFeeders).filter(f => {
       const cat = f.category || (f.type === 'HT' ? 'HV' : 'LV');
       return cat === category;
@@ -152,11 +156,17 @@ export default function App() {
       const target = matching.find(f => f.id === defaultId) || matching[0];
       setSelectedFeederId(target.id);
       setActiveTransformerKva(target.existingTransformerKva);
+      setActiveInjectedVoltage(target.nominalVoltage);
       setActiveConductors({});
       setActiveCapacitors({});
       setActiveLoadFactor(undefined);
       setBifurcationConfig(getSavedBifurcationConfig(target));
     }
+    setDbToast(category === 'LV' 
+      ? '⚡ Switched to 400V LT Feeder Analysis (Secondary Distribution · Gulbhar Colony)' 
+      : '⚡ Switched to 11kV HT Feeder Analysis (Primary 11 kV Feeder · Injected Voltage @ Node 0)'
+    );
+    setTimeout(() => setDbToast(''), 3500);
   };
 
   // When switching feeders, load persisted bifurcation configuration
@@ -166,6 +176,7 @@ export default function App() {
     const cat = target.category || (target.type === 'HT' ? 'HV' : 'LV');
     setActiveCategory(cat);
     setActiveTransformerKva(target.existingTransformerKva);
+    setActiveInjectedVoltage(target.nominalVoltage);
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
@@ -227,10 +238,11 @@ export default function App() {
       customConductors: activeConductors,
       customCapacitors: activeCapacitors,
       transformerOverrideKva: activeTransformerKva,
+      voltageOverride: activeInjectedVoltage,
       loadFactorOverride: activeLoadFactor,
       bifurcation: bifurcationConfig
     });
-  }, [activeFeeder, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor, bifurcationConfig]);
+  }, [activeFeeder, activeConductors, activeCapacitors, activeTransformerKva, activeInjectedVoltage, activeLoadFactor, bifurcationConfig]);
 
   // Forecast data (5-Year)
   const forecastData = useMemo(() => {
@@ -253,6 +265,7 @@ export default function App() {
 
   const hasActiveInterventions = 
     activeTransformerKva !== activeFeeder.existingTransformerKva ||
+    activeInjectedVoltage !== activeFeeder.nominalVoltage ||
     Object.keys(activeConductors).length > 0 ||
     Object.keys(activeCapacitors).length > 0 ||
     (activeLoadFactor !== undefined && activeLoadFactor !== activeFeeder.loadFactor) ||
@@ -323,6 +336,7 @@ export default function App() {
 
   const handleResetInterventions = () => {
     setActiveTransformerKva(activeFeeder.existingTransformerKva);
+    setActiveInjectedVoltage(activeFeeder.nominalVoltage);
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveLoadFactor(undefined);
@@ -456,6 +470,7 @@ export default function App() {
             {activeTab === 'input_form' && (
               <div className="space-y-4">
                 <InputDataForm
+                  key={`input-${activeFeeder.id}-${activeCategory}`}
                   feeder={activeFeeder}
                   summary={hasActiveInterventions ? proposedSummary : existingSummary}
                   onSaveFeeder={handleSaveFeeder}
@@ -463,6 +478,7 @@ export default function App() {
                   activeTransformerKva={activeTransformerKva}
                   onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
                   onOpenDatabase={() => setIsLocalDbOpen(true)}
+                  onSelectCategory={handleSelectCategory}
                 />
               </div>
             )}
@@ -470,6 +486,7 @@ export default function App() {
             {activeTab === 'sld' && (
               <div className="space-y-4">
                 <SingleLineDiagram
+                  key={`sld-${activeFeeder.id}-${activeCategory}`}
                   feeder={activeFeeder}
                   summary={hasActiveInterventions ? proposedSummary : existingSummary}
                   existingSummary={existingSummary}
@@ -492,6 +509,7 @@ export default function App() {
             {activeTab === 'table' && (
               <div className="space-y-4">
                 <SegmentTable
+                  key={`table-${activeFeeder.id}-${activeCategory}`}
                   segmentResults={(hasActiveInterventions ? proposedSummary : existingSummary).segmentResults}
                   feeder={activeFeeder}
                   onReconductor={handleSetConductor}
@@ -499,12 +517,15 @@ export default function App() {
                   activeCapacitors={activeCapacitors}
                   activeTransformerKva={activeTransformerKva}
                   onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
+                  activeInjectedVoltage={activeInjectedVoltage}
+                  onUpdateInjectedVoltage={(volts) => setActiveInjectedVoltage(volts)}
                   onResetToImage1={() => {
                     setCustomFeeders(prev => ({
                       ...prev,
                       [selectedFeederId]: JSON.parse(JSON.stringify(PRESET_FEEDERS.find(f => f.id === selectedFeederId) || GULBHAR_COLONY_LT_FEEDER))
                     }));
                     setActiveTransformerKva(activeFeeder.existingTransformerKva);
+                    setActiveInjectedVoltage(activeFeeder.nominalVoltage);
                     setActiveConductors({});
                     setActiveCapacitors({});
                   }}
@@ -515,6 +536,7 @@ export default function App() {
             {activeTab === 'charts' && (
               <div className="space-y-4">
                 <LossCharts
+                  key={`charts-${activeFeeder.id}-${activeCategory}`}
                   summary={hasActiveInterventions ? proposedSummary : existingSummary}
                   feeder={activeFeeder}
                   forecastData={forecastData}
@@ -525,11 +547,14 @@ export default function App() {
             {activeTab === 'whatif' && (
               <div className="space-y-4">
                 <WhatIfWorkbench
+                  key={`whatif-${activeFeeder.id}-${activeCategory}`}
                   feeder={activeFeeder}
                   existingSummary={existingSummary}
                   proposedSummary={proposedSummary}
                   activeTransformerKva={activeTransformerKva}
                   setActiveTransformerKva={setActiveTransformerKva}
+                  activeInjectedVoltage={activeInjectedVoltage}
+                  onUpdateInjectedVoltage={(volts) => setActiveInjectedVoltage(volts)}
                   activeConductors={activeConductors}
                   onSetConductor={handleSetConductor}
                   activeCapacitors={activeCapacitors}
@@ -548,6 +573,7 @@ export default function App() {
             {activeTab === 'forecast' && (
               <div className="space-y-4">
                 <ForecastingView
+                  key={`forecast-${activeFeeder.id}-${activeCategory}`}
                   feeder={activeFeeder}
                   activeConductors={activeConductors}
                   activeCapacitors={activeCapacitors}
