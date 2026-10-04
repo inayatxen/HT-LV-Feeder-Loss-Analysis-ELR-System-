@@ -1393,7 +1393,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </span>
                 <span className="text-[10px] text-slate-400">Click to auto-configure line length, conductor & pole structure</span>
               </div>
-              <div className="flex flex-wrap items-center gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {PRESET_COMBINATIONS.map(preset => {
                   const isActive = activePresetKey === preset.key;
                   return (
@@ -1401,13 +1401,13 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                       key={preset.key}
                       type="button"
                       onClick={() => handleSelectPreset(preset)}
-                      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 ${preset.badgeColor} ${
-                        isActive ? `${preset.activeRing} scale-102 ring-2` : 'opacity-90 hover:opacity-100'
+                      className={`w-full h-full min-h-[48px] px-3.5 py-2 text-xs font-bold rounded-lg border shadow-xs transition-all cursor-pointer flex items-center justify-center text-center gap-2 ${preset.badgeColor} ${
+                        isActive ? `${preset.activeRing} ring-2 scale-[1.01]` : 'opacity-90 hover:opacity-100'
                       }`}
                       title={`Click to auto-configure line parameters and update required material quantities below`}
                     >
-                      {isActive ? <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-800" /> : null}
-                      <span>{preset.label}</span>
+                      {isActive ? <Check className="w-4 h-4 shrink-0 stroke-[3] text-emerald-800" /> : null}
+                      <span className="leading-snug">{preset.label}</span>
                     </button>
                   );
                 })}
@@ -1432,7 +1432,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                           key={km}
                           type="button"
                           onClick={() => handleUpdateHtDogMultiplier(km)}
-                          className={`px-2.5 py-1 text-xs font-bold rounded-md border transition-all cursor-pointer ${
+                          className={`w-24 h-8 px-2 py-1 text-xs font-bold rounded-md border transition-all cursor-pointer flex items-center justify-center text-center ${
                             isSelected
                               ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-2 ring-emerald-400 font-black shadow-sm'
                               : 'bg-slate-800 hover:bg-slate-700 text-emerald-200 border-slate-600'
@@ -1443,7 +1443,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                         </button>
                       );
                     })}
-                    <div className="flex items-center gap-1 ml-1 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-600">
+                    <div className="flex items-center gap-1 ml-1 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-600 h-8">
                       <span className="text-[10px] text-slate-400">Custom KM:</span>
                       <input
                         type="number"
