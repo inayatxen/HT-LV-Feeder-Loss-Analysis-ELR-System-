@@ -293,71 +293,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       htPoles: 4,
       staySets: 2,
       schemeName: '4 Spans HT Line (ACSR Dog Conductor on 34.8ft Steel Structure Poles)'
-    },
-    {
-      key: 'preset-1km-osprey-spun45',
-      label: '⚡ 1.0 KM HT + Osprey Conductor + HT Spun Poles 45ft',
-      badgeColor: 'bg-sky-300 hover:bg-sky-200 text-slate-900 border-sky-400',
-      activeRing: 'ring-2 ring-sky-500 ring-offset-1 font-black shadow-md',
-      htLengthKm: 1.0,
-      conductorSize: 'OSPREY',
-      poleType: 'SPUN_45FT',
-      poleHeightMeters: 13.7,
-      htPoles: 12,
-      staySets: 6,
-      schemeName: '1.0 KM Heavy HT Trunk Line (Osprey Conductor on 45ft Spun PCC Poles)'
-    },
-    {
-      key: 'preset-4spans-osprey-steel45',
-      label: '⚡ 4 Spans HT + Osprey + Steel Structure 45ft',
-      badgeColor: 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700',
-      activeRing: 'ring-2 ring-indigo-400 ring-offset-1 font-black shadow-md',
-      htLengthKm: 0.4,
-      conductorSize: 'OSPREY',
-      poleType: 'STEEL_STRUCTURE_45FT',
-      poleHeightMeters: 13.7,
-      htPoles: 4,
-      staySets: 2,
-      schemeName: '4 Spans Heavy Span HT Line (Osprey Conductor on 45ft Steel Structure Towers)'
-    },
-    {
-      key: 'preset-1km-dog-spun36',
-      label: '⚡ 1.0 KM HT + Dog + Spun Poles 36ft (PCC)',
-      badgeColor: 'bg-emerald-300 hover:bg-emerald-200 text-slate-800 border-emerald-400',
-      activeRing: 'ring-2 ring-emerald-500 ring-offset-1 font-black shadow-md',
-      htLengthKm: 1.0,
-      conductorSize: 'DOG',
-      poleType: 'PCC',
-      poleHeightMeters: 11,
-      htPoles: 12,
-      staySets: 6,
-      schemeName: 'Standard 1.0 KM 11kV HT Extension (ACSR Dog Conductor on 36ft PCC Spun Poles)'
-    },
-    {
-      key: 'preset-4spans-rabbit-spun45',
-      label: '⚡ 4 Spans HT + Rabbit + Spun Poles 45ft',
-      badgeColor: 'bg-purple-300 hover:bg-purple-200 text-slate-800 border-purple-400',
-      activeRing: 'ring-2 ring-purple-500 ring-offset-1 font-black shadow-md',
-      htLengthKm: 0.4,
-      conductorSize: 'RABBIT',
-      poleType: 'SPUN_45FT',
-      poleHeightMeters: 13.7,
-      htPoles: 4,
-      staySets: 2,
-      schemeName: '4 Spans 11kV HT Line (ACSR Rabbit Conductor on 45ft Spun PCC Poles)'
-    },
-    {
-      key: 'preset-1km-wasp-spun36',
-      label: '⚡ 1.0 KM HT + WASP Conductor (Code 2130) + Spun Poles 36ft',
-      badgeColor: 'bg-teal-300 hover:bg-teal-200 text-teal-950 border-teal-400',
-      activeRing: 'ring-2 ring-teal-500 ring-offset-1 font-black shadow-md',
-      htLengthKm: 1.0,
-      conductorSize: 'WASP',
-      poleType: 'PCC',
-      poleHeightMeters: 11,
-      htPoles: 12,
-      staySets: 6,
-      schemeName: '1.0 KM HT Extension (ACSR WASP Conductor 7/0.170 on 36ft Spun PCC Poles)'
     }
   ];
 
@@ -756,6 +691,38 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     if (tableEl) {
       tableEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+  };
+
+  // Handler: Update HT Dog & H-Type Line Multiple for Additional Line Length
+  const handleUpdateHtDogMultiplier = (km: number) => {
+    const lineKm = km > 0 ? km : 1.0;
+    const updatedLine: EstimateLineDetails = {
+      ...lineDetails,
+      htLengthKm: lineKm,
+      htPoles: Math.round(16 * lineKm),
+      staySets: Math.round(8 * lineKm),
+      is1KmHtDogHTypePackage: true
+    };
+    setLineDetails(updatedLine);
+
+    const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updatedLine, designFactors, materials);
+    setItems(res.items);
+    setCalculationSteps(res.steps);
+
+    const baseMat = 3399531.32;
+    const totalMat = Number((baseMat * lineKm).toFixed(2));
+    const totalLabour = Number((totalMat * 0.1).toFixed(2));
+    const totalOverhead = Number((totalMat * 0.16).toFixed(2));
+    const netTotal = Number((totalMat + totalLabour + totalOverhead).toFixed(2));
+
+    setProjectInfo(prev => ({
+      ...prev,
+      schemeProjectName: `Construction of ${lineKm} KM HT Line with DOG Conductor & H-Type Steel Structures (Lump Sum Package)`,
+      purposeOfWork: `Construction of ${lineKm} KM 11kV HT line extension using ACSR DOG conductor and H-Type Steel Structures with material list (Total Material Rs. ${totalMat.toLocaleString('en-PK', {minimumFractionDigits: 2})}), 10% Labour Cost (Rs. ${totalLabour.toLocaleString('en-PK', {minimumFractionDigits: 2})}), and 16% Over Heads on material cost (Rs. ${totalOverhead.toLocaleString('en-PK', {minimumFractionDigits: 2})}). Net Cost: Rs. ${netTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}.`
+    }));
+
+    setSaveToast(`✅ Scaled to ${lineKm} KM (${lineKm}x multiple): Material = Rs. ${totalMat.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Net Cost = Rs. ${netTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}`);
+    setTimeout(() => setSaveToast(''), 4500);
   };
 
   // 7. Computed Charges (Live)
@@ -1445,6 +1412,52 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   );
                 })}
               </div>
+
+              {/* Dedicated Multiplier Toolbar for DOG & H-Type Steel Structure Line Package */}
+              {lineDetails.is1KmHtDogHTypePackage && (
+                <div className="mt-3 pt-3 border-t border-slate-700/80 bg-slate-950/60 rounded-lg p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Line Length Multiple
+                    </span>
+                    <span className="text-xs text-slate-300">
+                      Current Line: <strong className="text-white font-mono">{lineDetails.htLengthKm || 1.0} KM</strong> ({lineDetails.htLengthKm || 1.0}x Multiple · {Math.round(16 * (lineDetails.htLengthKm || 1.0))} Structures · {Math.round(3150 * (lineDetails.htLengthKm || 1.0))}m DOG)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[1, 2, 3, 4, 5].map(km => {
+                      const isSelected = Number(lineDetails.htLengthKm) === km;
+                      return (
+                        <button
+                          key={km}
+                          type="button"
+                          onClick={() => handleUpdateHtDogMultiplier(km)}
+                          className={`px-2.5 py-1 text-xs font-bold rounded-md border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-300 ring-2 ring-emerald-400 font-black shadow-sm'
+                              : 'bg-slate-800 hover:bg-slate-700 text-emerald-200 border-slate-600'
+                          }`}
+                          title={`Scale lump sum schedule for ${km} KM HT line extension`}
+                        >
+                          {km}.0 KM ({km}x)
+                        </button>
+                      );
+                    })}
+                    <div className="flex items-center gap-1 ml-1 bg-slate-800 px-2 py-0.5 rounded-md border border-slate-600">
+                      <span className="text-[10px] text-slate-400">Custom KM:</span>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={lineDetails.htLengthKm || ''}
+                        onChange={(e) => handleUpdateHtDogMultiplier(Number(e.target.value))}
+                        className="w-16 px-1.5 py-0.5 bg-slate-900 text-emerald-300 font-mono text-xs font-bold rounded text-center border border-slate-700 focus:outline-none focus:border-emerald-400"
+                        title="Enter any custom distance (e.g. 1.5, 2.8, etc.) to scale the line cost"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Estimate Type & Structure Selector Grid */}
@@ -1504,14 +1517,25 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             {/* Line Length & Quantities Input Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">HT Line Length (km)</label>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  HT Line Length (km) {lineDetails.is1KmHtDogHTypePackage && <span className="text-emerald-700 font-bold">(Multiple Active)</span>}
+                </label>
                 <input
                   type="number"
                   min="0"
                   step="0.01"
                   value={lineDetails.htLengthKm}
-                  onChange={(e) => setLineDetails({ ...lineDetails, htLengthKm: Number(e.target.value) })}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                  onChange={(e) => {
+                    const newKm = Number(e.target.value);
+                    if (lineDetails.is1KmHtDogHTypePackage && newKm > 0) {
+                      handleUpdateHtDogMultiplier(newKm);
+                    } else {
+                      setLineDetails({ ...lineDetails, htLengthKm: newKm });
+                    }
+                  }}
+                  className={`w-full px-3 py-1.5 bg-white border rounded-lg text-xs font-mono font-bold text-slate-900 ${
+                    lineDetails.is1KmHtDogHTypePackage ? 'border-emerald-500 ring-1 ring-emerald-400 bg-emerald-50/20' : 'border-slate-300'
+                  }`}
                 />
               </div>
 

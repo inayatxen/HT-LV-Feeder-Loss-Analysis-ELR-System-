@@ -44,51 +44,6 @@ export function calculateQuantitiesForLine(
   const steps: CalculationStep[] = [];
   const itemMap = new Map<string, EstimateItem>();
 
-  if (details.is1KmHtDogHTypePackage) {
-    itemMap.clear();
-    steps.push({
-      component: '1.0 KM HT Line Extension (DOG Conductor & H-Type Steel Structures)',
-      parameter: 'Official WAPDA / PESCO Lump Sum Material Schedule',
-      formula: 'Lump Sum Materials (Rs. 3,399,531.32) + 10% Labour Cost (Rs. 339,953.13) + 16% Over Heads on Material Cost (Rs. 543,925.01)',
-      calculation: `WAPDA CSR Schedule Items: Material = Rs. 3,399,531.32, Labour (10%) = Rs. 339,953.13, Over Heads (16% on Material) = Rs. 543,925.01. Net Cost = Rs. 4,283,409.46`,
-      resultQuantity: 1,
-      unit: 'Job / Set',
-      notes: 'Includes 1.0 KM 11kV HT line extension using ACSR DOG conductor (3150m) and H-Type Steel Structures (16 Nos), Pin and Disc insulators, cross arms, stays, and hardware fittings.'
-    });
-
-    LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS.forEach(lsItem => {
-      const itemMat = findMat(lsItem.code);
-      const itemQty = lsItem.quantity;
-      const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
-      const itemLabourRate = lsItem.labourRate;
-      const itemLabourAmount = Number((lsItem.labourRate * itemQty).toFixed(2));
-      const itemTotal = Number((itemMatAmount + itemLabourAmount).toFixed(2));
-
-      itemMap.set(lsItem.code, {
-        id: `item-${lsItem.code}`,
-        materialId: itemMat ? itemMat.id : `mat-code-${lsItem.code}`,
-        materialCode: lsItem.code,
-        description: lsItem.description,
-        specification: lsItem.specification,
-        unit: lsItem.unit,
-        quantity: itemQty,
-        unitRate: lsItem.unitRate,
-        materialAmount: itemMatAmount,
-        labourRate: itemLabourRate,
-        labourAmount: itemLabourAmount,
-        totalAmount: itemTotal,
-        isAutoCalculated: true,
-        calculationNotes: `1 KM HT Line (DOG & H-Type) Schedule item: 10% Labour Cost applied`
-      });
-    });
-
-    return {
-      items: Array.from(itemMap.values()),
-      steps,
-      updatedLineDetails: {}
-    };
-  }
-
   const findMat = (code: string) => {
     const query = code.trim().toUpperCase();
     const cleanQuery = query.replace(/^0+/, '');
@@ -117,6 +72,65 @@ export function calculateQuantitiesForLine(
       return name.includes(query) || spec.includes(query);
     });
   };
+
+  if (details.is1KmHtDogHTypePackage) {
+    const rawKm = Number(details.htLengthKm);
+    const lineKm = rawKm > 0 ? rawKm : 1.0;
+    const multiplier = lineKm;
+    itemMap.clear();
+
+    const baseMaterialTotal = LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS.materialCost;
+    const scaledMaterialTotal = Number((baseMaterialTotal * multiplier).toFixed(2));
+    const scaledLabourTotal = Number((scaledMaterialTotal * 0.10).toFixed(2));
+    const scaledOverheadTotal = Number((scaledMaterialTotal * 0.16).toFixed(2));
+    const scaledNetTotal = Number((scaledMaterialTotal + scaledLabourTotal + scaledOverheadTotal).toFixed(2));
+
+    steps.push({
+      component: `${multiplier} KM HT Line Extension (DOG Conductor & H-Type Steel Structures)`,
+      parameter: `Official WAPDA / PESCO Lump Sum Material Schedule (${multiplier}x multiple for ${multiplier} KM Line)`,
+      formula: `Lump Sum Base Materials (Rs. 3,399,531.32 × ${multiplier}) + 10% Labour Cost (Rs. ${(339953.13 * multiplier).toFixed(2)}) + 16% Over Heads on Material Cost (Rs. ${(543925.01 * multiplier).toFixed(2)})`,
+      calculation: `WAPDA CSR Schedule Items for ${multiplier} KM: Material = Rs. ${scaledMaterialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${scaledLabourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${scaledOverheadTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${scaledNetTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
+      resultQuantity: multiplier,
+      unit: 'KM',
+      notes: `Includes ${multiplier} KM 11kV HT line extension using ACSR DOG conductor (${Math.round(3150 * multiplier)}m) and H-Type Steel Structures (${Math.round(16 * multiplier)} Nos), Pin and Disc insulators, cross arms, stays, and hardware fittings.`
+    });
+
+    LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS.forEach(lsItem => {
+      const itemMat = findMat(lsItem.code);
+      const rawQty = lsItem.quantity * multiplier;
+      const itemQty = lsItem.unit === 'EA' || lsItem.unit === 'NOS' ? Math.round(rawQty) : Number(rawQty.toFixed(2));
+      const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
+      const itemLabourRate = lsItem.labourRate;
+      const itemLabourAmount = Number((lsItem.labourRate * itemQty).toFixed(2));
+      const itemTotal = Number((itemMatAmount + itemLabourAmount).toFixed(2));
+
+      itemMap.set(lsItem.code, {
+        id: `item-${lsItem.code}`,
+        materialId: itemMat ? itemMat.id : `mat-code-${lsItem.code}`,
+        materialCode: lsItem.code,
+        description: lsItem.description,
+        specification: lsItem.specification,
+        unit: lsItem.unit,
+        quantity: itemQty,
+        unitRate: lsItem.unitRate,
+        materialAmount: itemMatAmount,
+        labourRate: itemLabourRate,
+        labourAmount: itemLabourAmount,
+        totalAmount: itemTotal,
+        isAutoCalculated: true,
+        calculationNotes: `${multiplier} KM HT Line (DOG & H-Type) Schedule item (${multiplier}x multiple of base ${lsItem.quantity} ${lsItem.unit}): 10% Labour Cost applied`
+      });
+    });
+
+    return {
+      items: Array.from(itemMap.values()),
+      steps,
+      updatedLineDetails: {
+        htPoles: Math.round(16 * multiplier),
+        staySets: Math.round(8 * multiplier)
+      }
+    };
+  }
 
   // 1. HT Pole Calculation
   const htKm = Number(details.htLengthKm) || 0;

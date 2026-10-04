@@ -86,10 +86,12 @@ export interface EstimateLineDetails {
   existingPortionKm?: number;
   remainingPortionKm?: number;
   bifurcationType?: 'tee_off' | 'section_split' | 'tap_off' | 'spur_line';
-  // 25 kVA, 50 kVA & 100 kVA Transformer Lump Sum Package Flags
+  // 25 kVA, 50 kVA, 100 kVA & 200 kVA Transformer Lump Sum Package Flags & 1KM HT Line Package Flags
   is25KvaLumpSumPackage?: boolean;
   is50KvaLumpSumPackage?: boolean;
   is100KvaLumpSumPackage?: boolean;
+  is200KvaLumpSumPackage?: boolean;
+  is1KmHtDogHTypePackage?: boolean;
   // Tracking whether values were auto-calculated or manually overridden
   autoCalculatedFlags?: Record<string, boolean>;
 }
