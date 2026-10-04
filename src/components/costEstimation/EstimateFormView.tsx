@@ -268,6 +268,20 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       schemeName: 'Installation of 200 KVA Distribution Transformer Sub-Station (Lump Sum Package)'
     },
     {
+      key: 'preset-1km-ht-dog-h-type',
+      label: '⚡ 1.0 KM HT Line + DOG Conductor + H-Type Steel Structures (Lump Sum)',
+      badgeColor: 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-700 font-extrabold shadow-sm',
+      activeRing: 'ring-2 ring-emerald-400 ring-offset-1 font-black shadow-md',
+      htLengthKm: 1.0,
+      conductorSize: 'DOG',
+      poleType: 'H_STEEL_STRUCTURE',
+      poleHeightMeters: 11,
+      htPoles: 16,
+      staySets: 8,
+      is1KmHtDogHTypePackage: true,
+      schemeName: 'Construction of 1.0 KM HT Line with DOG Conductor & H-Type Steel Structures (Lump Sum Package)'
+    },
+    {
       key: 'preset-4spans-dog-steel',
       label: '⚡ 4 Spans HT + Dog + Steel Structure Poles (34.8ft)',
       badgeColor: 'bg-amber-400 hover:bg-amber-300 text-slate-900 border-amber-500',
@@ -621,6 +635,77 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       const tableEl2 = document.getElementById('boq-materials-table');
       if (tableEl2) {
         tableEl2.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+      return;
+    }
+
+    if ((preset as any).is1KmHtDogHTypePackage) {
+      setEstimateType('HT_LINE_EXTENSION');
+      const updatedLine: EstimateLineDetails = {
+        ...lineDetails,
+        htLengthKm: 1.0,
+        ltLengthKm: 0,
+        conductorSize: 'DOG',
+        conductorType: 'ACSR',
+        poleType: 'H_STEEL_STRUCTURE',
+        poleHeightMeters: 11,
+        roadCrossings: 0,
+        canalCrossings: 0,
+        transformerCount: 0,
+        transformerStructures: 0,
+        transformerCapacityKva: 0,
+        is1KmHtDogHTypePackage: true,
+        is200KvaLumpSumPackage: false,
+        is100KvaLumpSumPackage: false,
+        is50KvaLumpSumPackage: false,
+        is25KvaLumpSumPackage: false,
+        circuitsCount: 1,
+        htPoles: 16,
+        ltPoles: 0,
+        staySets: 8,
+        autoCalculatedFlags: {
+          htPoles: false,
+          ltPoles: true,
+          staySets: false
+        }
+      };
+
+      setLineDetails(updatedLine);
+
+      setPercentages({
+        departmentalPercent: 6.0,
+        contractorPercent: 10.0,
+        engineeringPercent: 0.0,
+        contingencyPercent: 0.0,
+        taxPercent: 0.0,
+        otherChargesFixed: 0,
+        overheadBasis: 'MATERIAL'
+      });
+
+      setTransportSettings({
+        method: 'FIXED',
+        distanceKm: 0,
+        ratePerKm: 0,
+        loadingUnloadingFixed: 0,
+        vehicleType: 'Heavy Truck'
+      });
+
+      setProjectInfo(prev => ({
+        ...prev,
+        schemeProjectName: preset.schemeName,
+        purposeOfWork: 'Construction of 1.0 KM 11kV HT line extension using ACSR DOG conductor and H-Type Steel Structures with material list (Total Material Rs. 3,399,531.32), 10% Labour Cost (Rs. 339,953.13), and 16% Over Heads on material cost (Rs. 543,925.01). Net Cost: Rs. 4,283,409.46.'
+      }));
+
+      const res = calculateQuantitiesForLine('HT_LINE_EXTENSION', updatedLine, designFactors, materials);
+      setItems(res.items);
+      setCalculationSteps(res.steps);
+
+      setSaveToast('✅ 1.0 KM HT Line (DOG & H-Type Steel Structures) Package applied: material schedule loaded (Material Rs. 3,399,531.32) + 10% Labour (Rs. 339,953.13) + 16% Over Heads on Material (Rs. 543,925.01) = Net Cost Rs. 4,283,409.46.');
+      setTimeout(() => setSaveToast(''), 5500);
+
+      const tableEl3 = document.getElementById('boq-materials-table');
+      if (tableEl3) {
+        tableEl3.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
       return;
     }

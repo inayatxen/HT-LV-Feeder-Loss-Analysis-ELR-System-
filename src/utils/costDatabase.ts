@@ -790,7 +790,81 @@ function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsCo
     updatedAt: '2026-10-02T11:30:00.000Z'
   };
 
-  return [est0, est0b, est0c, est0d, est1, est2, est3, est4, est5];
+  // Combination 0E: 1.0 KM HT Line with DOG Conductor & H-Type Steel Structures (Lump Sum Schedule)
+  const ld0e = {
+    htLengthKm: 1.0,
+    ltLengthKm: 0,
+    htPoles: 16,
+    ltPoles: 0,
+    staySets: 8,
+    roadCrossings: 0,
+    canalCrossings: 0,
+    transformerStructures: 0,
+    transformerCount: 0,
+    transformerCapacityKva: 0,
+    is1KmHtDogHTypePackage: true,
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: 'DOG',
+    poleType: 'H_STEEL_STRUCTURE',
+    poleHeightMeters: 11,
+    insulatorType: 'PIN_DISC'
+  };
+  const calc0e = calculateQuantitiesForLine('HT_LINE_EXTENSION', ld0e, factors, materials);
+  const charges0e = computeEstimateCharges(calc0e.items, 1.0, {
+    method: 'FIXED',
+    distanceKm: 0,
+    ratePerKm: 0,
+    loadingUnloadingFixed: 0
+  }, {
+    departmentalPercent: 6.0,
+    contractorPercent: 10.0,
+    engineeringPercent: 0.0,
+    contingencyPercent: 0.0,
+    taxPercent: 0.0,
+    otherChargesFixed: 0,
+    overheadBasis: 'MATERIAL'
+  });
+
+  const est0e: CostEstimateRecord = {
+    id: 'est-ht-1km-dog-h-type-lump-sum',
+    projectInfo: {
+      estimateNo: 'EST-PESH-2026-01060',
+      revisionNo: 'Rev-00',
+      estimateDate: '2026-10-03',
+      division: 'Peshawar Transmission & Line Division',
+      subDivision: 'Peshawar City Sub-Division',
+      circle: 'Peshawar Circle-1',
+      district: 'Peshawar',
+      feederName: 'University Town 11kV Feeder',
+      feederCode: 'FDR-UTN-02',
+      proposedLocation: '1.0 KM HT Line Extension Site with H-Type Steel Structures',
+      villageLocality: 'Peshawar',
+      gpsLatitude: '34.0100 N',
+      gpsLongitude: '71.5000 E',
+      applicantDepartment: 'PESCO Line Construction & System Augmentation',
+      schemeProjectName: 'Construction of 1.0 KM HT Line with DOG Conductor & H-Type Steel Structures (Lump Sum Package)',
+      purposeOfWork: 'Construction of 1.0 KM 11kV HT line extension using ACSR DOG conductor and H-Type Steel Structures (Total Material Rs. 3,399,531.32). Net cost is estimated adding 10% Labour Cost (Rs. 339,953.13) and 16% Over Heads on material cost (Rs. 543,925.01) = Rs. 4,283,409.46.',
+      preparedBy: 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: 'Engr. Tariq Khan (XEN Peshawar)',
+      approvedBy: 'Engr. Abdul Rehman (SE Circle-1)'
+    },
+    type: 'HT_LINE_EXTENSION',
+    status: 'APPROVED',
+    lineDetails: ld0e,
+    items: calc0e.items,
+    charges: charges0e,
+    calculationSteps: calc0e.steps,
+    auditTrail: [
+      { id: 'aud-s0e', timestamp: '2026-10-03 10:00', user: 'Engr. M. Inayat', role: 'SDO', action: 'Created estimate for 1.0 KM HT Line with DOG Conductor and H-Type Steel Structures lump sum schedule + 10% Labour + 16% Over Heads on Material Cost' },
+      { id: 'aud-s0e-appr', timestamp: '2026-10-03 12:00', user: 'Engr. Tariq Khan', role: 'XEN', action: 'Approved technical sanction for 1.0 KM HT Line H-Type package (Net Cost Rs. 4,283,409.46)' }
+    ],
+    createdAt: '2026-10-03T10:00:00.000Z',
+    updatedAt: '2026-10-03T12:00:00.000Z'
+  };
+
+  return [est0, est0b, est0c, est0d, est0e, est1, est2, est3, est4, est5];
 }
 
 // -------------------------------------------------------------

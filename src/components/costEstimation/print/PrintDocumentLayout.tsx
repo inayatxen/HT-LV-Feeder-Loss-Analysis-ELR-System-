@@ -31,7 +31,15 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 }) => {
   const totalKm = (estimate.lineDetails.htLengthKm || 0) + (estimate.lineDetails.ltLengthKm || 0);
 
-  // Check whether estimate is 50 kVA, 100 kVA or 200 kVA Transformer Lump Sum Package
+  // Check whether estimate is 50 kVA, 100 kVA, 200 kVA or 1.0 KM HT H-Type Lump Sum Package
+  const is1KmHtDogHTypePackage = Boolean(
+    estimate.lineDetails?.is1KmHtDogHTypePackage ||
+    estimate.projectInfo?.schemeProjectName?.includes('H-Type Steel Structures') ||
+    estimate.projectInfo?.purposeOfWork?.includes('H-Type Steel Structures') ||
+    estimate.id?.includes('1km-dog-h-type') ||
+    estimate.items?.some(i => i.materialCode === '01210')
+  );
+
   const is200KvaPackage = Boolean(
     estimate.lineDetails?.transformerCapacityKva === 200 ||
     estimate.lineDetails?.is200KvaLumpSumPackage ||
@@ -81,7 +89,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
     }
     return item;
   }).filter(item => {
-    if ((is50KvaPackage || is100KvaPackage || is200KvaPackage || estimate.charges.overheadBasis === 'MATERIAL') && ((estimate.lineDetails.htLengthKm || 0) === 0 && (estimate.lineDetails.ltLengthKm || 0) === 0)) {
+    if ((is50KvaPackage || is100KvaPackage || is200KvaPackage) && ((estimate.lineDetails.htLengthKm || 0) === 0 && (estimate.lineDetails.ltLengthKm || 0) === 0)) {
       return item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD');
     }
     return true;
@@ -90,7 +98,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
   const materialCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
   const labourCost = Number(renderedItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
   
-  const isLumpSumOverhead = estimate.charges.overheadBasis === 'MATERIAL' || is50KvaPackage || is100KvaPackage || is200KvaPackage;
+  const isLumpSumOverhead = estimate.charges.overheadBasis === 'MATERIAL' || is50KvaPackage || is100KvaPackage || is200KvaPackage || is1KmHtDogHTypePackage;
   const deptPercent = estimate.charges.departmentalOverheadPercent || 6.0;
   const contPercent = estimate.charges.contractorOverheadPercent || 10.0;
   const deptOverhead = isLumpSumOverhead
