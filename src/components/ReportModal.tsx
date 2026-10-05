@@ -272,7 +272,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         recommendations: false
       });
       setExcludeUnnecessaryGraphics(true);
-      setPageBreakMode('compact_flow');
+      setPageBreakMode('page_per_section');
+      setPrintScale('standard');
     } else if (preset === 'sld_only') {
       setDisplayMode('single_line_diagram');
       setSldScheme('combined');
@@ -1001,6 +1002,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-slate-400 text-[11px] mr-1">Quick Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('bifurcation_only')}
+                  className={`px-2.5 py-1 rounded font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all ${
+                    displayMode === 'bifurcation_4_statements'
+                      ? 'bg-purple-600 text-white shadow-xs border border-purple-400'
+                      : 'bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-600'
+                  }`}
+                  title="Export only the Line Bifurcation & T-2 node statements"
+                >
+                  <Split className="w-3.5 h-3.5 text-purple-300" />
+                  <span>Bifurcation Only</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('single_page')}
