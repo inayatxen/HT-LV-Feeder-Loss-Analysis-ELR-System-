@@ -103,7 +103,47 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
     const isProp1 = currentScheme === 'proposed_1';
     const isProp2 = currentScheme === 'proposed_2';
 
-    // Count strictly active spans in this specific scheme
+    // Locally shadow the summaries and result maps to dynamically target the active scheme
+    const effectiveSummary = (isExist && existingSummary) ? existingSummary : summary;
+
+    const segmentResultMap = (() => {
+      const map = new Map<string, SegmentAnalysisResult>();
+      effectiveSummary.segmentResults.forEach(r => {
+        map.set(`${r.fromNodeId}->${r.toNodeId}`, r);
+        map.set(r.segment.id, r);
+      });
+      return map;
+    })();
+
+    const isSegmentVisibleInScheme = (fromNodeId: string, toNodeId: string, fedBy?: 'T1' | 'T2', activeScheme?: any) => {
+      if (isExist || currentScheme === 'combined') return true;
+      if (isProp1) {
+        if (toNodeId === cutOffNodeId) return true; // Keep cut-off segment visible to show TIE OPEN
+        return fedBy === 'T1' || !fedBy;
+      }
+      if (isProp2) {
+        if (toNodeId === cutOffNodeId) return true; // Keep cut-off segment visible to show TIE OPEN
+        return fedBy === 'T2';
+      }
+      return true;
+    };
+
+    const isNodeVisibleInScheme = (nodeId: string, activeScheme?: any) => {
+      if (isExist || currentScheme === 'combined') return true;
+      if (isProp1) {
+        const seg = effectiveSummary.segmentResults.find(s => s.toNodeId === nodeId);
+        if (nodeId === '0.0') return true;
+        return seg ? seg.fedByTransformer === 'T1' || !seg.fedByTransformer : true;
+      }
+      if (isProp2) {
+        if (nodeId === proposedTransformerNodeId || nodeId === cutOffNodeId) return true;
+        const seg = effectiveSummary.segmentResults.find(s => s.toNodeId === nodeId);
+        return seg ? seg.fedByTransformer === 'T2' : false;
+      }
+      return true;
+    };
+
+    // Count strictly active spans in this specific scheme using the shadowed effectiveSummary
     const activeSchemeSegs = effectiveSummary.segmentResults.filter(s => {
       if (isExist) return true;
       if (isProp1) return s.toNodeId !== cutOffNodeId && (s.fedByTransformer === 'T1' || !s.fedByTransformer);

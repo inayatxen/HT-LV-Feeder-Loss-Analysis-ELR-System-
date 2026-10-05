@@ -14,6 +14,7 @@ export interface PdfExportOptions {
   reportTitle?: string;
   docReference?: string;
   excludeGraphics?: boolean;
+  pageBreakMode?: 'page_per_section' | 'compact_flow';
 }
 
 export interface PdfExportResult {
@@ -46,7 +47,8 @@ export async function exportElementToPdf(
     marginMm = 10,
     reportTitle = 'PESCO WAPDA Engineering Report',
     docReference = '',
-    excludeGraphics = false
+    excludeGraphics = false,
+    pageBreakMode = 'page_per_section'
   } = options;
 
   let rawFilename = (options.filename || `Report_${new Date().toISOString().slice(0, 10)}`).trim();
@@ -65,8 +67,15 @@ export async function exportElementToPdf(
     const contentHeightMm = pageHeightMm - (marginMm * 2) - 8; // Leave 8mm for running footer
 
     // Check if element contains dedicated per-page units (.print-page-unit)
-    const pageUnits = Array.from(element.querySelectorAll<HTMLElement>('.print-page-unit'))
-      .filter(unit => unit.offsetParent !== null || window.getComputedStyle(unit).display !== 'none');
+    // If pageBreakMode is 'compact_flow' (continuous flow), we bypass per-page splitting 
+    // to render continuous content naturally across multiple sliced A4 pages.
+    const pageUnits = pageBreakMode === 'page_per_section'
+      ? Array.from(element.querySelectorAll<HTMLElement>('.print-page-unit'))
+          .filter(unit => {
+            const style = window.getComputedStyle(unit);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+          })
+      : [];
 
     if (pageUnits.length > 0) {
       const pdf = new jsPDF({
@@ -160,6 +169,17 @@ export async function exportElementToPdf(
           clonedTarget.style.overflow = 'visible';
           clonedTarget.style.maxHeight = 'none';
           clonedTarget.style.height = 'auto';
+          clonedTarget.style.display = 'block';
+
+          // Recursively expand all parent elements to ensure that the document can render
+          // completely to its full height on the virtual DOM clone canvas without scroll/viewport clipping
+          let parent = clonedTarget.parentElement;
+          while (parent) {
+            parent.style.overflow = 'visible';
+            parent.style.maxHeight = 'none';
+            parent.style.height = 'auto';
+            parent = parent.parentElement;
+          }
         }
 
         // Hide all no-print elements in the cloned document

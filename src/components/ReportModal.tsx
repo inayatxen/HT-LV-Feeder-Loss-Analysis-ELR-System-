@@ -187,7 +187,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const handleExportPdf = async () => {
     if (!printContentRef.current) return;
     setIsGeneratingPdf(true);
-    setPdfToast({ message: 'Generating engineering PDF dossier (1 report per page)...', type: 'info' });
+    setPdfToast({ 
+      message: `Generating engineering PDF dossier (${pageBreakMode === 'page_per_section' ? '1 report per page' : 'continuous multi-page flow'})...`, 
+      type: 'info' 
+    });
 
     try {
       const cleanName = (feeder.name || 'Feeder').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -201,12 +204,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         marginMm: printScale === 'compact' ? 8 : 10,
         reportTitle: `PESCO ELR Engineering Report - ${feeder.name}`,
         docReference: `ELR-PESCO-${feeder.id.toUpperCase()}`,
-        excludeGraphics: excludeUnnecessaryGraphics
+        excludeGraphics: excludeUnnecessaryGraphics,
+        pageBreakMode: pageBreakMode
       });
 
       if (result.success) {
         setPdfToast({
-          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages, 1 per report)`,
+          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages, ${pageBreakMode === 'page_per_section' ? '1 per section' : 'continuous layout'})`,
           type: 'success'
         });
         setTimeout(() => setPdfToast(null), 4000);
