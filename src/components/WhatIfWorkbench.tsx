@@ -84,6 +84,21 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
   const currentLf = activeLoadFactor !== undefined ? activeLoadFactor : (feeder.loadFactor || 0.60);
 
+  const l1Volt = bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage;
+  const l2Volt = bifurcationConfig.line2InjectedVoltage || 11000;
+  const vKv1 = l1Volt / 1000;
+  const vKv2 = l2Volt / 1000;
+
+  const calculatedLine1Current = Number((proposedSummary.transformer1DemandKva ? (proposedSummary.transformer1DemandKva / (Math.sqrt(3) * vKv1)) : (proposedSummary.totalSourceCurrentAmps || 0)).toFixed(1));
+  const calculatedLine2Current = Number((proposedSummary.transformer2DemandKva ? (proposedSummary.transformer2DemandKva / (Math.sqrt(3) * vKv2)) : 0).toFixed(1));
+
+  const effectiveLine1Current = bifurcationConfig.line1InjectedCurrentAmps !== undefined 
+    ? bifurcationConfig.line1InjectedCurrentAmps 
+    : calculatedLine1Current;
+  const effectiveLine2Current = bifurcationConfig.line2InjectedCurrentAmps !== undefined 
+    ? bifurcationConfig.line2InjectedCurrentAmps 
+    : calculatedLine2Current;
+
   const bifurcationDossier: BifurcationFourStatementDossier = useMemo(() => {
     return calculateBifurcationFourStatements(feeder, bifurcationConfig, {
       customConductors: activeConductors,
@@ -99,6 +114,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
     Object.keys(activeConductors).length > 0 ||
     Object.keys(activeCapacitors).length > 0 ||
     (activeLoadFactor !== undefined && activeLoadFactor !== feeder.loadFactor) ||
+    bifurcationConfig.line1InjectedCurrentAmps !== undefined ||
+    bifurcationConfig.line2InjectedCurrentAmps !== undefined ||
     bifurcationConfig.enabled;
 
   // Candidate nodes for bifurcation (nodes with incoming segments, excluding source)
@@ -123,33 +140,67 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
         {/* Quick Packages */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          <button
-            onClick={() => onApplyPackage('bifurcation')}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
-              bifurcationConfig.enabled
-                ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
-                : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-300'
-            }`}
-          >
-            <Split className="w-3.5 h-3.5" />
-            <span>Line Bifurcation + T-2 (100 kVA @ Node 3.0)</span>
-          </button>
+          {isHtLine ? (
+            <>
+              <button
+                onClick={() => onApplyPackage('bifurcation')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bifurcationConfig.enabled
+                    ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
+                    : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-300'
+                }`}
+              >
+                <Split className="w-3.5 h-3.5" />
+                <span>HT Feeder Bifurcation (Grid Extension @ Break Point)</span>
+              </button>
 
-          <button
-            onClick={() => onApplyPackage('standard')}
-            className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>WAPDA Augmentation (200 kVA + Cap)</span>
-          </button>
+              <button
+                onClick={() => onApplyPackage('standard')}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>HT Re-conductoring Plan (Panther / Dog ACSR)</span>
+              </button>
 
-          <button
-            onClick={() => onApplyPackage('max')}
-            className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-          >
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Maximum Efficiency Plan</span>
-          </button>
+              <button
+                onClick={() => onApplyPackage('max')}
+                className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Grid Voltage Regulation (11.4 kV)</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => onApplyPackage('bifurcation')}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                  bifurcationConfig.enabled
+                    ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
+                    : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-300'
+                }`}
+              >
+                <Split className="w-3.5 h-3.5" />
+                <span>Line Bifurcation + T-2 (100 kVA @ Node 3.0)</span>
+              </button>
+
+              <button
+                onClick={() => onApplyPackage('standard')}
+                className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                <span>WAPDA Augmentation (200 kVA + Cap)</span>
+              </button>
+
+              <button
+                onClick={() => onApplyPackage('max')}
+                className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Maximum Efficiency Plan</span>
+              </button>
+            </>
+          )}
 
           {hasChanges && (
             <button
@@ -205,7 +256,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
       {/* 5 Interactive Intervention Panels Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
         
-        {/* Panel 1: Line Bifurcation & Additional Transformer */}
+        {/* Panel 1: Line Bifurcation & Additional Transformer (LT) OR HT Feeder Bifurcation & Grid Line Extension (HT) */}
         <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
           bifurcationConfig.enabled 
             ? 'bg-purple-50/70 border-purple-300 ring-2 ring-purple-400/30 shadow-sm' 
@@ -215,7 +266,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
             <div className="flex items-center justify-between text-xs mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
                 <Split className="w-4 h-4 text-purple-600" />
-                1. Line Bifurcation & T-2
+                {isHtLine ? '1. HT Bifurcation & Grid Line Extension' : '1. Line Bifurcation & T-2'}
               </span>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
@@ -223,7 +274,12 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                   checked={bifurcationConfig.enabled}
                   onChange={(e) => onSetBifurcation({
                     ...bifurcationConfig,
-                    enabled: e.target.checked
+                    enabled: e.target.checked,
+                    gridSourceType: bifurcationConfig.gridSourceType || 'SAME_GRID',
+                    extensionLengthKm: bifurcationConfig.extensionLengthKm || 2.0,
+                    extensionConductorCode: bifurcationConfig.extensionConductorCode || 'DOG',
+                    line1InjectedVoltage: bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage,
+                    line2InjectedVoltage: bifurcationConfig.line2InjectedVoltage || 11000
                   })}
                   className="sr-only peer"
                 />
@@ -232,15 +288,17 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
             </div>
 
             <p className="text-[11px] text-slate-500 mb-2.5">
-              Split the heavily loaded line & install an Additional Distribution Transformer (T-2) at load center.
+              {isHtLine 
+                ? 'Bifurcate primary 11kV line & construct new feeder line extension from present/nearby grid station to the point of line break.'
+                : 'Split heavily loaded line & install an Additional Distribution Transformer (T-2) at load center.'}
             </p>
 
             {bifurcationConfig.enabled ? (
               <div className="space-y-2 text-xs">
-                {/* Bifurcation Split Node */}
+                {/* Bifurcation Split Node / Point of Line Break */}
                 <div>
                   <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                    Bifurcation Cut-Off Point / Split Node:
+                    {isHtLine ? 'Point of Line Break / Cut-Off Node:' : 'Bifurcation Cut-Off Point / Split Node:'}
                   </label>
                   <select
                     value={bifurcationConfig.bifurcationNodeId}
@@ -252,94 +310,435 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                   >
                     {candidateNodes.map(n => (
                       <option key={n.id} value={n.id}>
-                        {n.label || `Pole ${n.id}`} ({n.singlePhaseCustomers} 1-Ph, {n.threePhaseCustomers} 3-Ph)
+                        {n.label || `Node ${n.id}`} ({n.spotLoadKva ? `${n.spotLoadKva} kVA` : `${n.singlePhaseCustomers} 1-Ph, ${n.threePhaseCustomers} 3-Ph`})
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Additional Transformer Location Node */}
-                <div>
-                  <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                    New Additional Transformer (T-2) Substation Location:
-                  </label>
-                  <select
-                    value={bifurcationConfig.transformerNodeId || bifurcationConfig.bifurcationNodeId}
-                    onChange={(e) => onSetBifurcation({
-                      ...bifurcationConfig,
-                      transformerNodeId: e.target.value
-                    })}
-                    className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                  >
-                    {feeder.nodes.map(n => (
-                      <option key={n.id} value={n.id}>
-                        Node {n.id} ({n.label}) {n.id === bifurcationConfig.bifurcationNodeId ? '★ Cut-Off Point' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {isHtLine ? (
+                  <>
+                    {/* HT Grid Source Origin */}
+                    <div>
+                      <label className="text-[10px] font-bold text-purple-900 block mb-1">
+                        New Feeder Grid Source Origin:
+                      </label>
+                      <div className="grid grid-cols-2 gap-1 mb-1">
+                        <button
+                          type="button"
+                          onClick={() => onSetBifurcation({
+                            ...bifurcationConfig,
+                            gridSourceType: 'SAME_GRID'
+                          })}
+                          className={`px-2 py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer text-center ${
+                            (bifurcationConfig.gridSourceType || 'SAME_GRID') === 'SAME_GRID'
+                              ? 'bg-purple-700 text-white border-purple-800'
+                              : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                          }`}
+                        >
+                          Present Grid Station
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSetBifurcation({
+                            ...bifurcationConfig,
+                            gridSourceType: 'OTHER_GRID',
+                            otherGridName: bifurcationConfig.otherGridName || 'Nearby 132kV Grid'
+                          })}
+                          className={`px-2 py-1 text-[10px] font-bold rounded border transition-colors cursor-pointer text-center ${
+                            bifurcationConfig.gridSourceType === 'OTHER_GRID'
+                              ? 'bg-purple-700 text-white border-purple-800'
+                              : 'bg-white text-purple-900 border-purple-200 hover:bg-purple-100'
+                          }`}
+                        >
+                          Other Grid Nearby
+                        </button>
+                      </div>
 
-                {/* Additional Transformer Capacity */}
-                <div>
-                  <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                    Additional Transformer (T-2) Rating:
-                  </label>
-                  <select
-                    value={bifurcationConfig.transformerCapacityKva}
-                    onChange={(e) => onSetBifurcation({
-                      ...bifurcationConfig,
-                      transformerCapacityKva: Number(e.target.value)
-                    })}
-                    className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                  >
-                    {TRANSFORMER_CAPACITIES.map(cap => (
-                      <option key={cap} value={cap}>
-                        {cap} kVA (New Substation T-2)
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                      {bifurcationConfig.gridSourceType === 'OTHER_GRID' && (
+                        <input
+                          type="text"
+                          value={bifurcationConfig.otherGridName || ''}
+                          onChange={(e) => onSetBifurcation({
+                            ...bifurcationConfig,
+                            otherGridName: e.target.value
+                          })}
+                          placeholder="e.g. 132/11kV Warsak Grid / Hayatabad Grid"
+                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-[11px] font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        />
+                      )}
+                    </div>
+
+                    {/* New Line Extension Specifications */}
+                    <div className="bg-purple-100/60 p-2 rounded-lg border border-purple-200 space-y-1.5">
+                      <span className="text-[10px] font-bold text-purple-950 uppercase tracking-wider block">
+                        New 11kV Line Extension (Grid → Break Point)
+                      </span>
+                      
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-600 block">Length (km):</label>
+                          <input
+                            type="number"
+                            min="0.1"
+                            max="50"
+                            step="0.1"
+                            value={bifurcationConfig.extensionLengthKm !== undefined ? bifurcationConfig.extensionLengthKm : 2.0}
+                            onChange={(e) => onSetBifurcation({
+                              ...bifurcationConfig,
+                              extensionLengthKm: parseFloat(e.target.value) || 0
+                            })}
+                            className="w-full bg-white border border-purple-300 rounded px-2 py-0.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                          />
+                          <span className="text-[9px] text-purple-800 font-mono">
+                            {Math.round((bifurcationConfig.extensionLengthKm || 2.0) * 1000)} meters
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="text-[9px] font-bold text-slate-600 block">Conductor Size:</label>
+                          <select
+                            value={bifurcationConfig.extensionConductorCode || 'DOG'}
+                            onChange={(e) => onSetBifurcation({
+                              ...bifurcationConfig,
+                              extensionConductorCode: e.target.value
+                            })}
+                            className="w-full bg-white border border-purple-300 rounded px-1.5 py-1 text-[11px] font-mono font-bold text-slate-900 focus:outline-none cursor-pointer"
+                          >
+                            <option value="DOG">DOG (100 mm²)</option>
+                            <option value="PANTHER">PANTHER (200 mm²)</option>
+                            <option value="OSPREY">OSPREY (200 mm²)</option>
+                            <option value="WASP">WASP (80 mm²)</option>
+                            <option value="RABBIT">RABBIT (50 mm²)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Independent Voltage & Current Injection for Both Lines */}
+                    <div className="bg-white/90 p-2 rounded-lg border border-purple-200 space-y-2">
+                      <span className="text-[10px] font-bold text-purple-950 block">
+                        Grid Side Voltage & Current Injections:
+                      </span>
+
+                      {/* Line 1 Grid Bay */}
+                      <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-slate-800">
+                          <span>Proposed Line 1 (Present Grid):</span>
+                          <span className="font-mono text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
+                            Active: {effectiveLine1Current} A
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                          {/* Line 1 Injected Voltage */}
+                          <div className="bg-white p-1.5 rounded border border-slate-200">
+                            <span className="text-[9px] font-bold text-slate-600 block mb-0.5">Inj Voltage (kV):</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                step="0.05"
+                                min="1.0"
+                                max="33"
+                                value={Number(((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) / 1000).toFixed(2))}
+                                onChange={(e) => {
+                                  const v = Math.round((parseFloat(e.target.value) || 11.0) * 1000);
+                                  onSetBifurcation({
+                                    ...bifurcationConfig,
+                                    line1InjectedVoltage: v
+                                  });
+                                  if (onUpdateInjectedVoltage) onUpdateInjectedVoltage(v);
+                                }}
+                                className="w-full bg-slate-50 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-mono font-bold text-center text-slate-900 focus:outline-none"
+                              />
+                              <span className="text-[10px] font-mono text-slate-500 font-bold">kV</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 mt-1">
+                              {[11000, 11200, 11400].map(v => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => {
+                                    onSetBifurcation({ ...bifurcationConfig, line1InjectedVoltage: v });
+                                    if (onUpdateInjectedVoltage) onUpdateInjectedVoltage(v);
+                                  }}
+                                  className={`flex-1 py-0.2 text-[9px] font-mono rounded cursor-pointer ${
+                                    Math.abs((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) - v) < 10
+                                      ? 'bg-blue-600 text-white font-bold'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                  }`}
+                                >
+                                  {(v / 1000).toFixed(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Line 1 Injected Current */}
+                          <div className="bg-white p-1.5 rounded border border-slate-200">
+                            <div className="flex items-center justify-between text-[9px] font-bold text-slate-600 mb-0.5">
+                              <span>Inj Current (A):</span>
+                              {bifurcationConfig.line1InjectedCurrentAmps !== undefined && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onSetBifurcation({
+                                      ...bifurcationConfig,
+                                      line1InjectedCurrentAmps: undefined
+                                    });
+                                  }}
+                                  className="text-[8px] text-blue-600 hover:underline cursor-pointer"
+                                  title="Reset to calculated downstream demand current"
+                                >
+                                  Auto
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="1"
+                                max="2000"
+                                value={bifurcationConfig.line1InjectedCurrentAmps !== undefined ? bifurcationConfig.line1InjectedCurrentAmps : ''}
+                                placeholder={`${calculatedLine1Current} A`}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                  onSetBifurcation({
+                                    ...bifurcationConfig,
+                                    line1InjectedCurrentAmps: val
+                                  });
+                                }}
+                                className={`w-full border rounded px-1.5 py-0.5 text-xs font-mono font-bold text-center ${
+                                  bifurcationConfig.line1InjectedCurrentAmps !== undefined
+                                    ? 'bg-blue-50 border-blue-400 text-blue-900'
+                                    : 'bg-slate-50 border-slate-300 text-slate-700'
+                                }`}
+                              />
+                              <span className="text-[10px] font-mono text-slate-500 font-bold">A</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[8px] font-mono text-slate-400 mt-1">
+                              <span>Calc: {calculatedLine1Current}A</span>
+                              {bifurcationConfig.line1InjectedCurrentAmps !== undefined && (
+                                <span className="text-blue-600 font-bold">Manual</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Line 2 Grid Bay */}
+                      <div className="bg-purple-50/70 p-2 rounded-lg border border-purple-200 space-y-1.5">
+                        <div className="flex items-center justify-between text-[10px] font-bold text-purple-950">
+                          <span>Proposed Line 2 (New Grid Feeder):</span>
+                          <span className="font-mono text-purple-800 bg-purple-100 px-1.5 py-0.2 rounded border border-purple-300 font-bold text-[10px]">
+                            Active: {effectiveLine2Current} A
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                          {/* Line 2 Injected Voltage */}
+                          <div className="bg-white p-1.5 rounded border border-purple-200">
+                            <span className="text-[9px] font-bold text-purple-900 block mb-0.5">Inj Voltage (kV):</span>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                step="0.05"
+                                min="1.0"
+                                max="33"
+                                value={Number(((bifurcationConfig.line2InjectedVoltage || 11000) / 1000).toFixed(2))}
+                                onChange={(e) => {
+                                  const v = Math.round((parseFloat(e.target.value) || 11.0) * 1000);
+                                  onSetBifurcation({
+                                    ...bifurcationConfig,
+                                    line2InjectedVoltage: v
+                                  });
+                                }}
+                                className="w-full bg-slate-50 border border-purple-300 rounded px-1.5 py-0.5 text-xs font-mono font-bold text-center text-slate-900 focus:outline-none"
+                              />
+                              <span className="text-[10px] font-mono text-purple-700 font-bold">kV</span>
+                            </div>
+                            <div className="flex items-center gap-0.5 mt-1">
+                              {[11000, 11200, 11400].map(v => (
+                                <button
+                                  key={v}
+                                  type="button"
+                                  onClick={() => onSetBifurcation({ ...bifurcationConfig, line2InjectedVoltage: v })}
+                                  className={`flex-1 py-0.2 text-[9px] font-mono rounded cursor-pointer ${
+                                    Math.abs((bifurcationConfig.line2InjectedVoltage || 11000) - v) < 10
+                                      ? 'bg-purple-700 text-white font-bold'
+                                      : 'bg-purple-100 hover:bg-purple-200 text-purple-900'
+                                  }`}
+                                >
+                                  {(v / 1000).toFixed(1)}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Line 2 Injected Current */}
+                          <div className="bg-white p-1.5 rounded border border-purple-200">
+                            <div className="flex items-center justify-between text-[9px] font-bold text-purple-900 mb-0.5">
+                              <span>Inj Current (A):</span>
+                              {bifurcationConfig.line2InjectedCurrentAmps !== undefined && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onSetBifurcation({
+                                      ...bifurcationConfig,
+                                      line2InjectedCurrentAmps: undefined
+                                    });
+                                  }}
+                                  className="text-[8px] text-purple-700 hover:underline cursor-pointer"
+                                  title="Reset to calculated downstream demand current"
+                                >
+                                  Auto
+                                </button>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                step="0.5"
+                                min="1"
+                                max="2000"
+                                value={bifurcationConfig.line2InjectedCurrentAmps !== undefined ? bifurcationConfig.line2InjectedCurrentAmps : ''}
+                                placeholder={`${calculatedLine2Current} A`}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                                  onSetBifurcation({
+                                    ...bifurcationConfig,
+                                    line2InjectedCurrentAmps: val
+                                  });
+                                }}
+                                className={`w-full border rounded px-1.5 py-0.5 text-xs font-mono font-bold text-center ${
+                                  bifurcationConfig.line2InjectedCurrentAmps !== undefined
+                                    ? 'bg-purple-50 border-purple-400 text-purple-900'
+                                    : 'bg-slate-50 border-slate-300 text-slate-700'
+                                }`}
+                              />
+                              <span className="text-[10px] font-mono text-purple-700 font-bold">A</span>
+                            </div>
+                            <div className="flex items-center justify-between text-[8px] font-mono text-slate-400 mt-1">
+                              <span>Calc: {calculatedLine2Current}A</span>
+                              {bifurcationConfig.line2InjectedCurrentAmps !== undefined && (
+                                <span className="text-purple-700 font-bold">Manual</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Dual Feeder Split Preview */}
+                    <div className="bg-white/80 p-2 rounded border border-purple-200 text-[10px] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">Line 1 Load:</span>
+                        <span className="font-mono font-bold text-blue-700">
+                          {proposedSummary.transformer1DemandKva} kVA
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-900 font-semibold">Line 2 Load:</span>
+                        <span className="font-mono font-bold text-purple-700">
+                          {proposedSummary.transformer2DemandKva} kVA
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* LT Additional Transformer Location Node */}
+                    <div>
+                      <label className="text-[10px] font-bold text-purple-900 block mb-1">
+                        New Additional Transformer (T-2) Substation Location:
+                      </label>
+                      <select
+                        value={bifurcationConfig.transformerNodeId || bifurcationConfig.bifurcationNodeId}
+                        onChange={(e) => onSetBifurcation({
+                          ...bifurcationConfig,
+                          transformerNodeId: e.target.value
+                        })}
+                        className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                      >
+                        {feeder.nodes.map(n => (
+                          <option key={n.id} value={n.id}>
+                            Node {n.id} ({n.label}) {n.id === bifurcationConfig.bifurcationNodeId ? '★ Cut-Off Point' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* LT Additional Transformer Capacity */}
+                    <div>
+                      <label className="text-[10px] font-bold text-purple-900 block mb-1">
+                        Additional Transformer (T-2) Rating:
+                      </label>
+                      <select
+                        value={bifurcationConfig.transformerCapacityKva}
+                        onChange={(e) => onSetBifurcation({
+                          ...bifurcationConfig,
+                          transformerCapacityKva: Number(e.target.value)
+                        })}
+                        className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                      >
+                        {TRANSFORMER_CAPACITIES.map(cap => (
+                          <option key={cap} value={cap}>
+                            {cap} kVA (New Substation T-2)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Dual Loading Preview */}
+                    <div className="bg-white/80 p-2 rounded border border-purple-200 text-[10px] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-600">T-1 Load ({activeTransformerKva} kVA):</span>
+                        <span className={`font-mono font-bold ${
+                          (proposedSummary.transformer1LoadingPercent || 0) > 100 ? 'text-rose-600' : 'text-emerald-700'
+                        }`}>
+                          {proposedSummary.transformer1DemandKva} kVA ({proposedSummary.transformer1LoadingPercent}%)
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-purple-900 font-semibold">T-2 Load ({bifurcationConfig.transformerCapacityKva} kVA):</span>
+                        <span className={`font-mono font-bold ${
+                          (proposedSummary.transformer2LoadingPercent || 0) > 100 ? 'text-rose-600' : 'text-purple-700'
+                        }`}>
+                          {proposedSummary.transformer2DemandKva} kVA ({proposedSummary.transformer2LoadingPercent}%)
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Status persistence badge */}
                 <div className="flex items-center gap-1.5 text-[10px] text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
                   <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                  <span>Status Saved: Active until changed or reset.</span>
-                </div>
-
-                {/* Dual Loading Preview */}
-                <div className="bg-white/80 p-2 rounded border border-purple-200 text-[10px] space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-600">T-1 Load ({activeTransformerKva} kVA):</span>
-                    <span className={`font-mono font-bold ${
-                      (proposedSummary.transformer1LoadingPercent || 0) > 100 ? 'text-rose-600' : 'text-emerald-700'
-                    }`}>
-                      {proposedSummary.transformer1DemandKva} kVA ({proposedSummary.transformer1LoadingPercent}%)
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-purple-900 font-semibold">T-2 Load ({bifurcationConfig.transformerCapacityKva} kVA):</span>
-                    <span className={`font-mono font-bold ${
-                      (proposedSummary.transformer2LoadingPercent || 0) > 100 ? 'text-rose-600' : 'text-purple-700'
-                    }`}>
-                      {proposedSummary.transformer2DemandKva} kVA ({proposedSummary.transformer2LoadingPercent}%)
-                    </span>
-                  </div>
+                  <span>Scheme configured & calculated live.</span>
                 </div>
               </div>
             ) : (
               <div className="bg-slate-50 p-2.5 rounded-lg border border-dashed border-slate-300 text-center py-4">
-                <span className="text-[11px] text-slate-400 block mb-1.5">Bifurcation inactive</span>
+                <span className="text-[11px] text-slate-400 block mb-1.5">
+                  {isHtLine ? 'HT Bifurcation inactive' : 'Bifurcation inactive'}
+                </span>
                 <button
                   type="button"
                   onClick={() => onSetBifurcation({
                     ...bifurcationConfig,
                     enabled: true,
                     bifurcationNodeId: candidateNodes[2]?.id || '3.0',
+                    gridSourceType: 'SAME_GRID',
+                    extensionLengthKm: 2.0,
+                    extensionConductorCode: 'DOG',
+                    line1InjectedVoltage: currentInjectedVoltage,
+                    line2InjectedVoltage: 11000,
                     transformerCapacityKva: 100
                   })}
                   className="px-2 py-1 text-[10px] font-bold bg-purple-100 text-purple-800 rounded border border-purple-200 hover:bg-purple-200 cursor-pointer"
                 >
-                  Enable Bifurcation Scheme
+                  {isHtLine ? 'Enable HT Feeder Bifurcation' : 'Enable Bifurcation Scheme'}
                 </button>
               </div>
             )}
@@ -359,7 +758,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
                 <Zap className="w-4 h-4 text-amber-500" />
-                {isHtLine ? '2. Injected Voltage @ Node 0' : '2. Main Transformer (T-1)'}
+                {isHtLine ? '2. Line 1 Grid Voltage & Current' : '2. Main Transformer (T-1)'}
               </span>
               <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-bold text-[11px]">
                 {isHtLine ? `${(currentInjectedVoltage / 1000).toFixed(2)} kV` : `${activeTransformerKva} kVA`}
@@ -367,7 +766,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
             </div>
             <p className="text-[11px] text-slate-500 mb-2.5">
               {isHtLine 
-                ? 'Adjust line voltage injected at Node 0 grid substation bus to observe impact on tail drops & losses.'
+                ? 'Adjust Line 1 voltage injected at Node 0 grid substation bus to observe impact on feeder tail drops & losses.'
                 : 'Augment main source transformer capacity to eliminate thermal overloading.'}
             </p>
 
@@ -380,18 +779,23 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     min="1.0"
                     max="132"
                     step="0.05"
-                    value={Number((currentInjectedVoltage / 1000).toFixed(2))}
+                    value={Number(((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) / 1000).toFixed(2))}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value) || 11.0;
+                      const v = Math.round(val * 1000);
+                      onSetBifurcation({
+                        ...bifurcationConfig,
+                        line1InjectedVoltage: v
+                      });
                       if (onUpdateInjectedVoltage) {
-                        onUpdateInjectedVoltage(Math.round(val * 1000));
+                        onUpdateInjectedVoltage(v);
                       }
                     }}
                     className="w-20 bg-slate-50 border border-slate-300 rounded px-2 py-1 text-xs font-mono font-bold text-slate-800 text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
                   />
-                  <span className="text-xs font-mono font-semibold text-slate-500">kV ({currentInjectedVoltage.toLocaleString()} V)</span>
+                  <span className="text-xs font-mono font-semibold text-slate-500">kV ({(bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage).toLocaleString()} V)</span>
                 </div>
-                <div className="flex flex-wrap items-center gap-1 pt-1">
+                <div className="flex flex-wrap items-center gap-1">
                   {[
                     { label: '11.0 kV', val: 11000 },
                     { label: '11.2 kV', val: 11200 },
@@ -401,9 +805,12 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     <button
                       key={p.val}
                       type="button"
-                      onClick={() => onUpdateInjectedVoltage && onUpdateInjectedVoltage(p.val)}
+                      onClick={() => {
+                        onSetBifurcation({ ...bifurcationConfig, line1InjectedVoltage: p.val });
+                        if (onUpdateInjectedVoltage) onUpdateInjectedVoltage(p.val);
+                      }}
                       className={`px-2 py-0.5 text-[10px] font-mono rounded font-bold transition-all cursor-pointer ${
-                        Math.abs(currentInjectedVoltage - p.val) < 10
+                        Math.abs((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) - p.val) < 10
                           ? 'bg-blue-600 text-white shadow-xs'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
                       }`}
@@ -411,6 +818,49 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                       {p.label}
                     </button>
                   ))}
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-[10px] font-semibold text-slate-600 mb-1">
+                    <span>Injected Line 1 Current:</span>
+                    {bifurcationConfig.line1InjectedCurrentAmps !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSetBifurcation({
+                            ...bifurcationConfig,
+                            line1InjectedCurrentAmps: undefined
+                          });
+                        }}
+                        className="text-[9px] text-blue-600 hover:underline cursor-pointer"
+                      >
+                        Auto ({calculatedLine1Current}A)
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min="1"
+                      max="2000"
+                      step="0.5"
+                      value={bifurcationConfig.line1InjectedCurrentAmps !== undefined ? bifurcationConfig.line1InjectedCurrentAmps : ''}
+                      placeholder={`${calculatedLine1Current} A (calc)`}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                        onSetBifurcation({
+                          ...bifurcationConfig,
+                          line1InjectedCurrentAmps: val
+                        });
+                      }}
+                      className={`w-24 border rounded px-2 py-1 text-xs font-mono font-bold text-center ${
+                        bifurcationConfig.line1InjectedCurrentAmps !== undefined
+                          ? 'bg-blue-50 border-blue-400 text-blue-900'
+                          : 'bg-slate-50 border-slate-300 text-slate-800'
+                      }`}
+                    />
+                    <span className="text-xs font-mono font-semibold text-slate-500">Amperes (A)</span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -432,14 +882,14 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">{isHtLine ? 'Source Current:' : 'T-1 Loading:'}</span>
+            <span className="text-slate-500">{isHtLine ? 'Line 1 Current:' : 'T-1 Loading:'}</span>
             <span className={`font-mono font-bold ${
               isHtLine 
                 ? 'text-blue-700' 
                 : ((proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) > 100 ? 'text-rose-600' : 'text-emerald-700')
             }`}>
               {isHtLine 
-                ? `${proposedSummary.totalSourceCurrentAmps} A` 
+                ? `${proposedSummary.transformer1DemandKva ? (proposedSummary.transformer1DemandKva / (Math.sqrt(3) * (currentInjectedVoltage / 1000))).toFixed(1) : proposedSummary.totalSourceCurrentAmps} A` 
                 : `${proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}% ${((proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) <= 100) ? '(Safe)' : ''}`}
             </span>
           </div>
@@ -685,18 +1135,22 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-mono">
-              {/* Bifurcation status row */}
+              {/* Network Scheme & Bifurcation row */}
               <tr>
                 <td className="py-2.5 px-4 font-sans font-medium text-slate-900">Network Scheme & Bifurcation</td>
-                <td className="py-2.5 px-4 text-slate-600">Single Radial Feeder (T-1 Only)</td>
+                <td className="py-2.5 px-4 text-slate-600">
+                  {isHtLine ? 'Single 11kV Radial Feeder (Grid Bay)' : 'Single Radial Feeder (T-1 Only)'}
+                </td>
                 <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-emerald-950">
                   {bifurcationConfig.enabled ? (
                     <span className="text-purple-800 flex items-center gap-1">
                       <Split className="w-3.5 h-3.5" />
-                      Bifurcated at Pole {bifurcationConfig.bifurcationNodeId} (+{bifurcationConfig.transformerCapacityKva} kVA T-2)
+                      {isHtLine 
+                        ? `Dual HT Feeders: Line 1 + Line 2 (${bifurcationConfig.extensionLengthKm || 2.0}km ${bifurcationConfig.extensionConductorCode || 'DOG'} to Node ${bifurcationConfig.bifurcationNodeId})`
+                        : `Bifurcated at Pole ${bifurcationConfig.bifurcationNodeId} (+${bifurcationConfig.transformerCapacityKva} kVA T-2)`}
                     </span>
                   ) : (
-                    'Standard Unified Topology'
+                    isHtLine ? 'Unified Radial HT Feeder' : 'Standard Unified Topology'
                   )}
                 </td>
                 <td className="py-2.5 px-4 text-purple-700 font-bold">
@@ -705,56 +1159,102 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                 <td className="py-2.5 px-4 font-sans">
                   {bifurcationConfig.enabled ? (
                     <span className="text-purple-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Dual Substation Zone
+                      <CheckCircle2 className="w-3.5 h-3.5" /> {isHtLine ? 'Dual HT Grid Feeder' : 'Dual Substation Zone'}
                     </span>
                   ) : (
-                    <span className="text-slate-500">Single DT Feeding</span>
+                    <span className="text-slate-500">{isHtLine ? 'Single HT Feeder' : 'Single DT Feeding'}</span>
                   )}
                 </td>
               </tr>
 
-              {/* Transformer 1 Capacity & Loading */}
+              {/* HT Line 1 Loading / LT Transformer 1 Loading */}
               <tr>
-                <td className="py-2.5 px-4 font-sans font-medium text-slate-900">Main Transformer (T-1) Loading</td>
-                <td className="py-2.5 px-4 text-slate-600">{existingSummary.existingTransformerKva} kVA ({existingSummary.existingTransformerLoadingPercent}%)</td>
+                <td className="py-2.5 px-4 font-sans font-medium text-slate-900">
+                  {isHtLine ? 'Proposed Line 1 (Present Grid Feeder) Loading' : 'Main Transformer (T-1) Loading'}
+                </td>
+                <td className="py-2.5 px-4 text-slate-600">
+                  {isHtLine 
+                    ? `${existingSummary.totalSourceCurrentAmps} A (${existingSummary.totalSystemDemandKva} kVA)` 
+                    : `${existingSummary.existingTransformerKva} kVA (${existingSummary.existingTransformerLoadingPercent}%)`}
+                </td>
                 <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-emerald-950">
-                  {activeTransformerKva} kVA ({proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%)
+                  {isHtLine 
+                    ? `${proposedSummary.transformer1DemandKva ? (proposedSummary.transformer1DemandKva / (Math.sqrt(3) * ((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) / 1000))).toFixed(1) : proposedSummary.totalSourceCurrentAmps} A (${proposedSummary.transformer1DemandKva || proposedSummary.totalSystemDemandKva} kVA)` 
+                    : `${activeTransformerKva} kVA (${proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%)`}
                 </td>
                 <td className="py-2.5 px-4 text-emerald-600 font-bold">
-                  {(existingSummary.existingTransformerLoadingPercent - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)) > 0
-                    ? `-${existingSummary.existingTransformerLoadingPercent - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)}% loading drop`
-                    : 'Optimal'}
+                  {isHtLine 
+                    ? (bifurcationConfig.enabled ? `-${(existingSummary.totalSourceCurrentAmps - (proposedSummary.transformer1DemandKva / (Math.sqrt(3) * ((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) / 1000)))).toFixed(1)} A current relief` : 'Nominal')
+                    : ((existingSummary.existingTransformerLoadingPercent - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)) > 0
+                        ? `-${existingSummary.existingTransformerLoadingPercent - (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent)}% loading drop`
+                        : 'Optimal')}
                 </td>
                 <td className="py-2.5 px-4 font-sans">
-                  {(proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) <= 100 ? (
+                  {isHtLine ? (
                     <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Normal / Safe ({proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%)
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Normal / Substation Bay 1
                     </span>
                   ) : (
-                    <span className="text-rose-600 font-semibold">Overloaded ({proposedSummary.transformer1LoadingPercent}%)</span>
+                    (proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent) <= 100 ? (
+                      <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> Normal / Safe ({proposedSummary.transformer1LoadingPercent || proposedSummary.existingTransformerLoadingPercent}%)
+                      </span>
+                    ) : (
+                      <span className="text-rose-600 font-semibold">Overloaded ({proposedSummary.transformer1LoadingPercent}%)</span>
+                    )
                   )}
                 </td>
               </tr>
 
-              {/* Additional Transformer 2 (if active) */}
+              {/* HT Line 2 Loading / LT Additional Transformer 2 (if active) */}
               {bifurcationConfig.enabled && (
                 <tr className="bg-purple-50/20">
-                  <td className="py-2.5 px-4 font-sans font-medium text-purple-950">Additional Transformer (T-2)</td>
-                  <td className="py-2.5 px-4 text-slate-400">Not Installed (0 kVA)</td>
+                  <td className="py-2.5 px-4 font-sans font-medium text-purple-950">
+                    {isHtLine ? 'Proposed Line 2 (New Feeder Extension) Loading' : 'Additional Transformer (T-2)'}
+                  </td>
+                  <td className="py-2.5 px-4 text-slate-400">
+                    {isHtLine ? 'Not Extended (0 A)' : 'Not Installed (0 kVA)'}
+                  </td>
                   <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-purple-950">
-                    {bifurcationConfig.transformerCapacityKva} kVA ({proposedSummary.transformer2LoadingPercent}%)
+                    {isHtLine 
+                      ? `${proposedSummary.transformer2DemandKva ? (proposedSummary.transformer2DemandKva / (Math.sqrt(3) * ((bifurcationConfig.line2InjectedVoltage || 11000) / 1000))).toFixed(1) : 0} A (${proposedSummary.transformer2DemandKva} kVA)` 
+                      : `${bifurcationConfig.transformerCapacityKva} kVA (${proposedSummary.transformer2LoadingPercent}%)`}
                   </td>
                   <td className="py-2.5 px-4 text-purple-700 font-bold">
                     Carrying {proposedSummary.transformer2DemandKva} kVA load
                   </td>
                   <td className="py-2.5 px-4 font-sans">
-                    {(proposedSummary.transformer2LoadingPercent || 0) <= 100 ? (
-                      <span className="text-emerald-700 font-semibold flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Optimal Load Center
+                    {isHtLine ? (
+                      <span className="text-purple-700 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> {bifurcationConfig.gridSourceType === 'OTHER_GRID' ? (bifurcationConfig.otherGridName || 'Nearby Grid') : 'Present Grid'} Bay
                       </span>
                     ) : (
-                      <span className="text-rose-600 font-semibold">Overloaded ({proposedSummary.transformer2LoadingPercent}%)</span>
+                      (proposedSummary.transformer2LoadingPercent || 0) <= 100 ? (
+                        <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Optimal Load Center
+                        </span>
+                      ) : (
+                        <span className="text-rose-600 font-semibold">Overloaded ({proposedSummary.transformer2LoadingPercent}%)</span>
+                      )
                     )}
+                  </td>
+                </tr>
+              )}
+
+              {/* Grid Injected Voltage Row (for HT) */}
+              {isHtLine && (
+                <tr>
+                  <td className="py-2.5 px-4 font-sans font-medium text-slate-900">Grid Injected Voltage (Line 1 / Line 2)</td>
+                  <td className="py-2.5 px-4 text-slate-600">{(existingSummary.injectedVoltageAtNode0 ? (existingSummary.injectedVoltageAtNode0 / 1000) : 11.0).toFixed(2)} kV</td>
+                  <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-emerald-950">
+                    L1: {((bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage) / 1000).toFixed(2)} kV
+                    {bifurcationConfig.enabled && ` / L2: ${((bifurcationConfig.line2InjectedVoltage || 11000) / 1000).toFixed(2)} kV`}
+                  </td>
+                  <td className="py-2.5 px-4 text-emerald-600 font-bold">
+                    Regulated from Grid
+                  </td>
+                  <td className="py-2.5 px-4 font-sans text-emerald-700 font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" /> Grid Regulated
                   </td>
                 </tr>
               )}

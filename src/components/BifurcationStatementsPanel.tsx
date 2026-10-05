@@ -228,14 +228,14 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
                 </span>
               </div>
               <span className="text-[11px] text-slate-300 font-sans block mt-0.5">
-                {stmt.transformerName} · Rating: <strong>{stmt.capacityKva} kVA</strong> · Total Spans: <strong>{stmt.spansCount}</strong> · Total Demand: <strong>{stmt.demandKva} kVA ({stmt.currentAmps} A)</strong>
+                {stmt.transformerName} · Total Spans: <strong>{stmt.spansCount}</strong> · Total Demand: <strong>{stmt.demandKva} kVA ({stmt.currentAmps} A)</strong>
               </span>
             </div>
           </div>
 
           <div className="text-right font-mono text-xs">
             <div className={`font-bold ${stmt.isOverloaded ? 'text-rose-300' : 'text-emerald-300'}`}>
-              Loading: {stmt.transformerLoadingPercent}%
+              {stmt.transformerLoadingPercent > 0 ? `Loading: ${stmt.transformerLoadingPercent}%` : `Current: ${stmt.currentAmps} A`}
             </div>
             <span className="text-[10px] text-slate-300">
               Worst Drop: -{stmt.worstVoltageDropPercent}% ({stmt.worstVoltageVolts}V @ {stmt.worstVoltageDropNodeId.replace('.0', '')})

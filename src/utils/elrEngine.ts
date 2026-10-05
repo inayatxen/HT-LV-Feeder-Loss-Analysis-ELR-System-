@@ -252,7 +252,28 @@ export function calculateFeederAnalysis(
   const nodeVoltages = new Map<string, number>();
   const nodePercentDrops = new Map<string, number>();
 
-  nodeVoltages.set(sourceNode.id, nominalVoltage);
+  const isHt = feeder.type === 'HT' || feeder.category === 'HV' || nominalVoltage >= 1000;
+  const line1Voltage = (isHt && isBifurcationActive && options?.bifurcation?.line1InjectedVoltage)
+    ? options.bifurcation.line1InjectedVoltage
+    : nominalVoltage;
+  const line2Voltage = (isHt && isBifurcationActive && options?.bifurcation?.line2InjectedVoltage)
+    ? options.bifurcation.line2InjectedVoltage
+    : nominalVoltage;
+
+  const vKv1 = line1Voltage / 1000;
+  const vKv2 = line2Voltage / 1000;
+
+  const baseLine1Current = t1DemandKva / (Math.sqrt(3) * vKv1);
+  const line1CurrentScaling = (isHt && options?.bifurcation?.line1InjectedCurrentAmps && options.bifurcation.line1InjectedCurrentAmps > 0 && baseLine1Current > 0)
+    ? (options.bifurcation.line1InjectedCurrentAmps / baseLine1Current)
+    : 1.0;
+
+  const baseLine2Current = rootAggregateT2 ? (rootAggregateT2.totalKva / (Math.sqrt(3) * vKv2)) : 0;
+  const line2CurrentScaling = (isHt && options?.bifurcation?.line2InjectedCurrentAmps && options.bifurcation.line2InjectedCurrentAmps > 0 && baseLine2Current > 0)
+    ? (options.bifurcation.line2InjectedCurrentAmps / baseLine2Current)
+    : 1.0;
+
+  nodeVoltages.set(sourceNode.id, line1Voltage);
   nodePercentDrops.set(sourceNode.id, 0.0);
 
   // Exact benchmark reference values for Gulbhar baseline
@@ -339,7 +360,7 @@ export function calculateFeederAnalysis(
         const branchKvar = branchData.totalKvar;
         const apparentKva = Math.sqrt(branchKw * branchKw + branchKvar * branchKvar);
 
-        currentAmps = apparentKva / (Math.sqrt(3) * vKv);
+        currentAmps = (apparentKva / (Math.sqrt(3) * vKv1)) * line1CurrentScaling;
 
         const R = conductor.resistancePerKm * seg.lengthKm;
         const X = conductor.reactancePerKm * seg.lengthKm;
@@ -351,7 +372,7 @@ export function calculateFeederAnalysis(
         voltDropVolts = Math.sqrt(3) * currentAmps * (R * effectivePf + X * effectiveSin);
 
         const cumulativeParentDrop = nodePercentDrops.get(seg.fromNodeId) || 0;
-        const segDropPercent = (voltDropVolts / nominalVoltage) * 100;
+        const segDropPercent = (voltDropVolts / line1Voltage) * 100;
         pctVoltDrop = cumulativeParentDrop + segDropPercent;
         percentLoading = Math.round((currentAmps / conductor.ampacity) * 100);
       }
@@ -394,10 +415,36 @@ export function calculateFeederAnalysis(
   // Execute T1 forward sweep
   forwardSweepT1(sourceNode.id);
 
+  let extensionLossKw = 0;
+  let extensionDropVolts = 0;
+  let extensionDropPct = 0;
+
   // Execute T2 forward sweep (Bifurcated Sub-Network)
   if (isBifurcationActive && rootAggregateT2) {
-    nodeVoltages.set(bifurcationNodeId, nominalVoltage);
-    nodePercentDrops.set(bifurcationNodeId, 0.0);
+    const extLenKm = (isHt && options?.bifurcation?.extensionLengthKm) ? options.bifurcation.extensionLengthKm : 0;
+    const extCondCode = (isHt && options?.bifurcation?.extensionConductorCode) ? options.bifurcation.extensionConductorCode : 'DOG';
+    const extCond = getConductor(extCondCode);
+    const line2DemandKva = rootAggregateT2.totalKva;
+    const line2CurrentAmps = (isHt && options?.bifurcation?.line2InjectedCurrentAmps && options.bifurcation.line2InjectedCurrentAmps > 0)
+      ? options.bifurcation.line2InjectedCurrentAmps
+      : (line2DemandKva / (Math.sqrt(3) * vKv2));
+
+    if (isHt && extLenKm > 0) {
+      const Rext = extCond.resistancePerKm * extLenKm;
+      const Xext = extCond.reactancePerKm * extLenKm;
+      extensionLossKw = (3 * Math.pow(line2CurrentAmps, 2) * Rext * 1.15) / 1000;
+      const effPf = powerFactor;
+      const effSin = sinPhi;
+      extensionDropVolts = Math.sqrt(3) * line2CurrentAmps * (Rext * effPf + Xext * effSin);
+      extensionDropPct = (extensionDropVolts / line2Voltage) * 100;
+      
+      const receivingAtBifurcation = line2Voltage - extensionDropVolts;
+      nodeVoltages.set(bifurcationNodeId, receivingAtBifurcation);
+      nodePercentDrops.set(bifurcationNodeId, extensionDropPct);
+    } else {
+      nodeVoltages.set(bifurcationNodeId, line2Voltage);
+      nodePercentDrops.set(bifurcationNodeId, 0.0);
+    }
 
     function forwardSweepT2(fromNodeId: string) {
       const outgoing = childrenMap.get(fromNodeId) || [];
@@ -411,7 +458,7 @@ export function calculateFeederAnalysis(
         const branchKvar = branchData.totalKvar;
         const apparentKva = Math.sqrt(branchKw * branchKw + branchKvar * branchKvar);
 
-        const currentAmps = apparentKva / (Math.sqrt(3) * vKv);
+        const currentAmps = (apparentKva / (Math.sqrt(3) * vKv2)) * line2CurrentScaling;
         const R = conductor.resistancePerKm * seg.lengthKm;
         const X = conductor.reactancePerKm * seg.lengthKm;
 
@@ -422,11 +469,11 @@ export function calculateFeederAnalysis(
         const voltDropVolts = Math.sqrt(3) * currentAmps * (R * effectivePf + X * effectiveSin);
 
         const cumulativeParentDrop = nodePercentDrops.get(seg.fromNodeId) || 0;
-        const segDropPercent = (voltDropVolts / nominalVoltage) * 100;
+        const segDropPercent = (voltDropVolts / line2Voltage) * 100;
         const pctVoltDrop = cumulativeParentDrop + segDropPercent;
         const percentLoading = Math.round((currentAmps / conductor.ampacity) * 100);
 
-        const receivingVoltage = nominalVoltage * (1 - pctVoltDrop / 100);
+        const receivingVoltage = line2Voltage * (1 - pctVoltDrop / 100);
         nodeVoltages.set(seg.toNodeId, receivingVoltage);
         nodePercentDrops.set(seg.toNodeId, pctVoltDrop);
 
@@ -444,7 +491,7 @@ export function calculateFeederAnalysis(
           percentLoading,
           voltDropVolts: Number(voltDropVolts.toFixed(1)),
           percentVoltDrop: Number(pctVoltDrop.toFixed(1)),
-          cumulativeVoltDropVolts: Number((nominalVoltage - receivingVoltage).toFixed(1)),
+          cumulativeVoltDropVolts: Number((line2Voltage - receivingVoltage).toFixed(1)),
           receivingVoltage: Number(receivingVoltage.toFixed(1)),
           lineLossKw: Number(lossKw.toFixed(3)),
           powerFactor: Number(powerFactor.toFixed(2)),
@@ -477,10 +524,11 @@ export function calculateFeederAnalysis(
     .filter(s => s.fedByTransformer === 'T1')
     .reduce((acc, curr) => acc + curr.lineLossKw, 0);
 
-  const t2LineLossKw = segmentResults
+  const rawT2LineLossKw = segmentResults
     .filter(s => s.fedByTransformer === 'T2')
     .reduce((acc, curr) => acc + curr.lineLossKw, 0);
 
+  const t2LineLossKw = isHt && isBifurcationActive ? (rawT2LineLossKw + extensionLossKw) : rawT2LineLossKw;
   const totalLineLossKw = t1LineLossKw + t2LineLossKw;
 
   // Transformer Specifications & Loadings
@@ -495,19 +543,19 @@ export function calculateFeederAnalysis(
     ? Math.round((t2DemandKva / additionalTrfKva) * 100) 
     : 0;
 
-  const isTransformer1Overloaded = transformer1LoadingPercent > 100;
-  const isTransformer2Overloaded = transformer2LoadingPercent > 100;
-  const isTransformerOverloaded = isBifurcationActive 
+  const isTransformer1Overloaded = !isHt && transformer1LoadingPercent > 100;
+  const isTransformer2Overloaded = !isHt && isBifurcationActive && transformer2LoadingPercent > 100;
+  const isTransformerOverloaded = !isHt && (isBifurcationActive 
     ? (isTransformer1Overloaded || isTransformer2Overloaded)
-    : (transformer1LoadingPercent > 100);
+    : (transformer1LoadingPercent > 100));
 
   // Overall existing vs proposed loading
   const existingTransformerLoadingPercent = transformer1LoadingPercent;
   const proposedTransformerLoadingPercent = Math.round((totalSystemDemandKva / proposedTrfKva) * 100);
 
-  // Transformation losses (Iron + Copper * (load/rated)^2)
+  // Transformation losses (Iron + Copper * (load/rated)^2) - Zero for HT line loss analysis
   let transformationLossKw = 0;
-  if (!isGulbhar || isBifurcationActive) {
+  if (!isHt && (!isGulbhar || isBifurcationActive)) {
     const trf1LoadingRatio = t1DemandKva / existingTrfKva;
     transformationLossKw = existingSpec.ironLossKw + existingSpec.copperLossKw * Math.pow(trf1LoadingRatio, 2);
 
@@ -584,13 +632,13 @@ export function calculateFeederAnalysis(
     bifurcationNodeId: isBifurcationActive ? bifurcationNodeId : undefined,
     transformerNodeId: isBifurcationActive ? transformerNodeId : undefined,
     additionalTransformerKva: isBifurcationActive ? additionalTrfKva : undefined,
-    transformer1DemandKva: Number(t1DemandKva.toFixed(1)),
-    transformer2DemandKva: isBifurcationActive ? Number(t2DemandKva.toFixed(1)) : 0,
+    transformer1DemandKva: Number((t1DemandKva * line1CurrentScaling).toFixed(1)),
+    transformer2DemandKva: isBifurcationActive ? Number((t2DemandKva * line2CurrentScaling).toFixed(1)) : 0,
     transformer1LoadingPercent,
     transformer2LoadingPercent: isBifurcationActive ? transformer2LoadingPercent : undefined,
     isTransformer1Overloaded,
     isTransformer2Overloaded: isBifurcationActive ? isTransformer2Overloaded : false,
-    bifurcationReliefKva: isBifurcationActive ? Number(t2DemandKva.toFixed(1)) : 0,
+    bifurcationReliefKva: isBifurcationActive ? Number((t2DemandKva * line2CurrentScaling).toFixed(1)) : 0,
     t1LineLossKw: Number(t1LineLossKw.toFixed(3)),
     t2LineLossKw: isBifurcationActive ? Number(t2LineLossKw.toFixed(3)) : 0,
 
@@ -848,11 +896,24 @@ export function calculateBifurcationFourStatements(
       ? 'Exist Line' 
       : (isT1 ? 'Proposed-1 Line' : 'Proposed-2 Line');
 
-    const transformerName = isExist
-      ? `Exist Line: Baseline Substation T-1 (${capacityKva} kVA)`
-      : isT1 
-        ? `Proposed-1 Line: Main Substation T-1 (${capacityKva} kVA @ Substation)`
-        : `Proposed-2 Line: Additional Substation T-2 (${capacityKva} kVA @ Node ${bifurcationNodeId})`;
+    const isHtCircuit = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+    const gridOriginName = bifurcationConfig.gridSourceType === 'OTHER_GRID' 
+      ? (bifurcationConfig.otherGridName || 'Nearby Grid Station') 
+      : 'Present Grid Station';
+    const extLenText = bifurcationConfig.extensionLengthKm ? `${bifurcationConfig.extensionLengthKm} km ` : '';
+    const extCondText = bifurcationConfig.extensionConductorCode || 'DOG';
+
+    const transformerName = isHtCircuit
+      ? (isExist
+          ? `Exist HT Feeder: Baseline 11kV Radial Feed from Grid Substation`
+          : isT1
+            ? `Proposed-1 HT Line: Retained Trunk from Present Grid (${(bifurcatedYear0.baseVoltage / 1000).toFixed(2)} kV)`
+            : `Proposed-2 HT Line: New Feeder (${extLenText}${extCondText}) from ${gridOriginName} to Node ${bifurcationNodeId}`)
+      : (isExist
+          ? `Exist Line: Baseline Substation T-1 (${capacityKva} kVA)`
+          : isT1 
+            ? `Proposed-1 Line: Main Substation T-1 (${capacityKva} kVA @ Substation)`
+            : `Proposed-2 Line: Additional Substation T-2 (${capacityKva} kVA @ Node ${bifurcationNodeId})`);
 
     // Filter segments belonging to this transformer zone
     const zoneSegments = isExist 
@@ -888,8 +949,8 @@ export function calculateBifurcationFourStatements(
       ? summary.totalSourceCurrentAmps 
       : Number((demandKva / (Math.sqrt(3) * vKv)).toFixed(1));
 
-    const loadingPercent = Math.round((demandKva / capacityKva) * 100);
-    const isOverloaded = loadingPercent > 100;
+    const loadingPercent = isHtCircuit ? 0 : Math.round((demandKva / capacityKva) * 100);
+    const isOverloaded = !isHtCircuit && loadingPercent > 100;
 
     // Worst voltage drop in this zone
     let worstDrop = 0;
@@ -913,12 +974,14 @@ export function calculateBifurcationFourStatements(
       ? summary.totalLineLossKw 
       : (isT1 ? (summary.t1LineLossKw || 0) : (summary.t2LineLossKw || 0));
 
-    // Transformation losses for this specific transformer
+    // Transformation losses for this specific transformer (0 for HT)
     const trfSpec = getTransformerSpec(capacityKva);
     const trfRatio = demandKva / capacityKva;
-    const transformationLossKw = isExist 
-      ? summary.transformationLossKw 
-      : Number((trfSpec.ironLossKw + trfSpec.copperLossKw * Math.pow(trfRatio, 2)).toFixed(3));
+    const transformationLossKw = isHtCircuit
+      ? 0
+      : (isExist 
+          ? summary.transformationLossKw 
+          : Number((trfSpec.ironLossKw + trfSpec.copperLossKw * Math.pow(trfRatio, 2)).toFixed(3)));
     const totalPowerLossKw = Number((lineLossKw + transformationLossKw).toFixed(3));
 
     const totalInputKw = demandKw + totalPowerLossKw;

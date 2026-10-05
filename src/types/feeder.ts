@@ -137,10 +137,22 @@ export interface FeederSegment {
 export interface BifurcationConfig {
   enabled: boolean;
   bifurcationNodeId: string;           // The node where cut-off / line split occurs
-  transformerNodeId?: string;          // Independent node where proposed transformer T-2 is placed
-  transformerCapacityKva: number;      // Rating of newly installed transformer (e.g. 50, 100, 200 kVA)
+  transformerNodeId?: string;          // Independent node where proposed transformer T-2 is placed (for LT)
+  transformerCapacityKva: number;      // Rating of newly installed transformer (for LT)
   mode: 'ADDITIONAL_TRANSFORMER' | 'EXPRESS_FEEDER';
   name?: string;
+
+  // HT Feeder Bifurcation & Second Line Extension fields:
+  gridSourceType?: 'SAME_GRID' | 'OTHER_GRID'; // Present Grid Station vs Nearby Alternative Grid Station
+  otherGridName?: string;                      // Name of other grid station (e.g. "Warsak 132kV Grid")
+  extensionLengthKm?: number;                  // Length of new 11kV line from grid to point of line break (km)
+  extensionConductorCode?: string;             // Conductor type for new line extension (e.g. 'DOG', 'PANTHER')
+  
+  // Independent Voltage & Current Injection per line from Grid side:
+  line1InjectedVoltage?: number;               // Injected Line Voltage at Line 1 Grid Bay (e.g. 11000 V)
+  line1InjectedCurrentAmps?: number;           // Injected / Measured Current for Line 1 (Amps)
+  line2InjectedVoltage?: number;               // Injected Line Voltage at Line 2 Grid Bay (e.g. 11000 V)
+  line2InjectedCurrentAmps?: number;           // Injected / Measured Current for Line 2 (Amps)
 }
 
 export interface SegmentAnalysisResult {
