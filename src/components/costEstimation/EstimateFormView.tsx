@@ -45,7 +45,9 @@ import {
   ChevronUp,
   Check,
   Eye,
-  FileText
+  FileText,
+  X,
+  Filter
 } from 'lucide-react';
 
 interface EstimateFormViewProps {
@@ -203,12 +205,57 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     overheadBasis: initialEstimate?.charges.overheadBasis
   });
 
-  // Material search / adder dropdown state
+  // Material search / adder state
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<string>('');
   const [materialSearchText, setMaterialSearchText] = useState('');
+  const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState(false);
+  const [materialCategoryFilter, setMaterialCategoryFilter] = useState<string>('ALL');
+  const [tableFilterQuery, setTableFilterQuery] = useState('');
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
+  const [catalogModalSearch, setCatalogModalSearch] = useState('');
+  const [catalogModalCategory, setCatalogModalCategory] = useState<string>('ALL');
+  const [recentlyAddedCode, setRecentlyAddedCode] = useState<string | null>(null);
   const [saveToast, setSaveToast] = useState('');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
   const [lastAppliedPresetName, setLastAppliedPresetName] = useState<string | null>(null);
+
+  // Search filtered materials for the search bar popover
+  const searchFilteredMaterials = useMemo(() => {
+    if (!materialSearchText.trim()) return [];
+    const q = materialSearchText.trim().toLowerCase();
+    return materials.filter(m => {
+      const matchText = 
+        m.code.toLowerCase().includes(q) ||
+        m.name.toLowerCase().includes(q) ||
+        (m.specification && m.specification.toLowerCase().includes(q));
+      const matchCat = materialCategoryFilter === 'ALL' || m.category === materialCategoryFilter;
+      return matchText && matchCat;
+    });
+  }, [materials, materialSearchText, materialCategoryFilter]);
+
+  // Search filtered materials for the full catalog browser modal
+  const modalFilteredMaterials = useMemo(() => {
+    const q = catalogModalSearch.trim().toLowerCase();
+    return materials.filter(m => {
+      const matchText = !q || 
+        m.code.toLowerCase().includes(q) ||
+        m.name.toLowerCase().includes(q) ||
+        (m.specification && m.specification.toLowerCase().includes(q));
+      const matchCat = catalogModalCategory === 'ALL' || m.category === catalogModalCategory;
+      return matchText && matchCat;
+    });
+  }, [materials, catalogModalSearch, catalogModalCategory]);
+
+  // BOQ items filtered by the table search query
+  const filteredBoqItems = useMemo(() => {
+    if (!tableFilterQuery.trim()) return items;
+    const q = tableFilterQuery.trim().toLowerCase();
+    return items.filter(i => 
+      i.materialCode.toLowerCase().includes(q) ||
+      i.description.toLowerCase().includes(q) ||
+      (i.specification && i.specification.toLowerCase().includes(q))
+    );
+  }, [items, tableFilterQuery]);
 
   const PRESET_COMBINATIONS = [
     {
@@ -863,13 +910,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   };
 
   // Handler: Add Custom Material from Catalog
-  const handleAddMaterialToBoq = (matCode: string) => {
+  const handleAddMaterialToBoq = (matCode: string, qtyToAdd: number = 1) => {
     const mat = materials.find(m => m.code === matCode);
     if (!mat) return;
 
     const existing = items.find(i => i.materialCode === mat.code);
     if (existing) {
-      handleUpdateItem(existing.id, 'quantity', existing.quantity + 1);
+      handleUpdateItem(existing.id, 'quantity', (existing.quantity || 0) + qtyToAdd);
+      setRecentlyAddedCode(mat.code);
+      setTimeout(() => setRecentlyAddedCode(null), 2500);
+      setSaveToast(`Updated quantity for [${mat.code}] ${mat.name} (+${qtyToAdd})`);
+      setTimeout(() => setSaveToast(''), 3500);
+      setSelectedMaterialToAdd('');
       return;
     }
 
@@ -880,18 +932,22 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       description: mat.name,
       specification: mat.specification,
       unit: mat.unit,
-      quantity: 1,
+      quantity: qtyToAdd || mat.defaultQtyFactor || 1,
       unitRate: mat.materialRate,
-      materialAmount: mat.materialRate,
+      materialAmount: mat.materialRate * (qtyToAdd || mat.defaultQtyFactor || 1),
       labourRate: mat.labourRate,
-      labourAmount: mat.labourRate,
-      totalAmount: mat.materialRate + mat.labourRate,
+      labourAmount: mat.labourRate * (qtyToAdd || mat.defaultQtyFactor || 1),
+      totalAmount: (mat.materialRate + mat.labourRate) * (qtyToAdd || mat.defaultQtyFactor || 1),
       isAutoCalculated: false,
       manualOverride: true,
-      remarks: 'Manually added to BOQ'
+      remarks: 'Manually added from Material Catalog'
     };
 
     setItems(prev => [...prev, newItem]);
+    setRecentlyAddedCode(mat.code);
+    setTimeout(() => setRecentlyAddedCode(null), 2500);
+    setSaveToast(`Added [${mat.code}] ${mat.name} to BOQ`);
+    setTimeout(() => setSaveToast(''), 3500);
     setSelectedMaterialToAdd('');
   };
 
@@ -1934,26 +1990,21 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   Bill of Quantities (BOQ) Materials & Erection Schedule
                 </h3>
                 <span className="text-[11px] text-slate-500">
-                  {items.length} items included. Quantities and approved CSR rates can be edited or overridden.
+                  {items.length} items included. Search by Material Name or Code to add materials, or adjust quantities and rates below.
                 </span>
               </div>
 
-              {/* Add Material Select Dropdown & Quick Export */}
-              <div className="flex flex-wrap items-center gap-2">
-                <select
-                  value={selectedMaterialToAdd}
-                  onChange={(e) => {
-                    if (e.target.value) handleAddMaterialToBoq(e.target.value);
-                  }}
-                  className="px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 max-w-xs"
+              {/* Quick Print & Export Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCatalogModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                  title="Browse and search full materials catalog"
                 >
-                  <option value="">+ Add Item from Catalog...</option>
-                  {materials.map(m => (
-                    <option key={m.code} value={m.code}>
-                      [{m.code}] {m.name} (PKR {m.materialRate.toLocaleString()})
-                    </option>
-                  ))}
-                </select>
+                  <Layers className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Browse Full Catalog</span>
+                </button>
 
                 <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
                   <button
@@ -2008,6 +2059,201 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
             </div>
 
+            {/* Material Search Bar for Adding Materials Through Name or Code */}
+            <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-2.5 relative">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Search Material to Add to BOQ (by Name or Store Code):</span>
+                </label>
+                <div className="flex items-center gap-1 text-[11px] font-mono text-slate-500">
+                  <span>Catalog: <strong>{materials.length}</strong> items available</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+                {/* Search input */}
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={materialSearchText}
+                    onChange={(e) => {
+                      setMaterialSearchText(e.target.value);
+                      setIsSearchDropdownOpen(true);
+                    }}
+                    onFocus={() => {
+                      if (materialSearchText.trim()) setIsSearchDropdownOpen(true);
+                    }}
+                    placeholder="Search material through Name or Store Code (e.g. 08110, 08120, DOG, stay rod, 15310, pin insulator, transformer)..."
+                    className="w-full pl-9 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-2xs"
+                  />
+                  {materialSearchText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMaterialSearchText('');
+                        setIsSearchDropdownOpen(false);
+                      }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category filter pills for search */}
+                <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 text-xs shrink-0">
+                  {(['ALL', 'TRANSFORMERS', 'POLES', 'CONDUCTORS', 'HARDWARE', 'INSULATORS'] as const).map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setMaterialCategoryFilter(cat)}
+                      className={`px-2 py-1 rounded-md text-[11px] font-semibold transition-colors cursor-pointer whitespace-nowrap ${
+                        materialCategoryFilter === cat
+                          ? 'bg-blue-600 text-white shadow-2xs font-bold'
+                          : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                      }`}
+                    >
+                      {cat === 'ALL' ? 'All' : cat === 'TRANSFORMERS' ? 'Transformers' : cat === 'POLES' ? 'Poles' : cat === 'CONDUCTORS' ? 'Conductors' : cat === 'HARDWARE' ? 'Hardware' : 'Insulators'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Live Search Results Dropdown Popover */}
+              {isSearchDropdownOpen && materialSearchText.trim() && (
+                <div className="absolute left-3.5 right-3.5 top-full mt-1.5 bg-white border border-slate-300 rounded-xl shadow-xl z-30 max-h-80 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="p-2.5 bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-between sticky top-0 z-10 border-b border-slate-200">
+                    <span className="flex items-center gap-1.5">
+                      <Search className="w-3.5 h-3.5 text-blue-600" />
+                      Matching Materials: <strong>{searchFilteredMaterials.length}</strong> items found
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsSearchDropdownOpen(false)}
+                      className="p-1 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {searchFilteredMaterials.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-xs space-y-1">
+                      <p className="font-semibold text-slate-700">No material found matching "{materialSearchText}"</p>
+                      <p className="text-[11px] text-slate-400">Try searching by Store Code (e.g. 08110, 15310, 01030) or Name (e.g. DOG, stay, transformer, pole).</p>
+                    </div>
+                  ) : (
+                    searchFilteredMaterials.map(mat => {
+                      const inBoqItem = items.find(i => i.materialCode === mat.code);
+                      const isRecentlyAdded = recentlyAddedCode === mat.code;
+
+                      return (
+                        <div
+                          key={mat.id}
+                          className={`p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 hover:bg-blue-50/50 transition-colors ${
+                            isRecentlyAdded ? 'bg-emerald-50/80 border-l-4 border-emerald-500' : ''
+                          }`}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            <span className="px-2 py-1 rounded bg-slate-900 text-amber-300 font-mono font-bold text-xs shrink-0 border border-slate-800">
+                              {mat.code}
+                            </span>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-xs text-slate-900">{mat.name}</span>
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                                  {mat.category}
+                                </span>
+                                {mat.voltageApplicability && (
+                                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
+                                    mat.voltageApplicability === 'HT' ? 'bg-blue-100 text-blue-800' :
+                                    mat.voltageApplicability === 'LT' ? 'bg-emerald-100 text-emerald-800' :
+                                    'bg-purple-100 text-purple-800'
+                                  }`}>
+                                    {mat.voltageApplicability}
+                                  </span>
+                                )}
+                              </div>
+                              {mat.specification && (
+                                <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{mat.specification}</p>
+                              )}
+                              <div className="flex items-center gap-3 text-[11px] font-mono text-slate-600 mt-1">
+                                <span>Unit: <strong>{mat.unit}</strong></span>
+                                <span>•</span>
+                                <span>Material: <strong className="text-slate-900">PKR {mat.materialRate.toLocaleString()}</strong></span>
+                                <span>•</span>
+                                <span>Labour: <strong className="text-slate-700">PKR {mat.labourRate.toLocaleString()}</strong></span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            {inBoqItem ? (
+                              <div className="flex items-center gap-1 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-200">
+                                <span className="text-[11px] font-bold text-emerald-800">In BOQ: {inBoqItem.quantity} {inBoqItem.unit}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddMaterialToBoq(mat.code, 1)}
+                                  className="ml-1 px-2 py-0.5 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded cursor-pointer transition-colors"
+                                  title="Add +1 to quantity"
+                                >
+                                  +1
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddMaterialToBoq(mat.code, 1)}
+                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                                <span>Add to BOQ</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Filter Bar for Active BOQ Items Table */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={tableFilterQuery}
+                  onChange={(e) => setTableFilterQuery(e.target.value)}
+                  placeholder="Filter active BOQ items by Name or Code..."
+                  className="w-full pl-8 pr-7 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {tableFilterQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setTableFilterQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 rounded-full cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                {tableFilterQuery ? (
+                  <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    Showing {filteredBoqItems.length} of {items.length} items matching "{tableFilterQuery}"
+                  </span>
+                ) : (
+                  <span>Total Items in BOQ: <strong>{items.length}</strong></span>
+                )}
+              </div>
+            </div>
+
             {/* Table */}
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
               <table className="w-full text-left text-xs">
@@ -2026,14 +2272,16 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
-                  {items.length === 0 ? (
+                  {filteredBoqItems.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="py-8 text-center text-slate-400 font-sans">
-                        No materials in BOQ yet. Click "Calculate Required Materials" or add from the catalog above.
+                        {tableFilterQuery 
+                          ? `No items found in BOQ matching "${tableFilterQuery}". Clear search filter above.`
+                          : 'No materials in BOQ yet. Use the search bar above or click "Calculate Required Materials".'}
                       </td>
                     </tr>
                   ) : (
-                    items.map((item, idx) => (
+                    filteredBoqItems.map((item, idx) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
                         <td className="py-2 px-3 font-bold text-slate-900 text-[11px]">
@@ -2457,6 +2705,188 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Full Material Catalog Browser Modal */}
+      {showCatalogModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-blue-600 rounded-lg text-white">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold tracking-tight">Material Catalog Browser & Search</h3>
+                  <p className="text-xs text-slate-300">
+                    Search by Material Name, Store Code, or Category to insert materials into the Bill of Quantities (BOQ).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCatalogModal(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Search and Filters Toolbar */}
+            <div className="p-4 bg-slate-50 border-b border-slate-200 space-y-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={catalogModalSearch}
+                  onChange={(e) => setCatalogModalSearch(e.target.value)}
+                  placeholder="Search material through Name or Store Code (e.g. 08110, 08120, DOG, stay, 15310, transformer, pole)..."
+                  className="w-full pl-9 pr-9 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs"
+                  autoFocus
+                />
+                {catalogModalSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setCatalogModalSearch('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto text-xs pb-1">
+                {(['ALL', 'TRANSFORMERS', 'POLES', 'CONDUCTORS', 'HARDWARE', 'INSULATORS', 'OTHER'] as const).map(cat => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCatalogModalCategory(cat)}
+                    className={`px-3 py-1 rounded-lg font-semibold transition-colors cursor-pointer whitespace-nowrap text-xs ${
+                      catalogModalCategory === cat
+                        ? 'bg-blue-600 text-white shadow-xs font-bold'
+                        : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                    }`}
+                  >
+                    {cat === 'ALL' ? 'All Items' : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Catalog Table */}
+            <div className="flex-1 overflow-y-auto p-4">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200 sticky top-0 bg-slate-100">
+                    <th className="py-2.5 px-3">Store Code</th>
+                    <th className="py-2.5 px-3">Material Name & Specification</th>
+                    <th className="py-2.5 px-2 text-center">Category</th>
+                    <th className="py-2.5 px-2 text-center">Voltage</th>
+                    <th className="py-2.5 px-2 text-center">Unit</th>
+                    <th className="py-2.5 px-3 text-right">Material Rate</th>
+                    <th className="py-2.5 px-3 text-right">Labour Rate</th>
+                    <th className="py-2.5 px-3 text-center w-28">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
+                  {modalFilteredMaterials.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-slate-400 font-sans">
+                        No materials found matching your search query "{catalogModalSearch}".
+                      </td>
+                    </tr>
+                  ) : (
+                    modalFilteredMaterials.map(mat => {
+                      const inBoq = items.find(i => i.materialCode === mat.code);
+                      const isRecentlyAdded = recentlyAddedCode === mat.code;
+
+                      return (
+                        <tr
+                          key={mat.id}
+                          className={`hover:bg-blue-50/40 transition-colors ${
+                            isRecentlyAdded ? 'bg-emerald-50/70' : ''
+                          }`}
+                        >
+                          <td className="py-2.5 px-3">
+                            <span className="px-1.5 py-0.5 rounded bg-slate-900 text-amber-300 font-mono font-bold text-[11px] border border-slate-800">
+                              {mat.code}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 font-sans">
+                            <span className="font-bold text-slate-900 block">{mat.name}</span>
+                            {mat.specification && (
+                              <span className="text-[11px] text-slate-500 block line-clamp-1">{mat.specification}</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-sans">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-700 border border-slate-200 font-medium">
+                              {mat.category}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-sans">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                              mat.voltageApplicability === 'HT' ? 'bg-blue-100 text-blue-800' :
+                              mat.voltageApplicability === 'LT' ? 'bg-emerald-100 text-emerald-800' :
+                              'bg-purple-100 text-purple-800'
+                            }`}>
+                              {mat.voltageApplicability || 'BOTH'}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-2 text-center font-sans text-slate-600 font-medium">{mat.unit}</td>
+                          <td className="py-2.5 px-3 text-right font-bold text-slate-900">
+                            PKR {mat.materialRate.toLocaleString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-right text-slate-600">
+                            PKR {mat.labourRate.toLocaleString()}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-sans">
+                            {inBoq ? (
+                              <div className="flex items-center justify-center gap-1">
+                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  Qty: {inBoq.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddMaterialToBoq(mat.code, 1)}
+                                  className="px-2 py-1 text-[11px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded cursor-pointer transition-colors"
+                                  title="Add another unit"
+                                >
+                                  +1
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddMaterialToBoq(mat.code, 1)}
+                                className="px-3 py-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-2xs transition-colors cursor-pointer"
+                              >
+                                + Add
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+              <span>Showing <strong>{modalFilteredMaterials.length}</strong> of <strong>{materials.length}</strong> materials</span>
+              <button
+                type="button"
+                onClick={() => setShowCatalogModal(false)}
+                className="px-4 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
