@@ -756,25 +756,25 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             background: #ffffff !important;
           }
           .print-page-unit {
-            page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
-            break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
+            page-break-after: always !important;
+            break-after: page !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
-            min-height: ${pageBreakMode === 'page_per_section' ? (pageOrientation === 'landscape' ? '185mm' : '262mm') : 'auto'} !important;
+            min-height: auto !important;
             display: flex !important;
             flex-direction: column !important;
             justify-content: space-between !important;
             box-sizing: border-box !important;
             padding-top: 1mm !important;
             padding-bottom: 2mm !important;
-            margin-bottom: ${pageBreakMode === 'page_per_section' ? '0' : '2rem'} !important;
+            margin-bottom: 10mm !important;
             background: #ffffff !important;
             position: relative !important;
           }
           .print-page-unit:last-child {
             page-break-after: auto !important;
             break-after: auto !important;
-            min-height: auto !important;
+            margin-bottom: 0 !important;
           }
           .report-official-footer {
             margin-top: auto !important;
