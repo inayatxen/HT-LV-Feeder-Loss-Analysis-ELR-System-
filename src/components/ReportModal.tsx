@@ -1881,7 +1881,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      summary={effectiveBifurcationConfig.enabled ? proposedSummary : summary}
                       existingSummary={summary}
                       scheme="exist"
                       theme="light"
@@ -1908,7 +1908,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      summary={effectiveBifurcationConfig.enabled ? proposedSummary : summary}
                       existingSummary={summary}
                       scheme="proposed_1"
                       theme="light"
@@ -1935,7 +1935,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      summary={effectiveBifurcationConfig.enabled ? proposedSummary : summary}
                       existingSummary={summary}
                       scheme="proposed_2"
                       theme="light"
@@ -2016,7 +2016,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   {/* Render SLD Diagrams */}
                   <FeederSLDViewer
                     feeder={feeder}
-                    summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                    summary={effectiveBifurcationConfig.enabled ? proposedSummary : summary}
                     existingSummary={summary}
                     scheme={sldScheme}
                     theme="light"
