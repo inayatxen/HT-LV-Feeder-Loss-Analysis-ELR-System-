@@ -228,7 +228,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   // Quick Preset Handlers
-  const handleApplyPreset = (preset: 'informative_only' | 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix') => {
+  const handleApplyPreset = (preset: 'informative_only' | 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix' | 'single_page') => {
     if (preset === 'informative_only') {
       setDisplayMode('full_report');
       setPagesToPrint({
