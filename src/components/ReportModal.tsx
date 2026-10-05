@@ -357,7 +357,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const isSdoMatch = !isXenMatch && !isSeMatch;
 
   const recommendations = generateTechnicalRecommendations(summary, feeder);
-  const tariff = feeder.tariffPerKwh || 38.5;
+  const tariff = feeder.tariffPerKwh || 24.83;
   const kwhSaved = Math.max(0, summary.annualEnergyLossKwh - proposedSummary.annualEnergyLossKwh);
   const annualSavings = Math.round(kwhSaved * tariff);
   const today = new Date().toLocaleDateString('en-GB', {
@@ -2072,7 +2072,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 {renderOfficialHeader('Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)', getPageInfo('table1Matrix').pageLabel)}
                 <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2.5 bg-slate-100 p-2 border-l-4 border-amber-500 flex items-center justify-between">
                   <span>Comparative Upgradation & Loss Relief Matrix (WAPDA Study Table 1)</span>
-                  <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: PKR 38.5 / kWh · {getPageInfo('table1Matrix').pageLabel}</span>
+                  <span className="text-[10px] font-mono text-slate-500 font-normal">Economics: {feeder.currencySymbol || 'Rupees'} {tariff} / kWh · {getPageInfo('table1Matrix').pageLabel}</span>
                 </h2>
 
                 <div className="overflow-x-auto print:overflow-visible border border-slate-300 rounded-lg print:border-slate-800">

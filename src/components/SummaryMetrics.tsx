@@ -29,7 +29,7 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
 }) => {
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || summary.baseVoltage >= 1000;
   const isOverloaded = isHtLine ? summary.worstVoltageDropPercent > 5.0 : summary.isTransformerOverloaded;
-  const tariff = feeder.tariffPerKwh || 38.5;
+  const tariff = feeder.tariffPerKwh || 24.83;
   const annualLossCost = Math.round(summary.annualEnergyLossKwh * tariff);
   const injectedKv = ((summary.injectedVoltageAtNode0 || summary.baseVoltage) / 1000).toFixed(2);
   const totalHtKva = summary.totalNodeKva || summary.totalSystemDemandKva;
@@ -265,9 +265,9 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
             </span>
           </div>
           <div className="mt-2 text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-            <span>Tariff Rate:</span>
-            <span className="font-mono font-medium text-slate-700">
-              {tariff} {feeder.currencySymbol}/kWh
+            <span>Rate Per KWH:</span>
+            <span className="font-mono font-medium text-emerald-800 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-200">
+              Rs. {tariff} / kWh
             </span>
           </div>
         </div>

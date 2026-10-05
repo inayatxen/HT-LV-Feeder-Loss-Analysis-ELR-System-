@@ -70,6 +70,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [powerFactor, setPowerFactor] = useState(feeder.operatingPowerFactor);
   const [loadFactor, setLoadFactor] = useState(feeder.loadFactor);
   const [annualGrowthRate, setAnnualGrowthRate] = useState(feeder.annualGrowthRatePercent);
+  const [tariffPerKwh, setTariffPerKwh] = useState<number>(feeder.tariffPerKwh || 24.83);
   const [proposedTrfKva, setProposedTrfKva] = useState(feeder.proposedTransformerKva);
   const [sourceCurrentInput, setSourceCurrentInput] = useState<number>(summary.totalSourceCurrentAmps || 180);
   const [showFormulas, setShowFormulas] = useState(false);
@@ -352,6 +353,8 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       operatingPowerFactor: powerFactor,
       loadFactor,
       annualGrowthRatePercent: annualGrowthRate,
+      tariffPerKwh: tariffPerKwh || 24.83,
+      currencySymbol: 'Rupees',
       existingTransformerKva: isHtLine ? (totalCalculatedNodeKva || 1200) : activeTransformerKva,
       proposedTransformerKva: proposedTrfKva,
       nodes: Array.from(nodeMap.values()),
@@ -909,7 +912,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
         )}
 
         {/* Secondary Parameters Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs pt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 text-xs pt-1">
           {/* Field 1: Proposed Transformer (LT) or Input Source Current (HT) */}
           <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
             <label className="font-semibold text-slate-800 block mb-1">
@@ -1024,6 +1027,41 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
               className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-slate-900"
             />
           </div>
+
+          {/* Field 6: Rate Per KWH (Rupees) */}
+          <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-200">
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-emerald-950">
+                Rate Per KWH (Rupees):
+              </label>
+              <span className="text-[10px] font-mono font-bold text-emerald-700 bg-white px-1.5 py-0.2 rounded border border-emerald-200">
+                Rs. {tariffPerKwh.toFixed(2)}
+              </span>
+            </div>
+            <div className="relative">
+              <input
+                type="number"
+                step="0.01"
+                min="1.0"
+                max="500"
+                value={tariffPerKwh}
+                onChange={(e) => setTariffPerKwh(parseFloat(e.target.value) || 24.83)}
+                placeholder="24.83"
+                className="w-full bg-white border border-emerald-300 rounded px-2 py-1 font-mono font-bold text-emerald-950 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+            </div>
+            <div className="flex items-center justify-between text-[10px] text-emerald-800 mt-1">
+              <span className="font-medium">Rate: Rs. 24.83 / kWh</span>
+              <button 
+                type="button" 
+                onClick={() => setTariffPerKwh(24.83)}
+                className="text-emerald-700 font-bold hover:underline cursor-pointer"
+                title="Reset to standard tariff rate Rs. 24.83 / kWh"
+              >
+                Set 24.83
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1085,8 +1123,8 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                 <th className="py-2.5 px-3 text-right">Length (km)</th>
                 <th className="py-2.5 px-3 text-right">Length (m)</th>
                 {isHtLine ? (
-                  <th className="py-2.5 px-3 text-right bg-blue-100/90 text-blue-950 font-extrabold border-x border-blue-200">
-                    Node KVA (Load)
+                  <th className="py-2.5 px-3 text-center bg-blue-100/90 text-blue-950 font-extrabold border-x border-blue-200">
+                    Node KVA
                   </th>
                 ) : (
                   <>
@@ -1149,21 +1187,23 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                     />
                   </td>
 
-                  {/* HT Mode: Node KVA vs LT Mode: Customers */}
+                  {/* HT Mode: Only Dropdown Node KVA */}
                   {isHtLine ? (
-                    <td className="py-2 px-2 text-right bg-blue-50/40 border-x border-blue-100">
-                      <div className="flex items-center justify-end gap-1">
-                        <input
-                          type="number"
-                          min="0"
-                          step="5"
-                          value={row.nodeKva || 0}
-                          onChange={(e) => handleUpdateRow(idx, 'nodeKva', e.target.value)}
-                          className="w-20 bg-white border border-blue-300 rounded px-2 py-1 text-right font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
-                          title="Connected Transformer / Spot Load at To Node in kVA"
-                        />
-                        <span className="text-[10px] text-slate-400 font-mono">kVA</span>
-                      </div>
+                    <td className="py-2 px-2.5 text-center bg-blue-50/40 border-x border-blue-100">
+                      <select
+                        value={row.nodeKva || 50}
+                        onChange={(e) => handleUpdateRow(idx, 'nodeKva', Number(e.target.value))}
+                        className="w-full min-w-[95px] bg-white border border-blue-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold text-blue-900 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer text-center shadow-2xs"
+                      >
+                        <option value={10}>10 kVA</option>
+                        <option value={25}>25 kVA</option>
+                        <option value={50}>50 kVA</option>
+                        <option value={100}>100 kVA</option>
+                        <option value={200}>200 kVA</option>
+                        {row.nodeKva && ![10, 25, 50, 100, 200].includes(row.nodeKva) && (
+                          <option value={row.nodeKva}>{row.nodeKva} kVA</option>
+                        )}
+                      </select>
                     </td>
                   ) : (
                     <>

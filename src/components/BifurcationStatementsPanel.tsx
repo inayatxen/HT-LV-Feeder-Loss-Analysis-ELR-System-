@@ -42,7 +42,7 @@ interface BifurcationStatementsPanelProps {
 
 export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProps> = ({
   dossier,
-  currencySymbol = 'PKR',
+  currencySymbol = 'Rupees',
   onOpenPrintReport,
   isPrintView = false
 }) => {

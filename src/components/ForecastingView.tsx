@@ -34,6 +34,7 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
   const [growthRatePercent, setGrowthRatePercent] = useState<number>(feeder.annualGrowthRatePercent || 5.0);
   const [forecastHorizon, setForecastHorizon] = useState<number>(5);
   const [activeSubNetworkView, setActiveSubNetworkView] = useState<'ALL' | 'T1' | 'T2'>('ALL');
+  const [customTariff, setCustomTariff] = useState<number>(feeder.tariffPerKwh || 24.83);
 
   const forecast = generateGrowthForecast(feeder, forecastHorizon, growthRatePercent, {
     customConductors: activeConductors,
@@ -43,7 +44,7 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
 
   const year0 = forecast[0];
   const year5 = forecast[Math.min(5, forecast.length - 1)];
-  const tariff = feeder.tariffPerKwh || 38.5;
+  const tariff = customTariff || feeder.tariffPerKwh || 24.83;
   const isBifurcated = Boolean(bifurcationConfig?.enabled);
 
   return (
@@ -79,6 +80,25 @@ export const ForecastingView: React.FC<ForecastingViewProps> = ({
               onChange={(e) => setGrowthRatePercent(Number(e.target.value))}
               className="w-44 accent-amber-500 cursor-pointer"
             />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1">
+              <span>Rate Per KWH (Rupees):</span>
+              <span className="font-mono text-emerald-700 font-bold">Rs. {customTariff.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                step="0.01"
+                min="1.0"
+                max="500"
+                value={customTariff}
+                onChange={(e) => setCustomTariff(parseFloat(e.target.value) || 24.83)}
+                className="w-24 bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-xs text-emerald-950 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              />
+              <span className="text-[10px] font-mono text-slate-500">Rs/kWh</span>
+            </div>
           </div>
 
           <div>

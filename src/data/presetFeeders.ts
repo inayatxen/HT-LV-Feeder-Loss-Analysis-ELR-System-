@@ -18,8 +18,8 @@ export const GULBHAR_COLONY_LT_FEEDER: FeederData = {
   operatingPowerFactor: 0.80,
   loadFactor: 0.60,
   annualGrowthRatePercent: 5.0,
-  tariffPerKwh: 38.5, // PKR per kWh (~$0.14/kWh)
-  currencySymbol: 'PKR',
+  tariffPerKwh: 24.83, // Rupees per kWh (Official WAPDA/NEPRA rate)
+  currencySymbol: 'Rupees',
   existingTransformerKva: 100,
   proposedTransformerKva: 200,
   nodes: [
@@ -66,8 +66,8 @@ export const HAYATABAD_11KV_HT_FEEDER: FeederData = {
   operatingPowerFactor: 0.85,
   loadFactor: 0.65,
   annualGrowthRatePercent: 6.0,
-  tariffPerKwh: 38.5,
-  currencySymbol: 'PKR',
+  tariffPerKwh: 24.83,
+  currencySymbol: 'Rupees',
   existingTransformerKva: 1200,
   proposedTransformerKva: 1600,
   nodes: [
@@ -106,8 +106,8 @@ export const WARSAK_11KV_HT_FEEDER: FeederData = {
   operatingPowerFactor: 0.82,
   loadFactor: 0.68,
   annualGrowthRatePercent: 5.5,
-  tariffPerKwh: 38.5,
-  currencySymbol: 'PKR',
+  tariffPerKwh: 24.83,
+  currencySymbol: 'Rupees',
   existingTransformerKva: 1800,
   proposedTransformerKva: 2500,
   nodes: [
@@ -142,8 +142,8 @@ export const AGRI_TUBEWELL_LT_FEEDER: FeederData = {
   operatingPowerFactor: 0.72,
   loadFactor: 0.55,
   annualGrowthRatePercent: 4.5,
-  tariffPerKwh: 32.0,
-  currencySymbol: 'PKR',
+  tariffPerKwh: 24.83,
+  currencySymbol: 'Rupees',
   existingTransformerKva: 100,
   proposedTransformerKva: 200,
   nodes: [

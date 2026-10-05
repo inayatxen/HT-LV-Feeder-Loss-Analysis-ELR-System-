@@ -193,7 +193,10 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
             </label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-[11px] text-slate-500 block mb-0.5">Spot Load (kVA):</span>
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[11px] text-slate-500 font-semibold">Node Load (kVA):</span>
+                  <span className="text-[10px] font-mono text-blue-700 font-bold">{spotLoadKva} kVA</span>
+                </div>
                 <input
                   type="number"
                   min="0"
@@ -201,6 +204,22 @@ export const NodeInspectorModal: React.FC<NodeInspectorModalProps> = ({
                   onChange={(e) => setSpotLoadKva(Math.max(0, parseFloat(e.target.value) || 0))}
                   className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-mono text-slate-800 focus:outline-none"
                 />
+                <div className="flex items-center gap-1 mt-1.5">
+                  {[10, 25, 50, 100, 200].map(kva => (
+                    <button
+                      key={kva}
+                      type="button"
+                      onClick={() => setSpotLoadKva(kva)}
+                      className={`flex-1 py-0.5 text-[10px] font-mono rounded border transition-colors cursor-pointer ${
+                        spotLoadKva === kva
+                          ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {kva}kVA
+                    </button>
+                  ))}
+                </div>
               </div>
               <div>
                 <span className="text-[11px] text-slate-500 block mb-0.5">Spot Load (Amps):</span>

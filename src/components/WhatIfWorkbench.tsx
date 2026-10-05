@@ -77,7 +77,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 }) => {
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
-  const tariff = feeder.tariffPerKwh || 38.5;
+  const tariff = feeder.tariffPerKwh || 24.83;
   const kwSaved = Math.max(0, existingSummary.totalLineLossKw - proposedSummary.totalLineLossKw);
   const kwhSaved = Math.max(0, existingSummary.annualEnergyLossKwh - proposedSummary.annualEnergyLossKwh);
   const moneySaved = Math.round(kwhSaved * tariff);
