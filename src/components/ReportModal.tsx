@@ -42,7 +42,8 @@ import {
   Maximize2,
   Minimize2,
   Loader2,
-  Filter
+  Filter,
+  Shrink
 } from 'lucide-react';
 import { 
   generateTechnicalRecommendations,
@@ -313,6 +314,20 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       });
       setExcludeUnnecessaryGraphics(true);
       setPageBreakMode('compact_flow');
+    } else if (preset === 'single_page') {
+      setDisplayMode('full_report');
+      setPagesToPrint({
+        summarySpecs: true,
+        bifurcationStatements: true,
+        singleLineDiagram: true,
+        inputFormImage1: true,
+        outputScheduleImage2: true,
+        table1Matrix: true,
+        recommendations: true
+      });
+      setExcludeUnnecessaryGraphics(true);
+      setPageBreakMode('compact_flow');
+      setPrintScale('compact');
     } else if (preset === 'summary_matrix') {
       setDisplayMode('full_report');
       setPagesToPrint({
@@ -985,6 +1000,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               {/* Quick Preset Buttons */}
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <span className="text-slate-400 text-[11px] mr-1">Quick Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('single_page')}
+                  className={`px-2.5 py-1 rounded font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all ${
+                    printScale === 'compact' && pageBreakMode === 'compact_flow'
+                      ? 'bg-purple-600 text-white shadow-xs border border-purple-400'
+                      : 'bg-purple-950/60 hover:bg-purple-900 text-purple-300 border border-purple-600'
+                  }`}
+                  title="Shrink all report sections to fit onto a single page with compact fonts and continuous layout"
+                >
+                  <Shrink className="w-3.5 h-3.5 text-purple-300" />
+                  <span>Single Page View</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('informative_only')}
