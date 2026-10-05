@@ -192,13 +192,19 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
         )}
 
         {/* SVG Canvas */}
-        <div className={`p-4 overflow-x-auto print:overflow-visible flex items-center justify-center ${isDark ? 'bg-slate-950' : 'bg-slate-50/60'}`}>
+        <div className={`p-4 overflow-x-auto print:overflow-visible flex items-center justify-center ${isDark ? 'bg-slate-950' : (isPrintView ? 'bg-white' : 'bg-slate-50/60')}`}>
           <svg
-            width={layout.width}
+            width="100%"
             height={layout.height}
             viewBox={layout.viewBox}
+            preserveAspectRatio="xMidYMid meet"
             className="w-full max-w-full h-auto select-none"
-            style={{ minHeight: isPrintView ? '240px' : '300px' }}
+            style={{ 
+              minHeight: isPrintView ? '260px' : '300px',
+              maxHeight: isPrintView ? '600px' : undefined,
+              width: '100%',
+              height: 'auto'
+            }}
           >
             <defs>
               <marker

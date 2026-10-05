@@ -185,6 +185,7 @@ export default function App() {
 
   // Modals state
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportDisplayMode, setReportDisplayMode] = useState<'full_report' | 'single_line_diagram' | undefined>('full_report');
   const [isConductorsOpen, setIsConductorsOpen] = useState(false);
   const [isLocalDbOpen, setIsLocalDbOpen] = useState(false);
   const [isNewJobOpen, setIsNewJobOpen] = useState(false);
@@ -412,7 +413,10 @@ export default function App() {
           feederType={activeFeeder.type}
           selectedFeederId={selectedFeederId}
           onSelectFeeder={handleSelectFeeder}
-          onOpenReport={() => setIsReportOpen(true)}
+          onOpenReport={() => {
+            setReportDisplayMode('full_report');
+            setIsReportOpen(true);
+          }}
           onOpenConductors={() => setIsConductorsOpen(true)}
           onOpenDatabase={() => setIsLocalDbOpen(true)}
           onOpenNewJob={() => setIsNewJobOpen(true)}
@@ -501,7 +505,10 @@ export default function App() {
                   onQuickCapacitor={handleSetCapacitor}
                   activeCapacitors={activeCapacitors}
                   activeConductors={activeConductors}
-                  onOpenPrintReport={() => setIsReportOpen(true)}
+                  onOpenPrintReport={() => {
+                    setReportDisplayMode('single_line_diagram');
+                    setIsReportOpen(true);
+                  }}
                 />
               </div>
             )}
@@ -635,6 +642,7 @@ export default function App() {
           activeTransformerKva={activeTransformerKva}
           bifurcationConfig={bifurcationConfig}
           selectedJobTitle={selectedJobTitle}
+          initialDisplayMode={reportDisplayMode}
         />
       )}
 

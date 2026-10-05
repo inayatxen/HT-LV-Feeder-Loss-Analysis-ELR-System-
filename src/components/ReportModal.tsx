@@ -64,6 +64,8 @@ interface ReportModalProps {
   bifurcationConfig?: BifurcationConfig;
   selectedJobTitle?: JobTitle;
   onUpdateJobTitle?: (title: string) => void;
+  initialDisplayMode?: 'full_report' | 'bifurcation_4_statements' | 'single_line_diagram' | 'tri_sld_schemes' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix';
+  initialSldScheme?: SLDSchemeType;
 }
 
 export type PageBreakMode = 'page_per_section' | 'compact_flow';
@@ -79,7 +81,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   activeTransformerKva,
   bifurcationConfig,
   selectedJobTitle = 'Sub-Divisional Officer (SDO)',
-  onUpdateJobTitle
+  onUpdateJobTitle,
+  initialDisplayMode,
+  initialSldScheme
 }) => {
   const effectiveBifurcationConfig: BifurcationConfig = useMemo(() => {
     if (bifurcationConfig) return bifurcationConfig;
@@ -99,11 +103,22 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   const [displayMode, setDisplayMode] = useState<
     'full_report' | 'bifurcation_4_statements' | 'single_line_diagram' | 'tri_sld_schemes' | 'input_form_image1' | 'output_schedule_image2' | 'dual_form' | 'table1_matrix'
-  >(effectiveBifurcationConfig.enabled ? 'full_report' : 'full_report');
+  >(initialDisplayMode || 'full_report');
 
   const [sldScheme, setSldScheme] = useState<SLDSchemeType>(
-    effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined'
+    initialSldScheme || (effectiveBifurcationConfig.enabled ? 'tri_scheme' : 'combined')
   );
+
+  React.useEffect(() => {
+    if (isOpen) {
+      if (initialDisplayMode) {
+        setDisplayMode(initialDisplayMode);
+      }
+      if (initialSldScheme) {
+        setSldScheme(initialSldScheme);
+      }
+    }
+  }, [isOpen, initialDisplayMode, initialSldScheme]);
 
   const [isMaximized, setIsMaximized] = useState(true);
 
@@ -1836,86 +1851,183 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               REPORT 4: SINGLE LINE DIAGRAM (SLD) SCHEMATIC BLUEPRINT
              ======================================================== */}
           {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
-            <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                {renderOfficialHeader('Single Line Diagram (SLD) Schematic & Network Topology Blueprint', getPageInfo('singleLineDiagram').pageLabel)}
-                <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <Network className="w-4 h-4 text-indigo-700" />
-                      <span>Single Line Diagram (SLD) Topology & Bifurcation Schemes</span>
-                    </h2>
-                    <p className="text-[11px] text-slate-600 mt-0.5">
-                      Separate electrical single line diagrams for Existing (Exist: Baseline), Proposed-1 (T-1 Line Portion), and Proposed-2 (T-2 Bifurcated Line Portion).
-                    </p>
-                  </div>
+            sldScheme === 'tri_scheme' && pageBreakMode === 'page_per_section' ? (
+              <>
+                {/* Scheme 1: Exist Line Map */}
+                <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    {renderOfficialHeader('Single Line Diagram (SLD): Existing Feeder (Exist: Baseline)', `${getPageInfo('singleLineDiagram').pageLabel} (Part A)`)}
+                    <div className="bg-amber-50 border-l-4 border-amber-500 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Network className="w-4 h-4 text-amber-700" />
+                          <span>1. Existing Single Line Diagram (Baseline Feeder Topology)</span>
+                        </h2>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
+                          Un-bifurcated radial network showing existing load, currents, conductor types, and baseline voltage profile.
+                        </p>
+                      </div>
+                      <div className="no-print flex items-center gap-1 text-xs">
+                        <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
+                        <button
+                          type="button"
+                          onClick={() => setSldScheme('combined')}
+                          className="px-2 py-0.5 rounded text-[11px] font-semibold bg-white text-slate-700 border border-slate-200 cursor-pointer"
+                        >
+                          Switch to Combined
+                        </button>
+                      </div>
+                    </div>
 
-                  {/* Scheme Switcher in Report Viewer (no-print) */}
-                  <div className="no-print flex flex-wrap items-center gap-1 text-xs">
-                    <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
-                    <button
-                      type="button"
-                      onClick={() => setSldScheme('combined')}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                        sldScheme === 'combined' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
-                      }`}
-                    >
-                      Combined
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSldScheme('exist')}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                        sldScheme === 'exist' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-amber-950 border border-amber-300'
-                      }`}
-                    >
-                      Exist
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSldScheme('proposed_1')}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                        sldScheme === 'proposed_1' ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-900 border border-blue-300'
-                      }`}
-                    >
-                      Proposed-1
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSldScheme('proposed_2')}
-                      className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
-                        sldScheme === 'proposed_2' ? 'bg-purple-600 text-white font-bold' : 'bg-white text-purple-900 border border-purple-300'
-                      }`}
-                    >
-                      Proposed-2
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSldScheme('tri_scheme')}
-                      className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1 ${
-                        sldScheme === 'tri_scheme' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-900 border border-emerald-300'
-                      }`}
-                    >
-                      <Columns className="w-3 h-3" />
-                      <span>3-Scheme (Exist vs P-1 vs P-2)</span>
-                    </button>
+                    <FeederSLDViewer
+                      feeder={feeder}
+                      summary={summary}
+                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      scheme="exist"
+                      theme="light"
+                      isPrintView={true}
+                      showMetrics={true}
+                    />
                   </div>
+                  {renderOfficialFooter('4A. Existing Feeder Single Line Diagram', 'singleLineDiagram')}
                 </div>
 
-                {/* Render SLD Diagrams */}
-                <FeederSLDViewer
-                  feeder={feeder}
-                  summary={summary}
-                  existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
-                  scheme={sldScheme}
-                  theme="light"
-                  isPrintView={true}
-                  showMetrics={true}
-                />
-              </div>
+                {/* Scheme 2: Proposed-1 Line Map */}
+                <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    {renderOfficialHeader('Single Line Diagram (SLD): Proposed-1 Line (Main Transformer T-1)', `${getPageInfo('singleLineDiagram').pageLabel} (Part B)`)}
+                    <div className="bg-blue-50 border-l-4 border-blue-600 p-2.5 rounded-r-lg">
+                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Network className="w-4 h-4 text-blue-700" />
+                        <span>2. Proposed-1 Single Line Diagram (Main Transformer T-1 Line Portion)</span>
+                      </h2>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Relieved upstream line portion powered from Main Substation T-1 with downstream cut-off point isolated.
+                      </p>
+                    </div>
 
-              {renderOfficialFooter('4. Single Line Diagram (SLD) Engineering Blueprint', 'singleLineDiagram')}
-            </div>
+                    <FeederSLDViewer
+                      feeder={feeder}
+                      summary={summary}
+                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      scheme="proposed_1"
+                      theme="light"
+                      isPrintView={true}
+                      showMetrics={true}
+                    />
+                  </div>
+                  {renderOfficialFooter('4B. Proposed-1 Single Line Diagram (T-1 Zone)', 'singleLineDiagram')}
+                </div>
+
+                {/* Scheme 3: Proposed-2 Line Map */}
+                <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
+                  <div className="space-y-3">
+                    {renderOfficialHeader('Single Line Diagram (SLD): Proposed-2 Line (Additional Transformer T-2)', `${getPageInfo('singleLineDiagram').pageLabel} (Part C)`)}
+                    <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg">
+                      <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Network className="w-4 h-4 text-purple-700" />
+                        <span>3. Proposed-2 Single Line Diagram (Additional Transformer T-2 Bifurcated Portion)</span>
+                      </h2>
+                      <p className="text-[11px] text-purple-800 mt-0.5">
+                        Newly injected tail zone powered from proposed Transformer Substation T-2, eliminating end-of-line voltage drops.
+                      </p>
+                    </div>
+
+                    <FeederSLDViewer
+                      feeder={feeder}
+                      summary={summary}
+                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      scheme="proposed_2"
+                      theme="light"
+                      isPrintView={true}
+                      showMetrics={true}
+                    />
+                  </div>
+                  {renderOfficialFooter('4C. Proposed-2 Single Line Diagram (T-2 Zone)', 'singleLineDiagram')}
+                </div>
+              </>
+            ) : (
+              <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  {renderOfficialHeader('Single Line Diagram (SLD) Schematic & Network Topology Blueprint', getPageInfo('singleLineDiagram').pageLabel)}
+                  <div className="bg-indigo-50 border-l-4 border-indigo-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <Network className="w-4 h-4 text-indigo-700" />
+                        <span>Single Line Diagram (SLD) Topology & Bifurcation Schemes</span>
+                      </h2>
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        Separate electrical single line diagrams for Existing (Exist: Baseline), Proposed-1 (T-1 Line Portion), and Proposed-2 (T-2 Bifurcated Line Portion).
+                      </p>
+                    </div>
+
+                    {/* Scheme Switcher in Report Viewer (no-print) */}
+                    <div className="no-print flex flex-wrap items-center gap-1 text-xs">
+                      <span className="text-[10px] font-bold text-slate-500 mr-1">Scheme:</span>
+                      <button
+                        type="button"
+                        onClick={() => setSldScheme('combined')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                          sldScheme === 'combined' ? 'bg-slate-900 text-white' : 'bg-white text-slate-700 border border-slate-200'
+                        }`}
+                      >
+                        Combined
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSldScheme('exist')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                          sldScheme === 'exist' ? 'bg-amber-500 text-slate-950 font-bold' : 'bg-white text-amber-950 border border-amber-300'
+                        }`}
+                      >
+                        Exist
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSldScheme('proposed_1')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                          sldScheme === 'proposed_1' ? 'bg-blue-600 text-white font-bold' : 'bg-white text-blue-900 border border-blue-300'
+                        }`}
+                      >
+                        Proposed-1
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSldScheme('proposed_2')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-semibold cursor-pointer ${
+                          sldScheme === 'proposed_2' ? 'bg-purple-600 text-white font-bold' : 'bg-white text-purple-900 border border-purple-300'
+                        }`}
+                      >
+                        Proposed-2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSldScheme('tri_scheme')}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold cursor-pointer flex items-center gap-1 ${
+                          sldScheme === 'tri_scheme' ? 'bg-emerald-700 text-white' : 'bg-white text-emerald-900 border border-emerald-300'
+                        }`}
+                      >
+                        <Columns className="w-3 h-3" />
+                        <span>3-Scheme (Exist vs P-1 vs P-2)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Render SLD Diagrams */}
+                  <FeederSLDViewer
+                    feeder={feeder}
+                    summary={summary}
+                    existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                    scheme={sldScheme}
+                    theme="light"
+                    isPrintView={true}
+                    showMetrics={true}
+                  />
+                </div>
+
+                {renderOfficialFooter('4. Single Line Diagram (SLD) Engineering Blueprint', 'singleLineDiagram')}
+              </div>
+            )
           )}
 
           {/* ========================================================
