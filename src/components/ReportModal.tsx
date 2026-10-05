@@ -1881,8 +1881,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={summary}
-                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      existingSummary={summary}
                       scheme="exist"
                       theme="light"
                       isPrintView={true}
@@ -1908,8 +1908,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={summary}
-                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      existingSummary={summary}
                       scheme="proposed_1"
                       theme="light"
                       isPrintView={true}
@@ -1935,8 +1935,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
                     <FeederSLDViewer
                       feeder={feeder}
-                      summary={summary}
-                      existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                      summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                      existingSummary={summary}
                       scheme="proposed_2"
                       theme="light"
                       isPrintView={true}
@@ -2016,8 +2016,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   {/* Render SLD Diagrams */}
                   <FeederSLDViewer
                     feeder={feeder}
-                    summary={summary}
-                    existingSummary={proposedSummary.bifurcationActive ? summary : undefined}
+                    summary={proposedSummary.bifurcationActive ? proposedSummary : summary}
+                    existingSummary={summary}
                     scheme={sldScheme}
                     theme="light"
                     isPrintView={true}

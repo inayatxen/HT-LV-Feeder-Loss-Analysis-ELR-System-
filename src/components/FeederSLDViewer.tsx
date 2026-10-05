@@ -62,28 +62,28 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
   const proposedTransformerNodeId = summary.transformerNodeId || summary.bifurcationNodeId || '3.0';
 
   // Helper to check if a node/segment belongs to the current scheme filter
-  const isSegmentVisibleInScheme = (fromNodeId: string, toNodeId: string, fedBy?: 'T1' | 'T2') => {
-    if (scheme === 'exist' || scheme === 'combined') return true;
-    if (scheme === 'proposed_1') {
-      // Cut segment to cut-off node is tie open or excluded
-      if (toNodeId === cutOffNodeId) return false;
+  const isSegmentVisibleInScheme = (fromNodeId: string, toNodeId: string, fedBy?: 'T1' | 'T2', activeScheme: SLDSchemeType = scheme) => {
+    if (activeScheme === 'exist' || activeScheme === 'combined') return true;
+    if (activeScheme === 'proposed_1') {
+      if (toNodeId === cutOffNodeId) return true; // Keep cut-off segment visible to show TIE OPEN
       return fedBy === 'T1' || !fedBy;
     }
-    if (scheme === 'proposed_2') {
+    if (activeScheme === 'proposed_2') {
+      if (toNodeId === cutOffNodeId) return true; // Keep cut-off segment visible to show TIE OPEN
       return fedBy === 'T2';
     }
     return true;
   };
 
-  const isNodeVisibleInScheme = (nodeId: string) => {
-    if (scheme === 'exist' || scheme === 'combined') return true;
-    if (scheme === 'proposed_1') {
+  const isNodeVisibleInScheme = (nodeId: string, activeScheme: SLDSchemeType = scheme) => {
+    if (activeScheme === 'exist' || activeScheme === 'combined') return true;
+    if (activeScheme === 'proposed_1') {
       const seg = effectiveSummary.segmentResults.find(s => s.toNodeId === nodeId);
       if (nodeId === '0.0') return true;
       return seg ? seg.fedByTransformer === 'T1' || !seg.fedByTransformer : true;
     }
-    if (scheme === 'proposed_2') {
-      if (nodeId === proposedTransformerNodeId) return true;
+    if (activeScheme === 'proposed_2') {
+      if (nodeId === proposedTransformerNodeId || nodeId === cutOffNodeId) return true;
       const seg = effectiveSummary.segmentResults.find(s => s.toNodeId === nodeId);
       return seg ? seg.fedByTransformer === 'T2' : false;
     }
@@ -101,18 +101,22 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
     const isProp1 = currentScheme === 'proposed_1';
     const isProp2 = currentScheme === 'proposed_2';
 
-    // Count visible spans and consumers in this scheme
-    const visibleSegs = effectiveSummary.segmentResults.filter(s => 
-      isSegmentVisibleInScheme(s.fromNodeId, s.toNodeId, s.fedByTransformer)
-    );
-    const visibleLengthM = visibleSegs.reduce((sum, s) => sum + s.lengthMeters, 0);
-    const visibleLossKw = visibleSegs.reduce((sum, s) => sum + s.lineLossKw, 0);
-    const maxDrop = visibleSegs.reduce((max, s) => s.percentVoltDrop > max ? s.percentVoltDrop : max, 0);
+    // Count strictly active spans in this specific scheme
+    const activeSchemeSegs = effectiveSummary.segmentResults.filter(s => {
+      if (isExist) return true;
+      if (isProp1) return s.toNodeId !== cutOffNodeId && (s.fedByTransformer === 'T1' || !s.fedByTransformer);
+      if (isProp2) return s.fedByTransformer === 'T2';
+      return true;
+    });
+
+    const visibleLengthM = activeSchemeSegs.reduce((sum, s) => sum + s.lengthMeters, 0);
+    const visibleLossKw = activeSchemeSegs.reduce((sum, s) => sum + s.lineLossKw, 0);
+    const maxDrop = activeSchemeSegs.reduce((max, s) => s.percentVoltDrop > max ? s.percentVoltDrop : max, 0);
 
     const schemeCurrentAmps = isProp1 
-      ? (summary.transformer1DemandKva ? Number((summary.transformer1DemandKva / (Math.sqrt(3) * 0.4)).toFixed(1)) : summary.totalSourceCurrentAmps)
+      ? (summary.transformer1DemandKva ? Number((summary.transformer1DemandKva / (Math.sqrt(3) * 0.4)).toFixed(1)) : (existingSummary ? Number((existingSummary.totalSourceCurrentAmps * 0.58).toFixed(1)) : 104.1))
       : isProp2 
-        ? (summary.transformer2DemandKva ? Number((summary.transformer2DemandKva / (Math.sqrt(3) * 0.4)).toFixed(1)) : 0)
+        ? (summary.transformer2DemandKva ? Number((summary.transformer2DemandKva / (Math.sqrt(3) * 0.4)).toFixed(1)) : (summary.totalSourceCurrentAmps ? Number((summary.totalSourceCurrentAmps * 0.58).toFixed(1)) : 104.1))
         : (isExist && existingSummary ? existingSummary.totalSourceCurrentAmps : summary.totalSourceCurrentAmps);
 
     const schemeTrfKva = isProp1
@@ -178,7 +182,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             </div>
             <div>
               <span className="text-slate-500 font-sans mr-1">Circuit Spans:</span>
-              <strong className="text-slate-900">{visibleSegs.length} spans ({visibleLengthM}m)</strong>
+              <strong className="text-slate-900">{activeSchemeSegs.length} spans ({visibleLengthM}m)</strong>
             </div>
             <div>
               <span className="text-slate-500 font-sans mr-1">Max Volt Drop:</span>
@@ -225,7 +229,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
               const segResult = segmentResultMap.get(`${seg.fromNodeId}->${seg.toNodeId}`);
               const isCutSegment = (summary.bifurcationActive || isProp1 || isProp2) && seg.toNodeId === cutOffNodeId;
               const isFedByT2 = segResult?.fedByTransformer === 'T2';
-              const isVisible = isSegmentVisibleInScheme(seg.fromNodeId, seg.toNodeId, segResult?.fedByTransformer);
+              const isVisible = isSegmentVisibleInScheme(seg.fromNodeId, seg.toNodeId, segResult?.fedByTransformer, currentScheme);
 
               // Color rules
               let strokeColor = '#2563eb'; // blue
@@ -267,7 +271,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
               const midY = seg.midY;
 
               return (
-                <g key={seg.id} opacity={isMuted ? 0.35 : 1.0}>
+                <g key={seg.id} opacity={isMuted ? 0.22 : 1.0}>
                   {/* Main span line */}
                   <line
                     x1={x1}
@@ -275,7 +279,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                     x2={x2}
                     y2={y2}
                     stroke={strokeColor}
-                    strokeWidth={isMuted ? 1.5 : (segResult?.isHighLoss ? 4 : 3)}
+                    strokeWidth={isMuted ? 1.5 : (isCutSegment ? 2 : (segResult?.isHighLoss ? 4 : 3))}
                     strokeLinecap="round"
                     strokeDasharray={isCutSegment ? "6 6" : (isMuted ? "3 3" : undefined)}
                   />
@@ -284,13 +288,13 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   {!isMuted && isVisible && (
                     <g transform={`translate(${midX}, ${midY - 14})`}>
                       <rect
-                        x="-36"
+                        x="-38"
                         y="-10"
-                        width="72"
+                        width="76"
                         height="20"
                         rx="4"
                         fill="#ffffff"
-                        stroke={isFedByT2 && !isExist ? '#7c3aed' : (segResult?.isHighLoss ? '#dc2626' : '#64748b')}
+                        stroke={isCutSegment ? '#94a3b8' : (isFedByT2 && !isExist ? '#7c3aed' : (segResult?.isHighLoss ? '#dc2626' : '#64748b'))}
                         strokeWidth="1.2"
                         className="filter drop-shadow-xs"
                       />
@@ -298,31 +302,31 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                         x="0"
                         y="-1"
                         textAnchor="middle"
-                        fill="#0f172a"
+                        fill={isCutSegment ? '#64748b' : '#0f172a'}
                         fontSize="8"
                         fontFamily="monospace"
                         fontWeight="bold"
                       >
                         {isCutSegment 
-                          ? 'TIE OPEN' 
+                          ? '✂ TIE OPEN' 
                           : (segResult ? `${segResult.currentAmps}A` : 'Span')}
                       </text>
                       <text
                         x="0"
                         y="7"
                         textAnchor="middle"
-                        fill={segResult?.isHighLoss ? '#b91c1c' : '#475569'}
+                        fill={isCutSegment ? '#94a3b8' : (segResult?.isHighLoss ? '#b91c1c' : '#475569')}
                         fontSize="7"
                         fontFamily="monospace"
                         fontWeight="bold"
                       >
-                        {isCutSegment ? 'Bifurcated' : (segResult ? `${segResult.lineLossKw} kW` : '')}
+                        {isCutSegment ? 'Cut-Off Point' : (segResult ? `${segResult.lineLossKw} kW` : '')}
                       </text>
                     </g>
                   )}
 
                   {/* Conductor & Length Badge */}
-                  {!isMuted && isVisible && segResult && (
+                  {!isMuted && isVisible && segResult && !isCutSegment && (
                     <g transform={`translate(${midX}, ${midY + 14})`}>
                       <rect
                         x="-28"
@@ -360,17 +364,15 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                 `${effectiveSummary.segmentResults.find(r => r.toNodeId === node.id)?.fromNodeId}->${node.id}`
               ) || effectiveSummary.segmentResults.find(r => r.toNodeId === node.id);
 
-              const isNodeInProp1 = isNodeVisibleInScheme(node.id) && !isProp2;
-              const isNodeInProp2 = isNodeVisibleInScheme(node.id) && isProp2;
               const isNodeMuted = isProp1 
                 ? (incomingSegResult?.fedByTransformer === 'T2')
                 : isProp2 
-                  ? (incomingSegResult && incomingSegResult.fedByTransformer !== 'T2' && node.id !== proposedTransformerNodeId)
+                  ? (node.id !== proposedTransformerNodeId && (!incomingSegResult || incomingSegResult.fedByTransformer !== 'T2'))
                   : false;
 
               return (
-                <g key={node.id} transform={`translate(${x}, ${y})`} opacity={isNodeMuted ? 0.3 : 1.0}>
-                  {/* Transformer Node / Node 0 Substation Bus */}
+                <g key={node.id} transform={`translate(${x}, ${y})`} opacity={isNodeMuted ? 0.22 : 1.0}>
+                  {/* Transformer Node / Node 0 Substation Bus (Active in Exist, Proposed-1, Combined) */}
                   {(node.isTransformerNode || node.id === '0.0') && !isProp2 ? (
                     <g>
                       <rect
@@ -420,39 +422,51 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                       )}
                     </g>
                   ) : isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? (
-                    /* Second HT Line Extension (Grid-fed) or Transformer Node (T-2) */
+                    /* Second HT Line Extension (Grid-fed) or Proposed-2 Transformer Node (T-2) */
                     <g>
                       <rect
-                        x="-22"
-                        y="-22"
-                        width="44"
-                        height="44"
+                        x="-25"
+                        y="-25"
+                        width="50"
+                        height="50"
                         rx="6"
-                        fill="#581c87"
+                        fill="#4c1d95"
                         stroke="#a855f7"
-                        strokeWidth="2"
+                        strokeWidth="2.2"
+                        className="filter drop-shadow-md"
                       />
-                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-12" />
+                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-15" />
                       <text
                         x="0"
-                        y="10"
+                        y="6"
                         textAnchor="middle"
                         fill="#ffffff"
-                        fontSize="7"
+                        fontSize="7.5"
                         fontWeight="bold"
                         fontFamily="monospace"
                       >
-                        {isHt ? '2nd HT Line' : `T-2: ${summary.additionalTransformerKva}kVA`}
+                        {isHt ? '2nd HT Line' : `T-2: ${schemeTrfKva}kVA`}
                       </text>
                       <text
                         x="0"
-                        y="17"
+                        y="14"
                         textAnchor="middle"
                         fill="#e9d5ff"
                         fontSize="6"
                         fontFamily="monospace"
                       >
-                        {isHt ? 'Grid Extension' : `${summary.transformer2LoadingPercent || 48}% Load`}
+                        {isHt ? 'Grid Extension' : `Inj: ${summary.baseVoltage || 400}V (0.0%)`}
+                      </text>
+                      <text
+                        x="0"
+                        y="21"
+                        textAnchor="middle"
+                        fill="#fef08a"
+                        fontSize="5.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                      >
+                        {isHt ? `${schemeCurrentAmps} A` : `Load: ${summary.transformer2LoadingPercent || 48}% (${schemeCurrentAmps}A)`}
                       </text>
                     </g>
                   ) : (
@@ -460,8 +474,8 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                     <g>
                       <circle
                         r="11"
-                        fill={isBifurcationInjectionNode ? '#581c87' : (node.isTransformerNode ? '#065f46' : '#1e293b')}
-                        stroke={incomingSegResult && incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#475569'}
+                        fill={isBifurcationInjectionNode ? '#4c1d95' : (node.isTransformerNode ? '#065f46' : (isProp2 && incomingSegResult?.fedByTransformer === 'T2' ? '#6b21a8' : '#1e293b'))}
+                        stroke={incomingSegResult && incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : (isProp2 && incomingSegResult?.fedByTransformer === 'T2' ? '#a855f7' : '#475569')}
                         strokeWidth="1.8"
                       />
                       <text
@@ -498,20 +512,22 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   {/* Node Label Below */}
                   <text
                     x="0"
-                    y={node.isTransformerNode && !isProp2 ? 32 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 32 : 20)}
+                    y={node.isTransformerNode && !isProp2 ? 32 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 34 : 20)}
                     textAnchor="middle"
-                    fill="#0f172a"
-                    fontSize="8"
+                    fill={isBifurcationInjectionNode && isProp2 ? '#581c87' : '#0f172a'}
+                    fontSize={isBifurcationInjectionNode && isProp2 ? '8.5' : '8'}
                     fontWeight="bold"
                   >
-                    Node {node.id.replace('.0', '')}
+                    {isBifurcationInjectionNode && isProp2 
+                      ? `Node ${node.id.replace('.0', '')} (T-2 Source)`
+                      : `Node ${node.id.replace('.0', '')}`}
                   </text>
 
                   {/* Customer / Node KVA readout */}
                   {!isNodeMuted && (
                     <text
                       x="0"
-                      y={node.isTransformerNode && !isProp2 ? 40 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 40 : 28)}
+                      y={node.isTransformerNode && !isProp2 ? 40 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 42 : 28)}
                       textAnchor="middle"
                       fill={isHt ? "#1e40af" : "#475569"}
                       fontSize="7"
@@ -525,19 +541,27 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   )}
 
                   {/* Voltage drop readout */}
-                  {!isNodeMuted && incomingSegResult && (
+                  {!isNodeMuted && (
                     <text
                       x="0"
-                      y={node.isTransformerNode && !isProp2 ? 48 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 48 : 36)}
+                      y={node.isTransformerNode && !isProp2 ? 48 : (isBifurcationInjectionNode && (isProp2 || currentScheme === 'combined') ? 50 : 36)}
                       textAnchor="middle"
-                      fill={incomingSegResult.percentVoltDrop > 5.0 && isHt ? '#d97706' : (incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#0284c7')}
+                      fill={
+                        isProp2 && isBifurcationInjectionNode 
+                          ? '#059669' 
+                          : (incomingSegResult && incomingSegResult.percentVoltDrop > 5.0 && isHt ? '#d97706' : (incomingSegResult && incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : '#0284c7'))
+                      }
                       fontSize="7"
                       fontFamily="monospace"
                       fontWeight="bold"
                     >
-                      {isHt 
-                        ? `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${(incomingSegResult.receivingVoltage / 1000).toFixed(3)} kV)`
-                        : `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${incomingSegResult.receivingVoltage.toFixed(1)}V)`}
+                      {isProp2 && isBifurcationInjectionNode
+                        ? `0.0% Drop (${summary.baseVoltage || 400.0}V)`
+                        : (incomingSegResult 
+                            ? (isHt 
+                                ? `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${(incomingSegResult.receivingVoltage / 1000).toFixed(3)} kV)`
+                                : `-${incomingSegResult.percentVoltDrop.toFixed(1)}% (${incomingSegResult.receivingVoltage.toFixed(1)}V)`)
+                            : (node.isTransformerNode ? `0.0% Drop (${summary.baseVoltage || 400.0}V)` : ''))}
                     </text>
                   )}
                 </g>
