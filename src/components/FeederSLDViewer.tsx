@@ -26,6 +26,7 @@ interface FeederSLDViewerProps {
   theme?: 'dark' | 'light';
   height?: number | string;
   showMetrics?: boolean;
+  diagramScale?: number;
 }
 
 export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
@@ -38,7 +39,8 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
   isPrintView = false,
   theme = 'light',
   height,
-  showMetrics = true
+  showMetrics = true,
+  diagramScale = 1.0
 }) => {
   const layout = useMemo(() => {
     return calculateNonOverlappingSLDLayout(feeder);
@@ -204,10 +206,12 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             preserveAspectRatio="xMidYMid meet"
             className="w-full max-w-full h-auto select-none"
             style={{ 
-              minHeight: isPrintView ? '260px' : '300px',
-              maxHeight: isPrintView ? '600px' : undefined,
+              minHeight: isPrintView ? (260 * diagramScale) + 'px' : (300 * diagramScale) + 'px',
+              maxHeight: isPrintView ? (600 * diagramScale) + 'px' : undefined,
               width: '100%',
-              height: 'auto'
+              height: 'auto',
+              transform: `scale(${diagramScale})`,
+              transformOrigin: 'top center'
             }}
           >
             <defs>

@@ -133,6 +133,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [includeWatermark, setIncludeWatermark] = useState(false); // Excluded by default to avoid unnecessary graphics
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
   const [excludeUnnecessaryGraphics, setExcludeUnnecessaryGraphics] = useState<boolean>(true); // Focus purely on informative data report and engineering diagrams (no decorative bloat)
+  const [diagramScale, setDiagramScale] = useState<number>(0.85);
 
   // PDF Export Generation State
   const printContentRef = useRef<HTMLDivElement>(null);
@@ -1208,6 +1209,23 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                   </label>
                 </div>
               </div>
+
+              {/* Setting 4: Diagram Scale Factor */}
+              <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                <label className="text-slate-200 font-bold block flex items-center justify-between">
+                  <span>4. SLD Fit-to-Page Scale Factor</span>
+                  <span className="text-[10px] font-mono text-amber-400 font-normal">{Math.round(diagramScale * 100)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.2"
+                  step="0.05"
+                  value={diagramScale}
+                  onChange={(e) => setDiagramScale(Number(e.target.value))}
+                  className="w-full accent-amber-500"
+                />
+              </div>
             </div>
 
             {/* Checklist of Pages / Sections to Print */}
@@ -1915,6 +1933,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                       theme="light"
                       isPrintView={true}
                       showMetrics={true}
+                      diagramScale={diagramScale}
                     />
                   </div>
                   {renderOfficialFooter('4A. Existing Feeder Single Line Diagram', 'singleLineDiagram')}
@@ -1942,6 +1961,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                       theme="light"
                       isPrintView={true}
                       showMetrics={true}
+                      diagramScale={diagramScale}
                     />
                   </div>
                   {renderOfficialFooter('4B. Proposed-1 Single Line Diagram (T-1 Zone)', 'singleLineDiagram')}
@@ -1969,6 +1989,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                       theme="light"
                       isPrintView={true}
                       showMetrics={true}
+                      diagramScale={diagramScale}
                     />
                   </div>
                   {renderOfficialFooter('4C. Proposed-2 Single Line Diagram (T-2 Zone)', 'singleLineDiagram')}
@@ -2050,6 +2071,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     theme="light"
                     isPrintView={true}
                     showMetrics={true}
+                    diagramScale={diagramScale}
                   />
                 </div>
 
