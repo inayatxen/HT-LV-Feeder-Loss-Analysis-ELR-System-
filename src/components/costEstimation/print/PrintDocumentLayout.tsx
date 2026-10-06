@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { CostEstimateRecord } from '../../../types/costEstimation';
+import { format11DigitWorkOrder } from '../../../utils/costEngine';
 
 export interface PrintDocumentLayoutProps {
   estimate: CostEstimateRecord;
@@ -73,8 +74,11 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                 <div className="text-xs font-mono font-bold text-slate-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded">
                   ESTIMATE NO: {estimate.projectInfo.estimateNo}
                 </div>
-                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
-                  Date: {new Date().toLocaleDateString('en-GB')}
+                <div className="text-[11px] font-mono font-bold text-amber-900 mt-0.5">
+                  11-DIGIT W.O.: {format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}
+                </div>
+                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                  ELR Code: {estimate.projectInfo.elrCode || 'ELR-71-26-042'}
                 </div>
               </div>
             </div>
@@ -371,11 +375,12 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 
             {/* Reference Meta Sub-header */}
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-700 mt-3 pt-2 border-t border-slate-200 bg-slate-50/70 px-3 py-1.5 rounded-md">
-              <span>Estimate No: <strong className="text-slate-950 font-bold">{estimate.projectInfo.estimateNo}</strong></span>
-              <span>Revision: <strong>{estimate.projectInfo.revisionNo}</strong></span>
+              <span>Est No: <strong className="text-slate-950 font-bold">{estimate.projectInfo.estimateNo}</strong></span>
+              <span>11-Digit W.O.: <strong className="text-amber-950 bg-amber-100 px-1.5 py-0.5 rounded font-black border border-amber-300">{format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}</strong></span>
+              <span>ELR Code: <strong className="text-blue-950">{estimate.projectInfo.elrCode || 'ELR-71-26-042'}</strong></span>
+              <span>Rev: <strong>{estimate.projectInfo.revisionNo}</strong></span>
               <span>Date: <strong>{estimate.projectInfo.estimateDate}</strong></span>
               <span>Division: <strong>{estimate.projectInfo.division}</strong></span>
-              <span>Sub-Div: <strong>{estimate.projectInfo.subDivision}</strong></span>
               <span>Status: <strong className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[11px]">{estimate.status}</strong></span>
             </div>
 

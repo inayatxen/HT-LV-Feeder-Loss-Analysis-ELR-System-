@@ -14,9 +14,12 @@ import {
   Printer, 
   FileSpreadsheet, 
   RefreshCw,
-  Info
+  Info,
+  Zap,
+  ShieldCheck
 } from 'lucide-react';
 import { CostBenefitAnalysisPrintModal } from './CostBenefitAnalysisPrintModal';
+import { format11DigitWorkOrder, parse11DigitWorkOrder, generate11DigitWorkOrder } from '../../utils/costEngine';
 
 interface CostBenefitAnalysisViewProps {
   estimates: CostEstimateRecord[];
@@ -26,6 +29,7 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   // Selected Estimate to link Project Cost
   const [selectedEstimateId, setSelectedEstimateId] = useState<string>('default');
+  const [manualWorkOrderNo, setManualWorkOrderNo] = useState<string>('26147126042');
 
   // Input States matching WAPDA Cost Benefit Analysis Sheet
   // Existing Conditions
@@ -55,6 +59,15 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
   const linkedEstimate = estimates.find(e => e.id === selectedEstimateId);
   const linkedCost = linkedEstimate ? linkedEstimate.charges.grandTotal : 1769032;
   const projectCost = useLinkedCost ? linkedCost : manualProjectCost;
+
+  const effectiveWorkOrderNo = useLinkedCost && linkedEstimate?.projectInfo?.workOrderNo
+    ? linkedEstimate.projectInfo.workOrderNo
+    : manualWorkOrderNo;
+  const parsedWo = parse11DigitWorkOrder(effectiveWorkOrderNo);
+  const effectiveEstimateNo = linkedEstimate ? linkedEstimate.projectInfo.estimateNo : 'EST-PESH-2026-00401';
+  const effectiveSchemeName = linkedEstimate ? linkedEstimate.projectInfo.schemeProjectName : 'HT/LT Line Loss Reduction & Capital Works';
+  const effectiveElrCode = linkedEstimate?.projectInfo?.elrCode || parsedWo.elrCode || 'ELR-71-26-042';
+  const effectiveAccountHead = linkedEstimate?.projectInfo?.accountHead || parsedWo.headOfAccount || '4-71 ELR Capital Loss Reduction';
 
   // Calculations
   const reductionPowerLossKw = Number((existingPowerLossKw - improvedPowerLossKw).toFixed(2));
@@ -216,6 +229,62 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 flex items-center justify-between text-xs font-mono">
               <span className="text-slate-600 font-sans font-bold">Active Project Capital Cost:</span>
               <span className="text-sm font-black text-blue-900">Rs. {projectCost.toLocaleString()}</span>
+            </div>
+
+            {/* 11-Digit Work Order & ELR Tie-Up Box */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-blue-500/5 to-slate-50 border border-amber-300 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-slate-900 text-amber-400 font-mono font-black text-xs flex items-center justify-center">#</span>
+                  <span className="text-xs font-bold text-slate-900">
+                    11-Digit Work Order: <strong className="font-mono text-slate-950 text-sm font-black tracking-wider">{format11DigitWorkOrder(effectiveWorkOrderNo)}</strong>
+                    <span className="ml-1.5 text-[11px] text-slate-500 font-mono">[{effectiveWorkOrderNo}]</span>
+                  </span>
+                </div>
+
+                {!useLinkedCost && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={manualWorkOrderNo}
+                      onChange={(e) => setManualWorkOrderNo(e.target.value)}
+                      placeholder="Enter 11-digit W.O."
+                      className="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-mono font-bold text-slate-900 w-36"
+                      maxLength={15}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setManualWorkOrderNo(generate11DigitWorkOrder({ categoryCode: '71' }))}
+                      className="px-2 py-1 text-[11px] font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded border border-amber-400 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Zap className="w-3 h-3" />
+                      Auto-Gen
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block font-sans uppercase">ELR Scheme Code</span>
+                  <strong className="text-amber-900 font-bold">{effectiveElrCode}</strong>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block font-sans uppercase">Head of Account</span>
+                  <strong className="text-slate-900 font-bold">{effectiveAccountHead}</strong>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block font-sans uppercase">Circle & Division</span>
+                  <strong className="text-blue-900 font-bold">{parsedWo.circleName} · {parsedWo.divisionCode}</strong>
+                </div>
+                <div className="p-2 bg-white rounded-lg border border-slate-200">
+                  <span className="text-slate-400 text-[10px] block font-sans uppercase">Tie-Up Status</span>
+                  <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    Line & ELR Linked
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -525,6 +594,11 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         data={{
+          workOrderNo: format11DigitWorkOrder(effectiveWorkOrderNo),
+          elrCode: effectiveElrCode,
+          estimateNo: effectiveEstimateNo,
+          schemeProjectName: effectiveSchemeName,
+          accountHead: effectiveAccountHead,
           projectCost,
           existingPowerLossKw,
           existingEnergyLossKwh,

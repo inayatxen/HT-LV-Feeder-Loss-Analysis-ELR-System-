@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { CostEstimateRecord } from '../../types/costEstimation';
-import { exportEstimateToExcelWorkbook } from '../../utils/costEngine';
+import { exportEstimateToExcelWorkbook, format11DigitWorkOrder } from '../../utils/costEngine';
 import { X, Printer, Download, Maximize2, Minimize2, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 interface EstimatePrintReportModalProps {
@@ -279,16 +279,18 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-5 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
                     <span>Est No: <strong>{estimate.projectInfo.estimateNo}</strong></span>
+                    <span>·</span>
+                    <span>11-Digit W.O.: <strong className="text-amber-950 bg-amber-100 px-1.5 py-0.5 rounded font-black border border-amber-300">{format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}</strong></span>
+                    <span>·</span>
+                    <span>ELR Code: <strong className="text-blue-950">{estimate.projectInfo.elrCode || 'ELR-71-26-042'}</strong></span>
                     <span>·</span>
                     <span>Rev: <strong>{estimate.projectInfo.revisionNo}</strong></span>
                     <span>·</span>
                     <span>Date: <strong>{estimate.projectInfo.estimateDate}</strong></span>
                     <span>·</span>
                     <span>Division: <strong>{estimate.projectInfo.division}</strong></span>
-                    <span>·</span>
-                    <span>Sub-Div: <strong>{estimate.projectInfo.subDivision}</strong></span>
                     <span>·</span>
                     <span>Status: <strong className="text-blue-900 font-bold">{estimate.status}</strong></span>
                   </div>

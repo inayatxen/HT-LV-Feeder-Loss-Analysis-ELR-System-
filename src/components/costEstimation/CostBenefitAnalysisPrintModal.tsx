@@ -11,6 +11,11 @@ interface CostBenefitAnalysisPrintModalProps {
   isOpen: boolean;
   onClose: () => void;
   data: {
+    workOrderNo?: string;
+    elrCode?: string;
+    estimateNo?: string;
+    schemeProjectName?: string;
+    accountHead?: string;
     projectCost: number;
     existingPowerLossKw: number;
     existingEnergyLossKwh: number;
@@ -224,6 +229,40 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
             <tbody>
               <tr>
                 <td className="p-0 pt-4 space-y-6">
+
+                  {/* 11-Digit Work Order & ELR Tie-Up Header Banner */}
+                  <div className="print-avoid-break bg-slate-50 border-2 border-slate-900 rounded-xl p-3.5 space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-300 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded bg-slate-900 text-amber-400 font-mono font-black text-xs flex items-center justify-center">#</span>
+                        <span className="text-xs font-bold text-slate-900">
+                          11-DIGIT WORK ORDER NO: <strong className="font-mono text-slate-950 text-sm font-black tracking-wider">{data.workOrderNo || '26-14-71-26-042'}</strong>
+                        </span>
+                      </div>
+                      <div className="text-[11px] font-mono font-bold text-amber-900 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">
+                        ELR SCHEME CODE: {data.elrCode || 'ELR-71-26-042'}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-sans">
+                      <div>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Tied Estimate No:</span>
+                        <strong className="font-mono text-slate-900">{data.estimateNo || 'EST-PESH-2026-00401'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Head of Account:</span>
+                        <strong className="text-slate-900">{data.accountHead || '4-71 ELR Capital Loss Reduction'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Study Period:</span>
+                        <strong className="font-mono text-slate-900">{data.studyPeriodYears} Years</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block text-[10px] uppercase font-semibold">Economic Criterion:</span>
+                        <strong className="text-emerald-700 font-bold">BCR ≥ 1.0 (Viable)</strong>
+                      </div>
+                    </div>
+                  </div>
 
                   {/* Capital Cost & Parameters Summary */}
                   <div className="print-avoid-break space-y-2">

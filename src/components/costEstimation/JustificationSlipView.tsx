@@ -5,8 +5,9 @@
 
 import React, { useState } from 'react';
 import { CostEstimateRecord } from '../../types/costEstimation';
-import { Calculator, Printer, FileText, CheckCircle2, AlertTriangle, Layers, Info } from 'lucide-react';
+import { Calculator, Printer, FileText, CheckCircle2, AlertTriangle, Layers, Info, Zap, ShieldCheck } from 'lucide-react';
 import { JustificationSlipPrintModal } from './JustificationSlipPrintModal';
+import { format11DigitWorkOrder, parse11DigitWorkOrder, generate11DigitWorkOrder } from '../../utils/costEngine';
 
 interface JustificationSlipViewProps {
   estimates: CostEstimateRecord[];
@@ -18,6 +19,7 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
   const [selectedEstimateId, setSelectedEstimateId] = useState<string>('default');
   const [useLinkedCost, setUseLinkedCost] = useState<boolean>(true);
   const [manualProjectCost, setManualProjectCost] = useState<number>(1769032);
+  const [manualWorkOrderNo, setManualWorkOrderNo] = useState<string>('26147126042');
 
   // Section 1: Line Losses (Proposal A)
   const [existingLosses5Yrs, setExistingLosses5Yrs] = useState<number>(12308.9);
@@ -37,10 +39,19 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
   const [benefitRateB, setBenefitRateB] = useState<number>(4.39); // Rs. per kWh
   const [studyPeriodYears, setStudyPeriodYears] = useState<number>(5); // years
 
-  // Linked cost
+  // Linked cost & Work Order
   const linkedEstimate = estimates.find(e => e.id === selectedEstimateId);
   const linkedCost = linkedEstimate ? linkedEstimate.charges.grandTotal : 1769032;
   const totalCost = useLinkedCost ? linkedCost : manualProjectCost;
+
+  const effectiveWorkOrderNo = useLinkedCost && linkedEstimate?.projectInfo?.workOrderNo
+    ? linkedEstimate.projectInfo.workOrderNo
+    : manualWorkOrderNo;
+  const parsedWo = parse11DigitWorkOrder(effectiveWorkOrderNo);
+  const effectiveEstimateNo = linkedEstimate ? linkedEstimate.projectInfo.estimateNo : 'EST-PESH-2026-00401';
+  const effectiveSchemeName = linkedEstimate ? linkedEstimate.projectInfo.schemeProjectName : 'HT/LT Line Loss Reduction & Transformer Augmentation';
+  const effectiveElrCode = linkedEstimate?.projectInfo?.elrCode || parsedWo.elrCode || 'ELR-71-26-042';
+  const effectiveAccountHead = linkedEstimate?.projectInfo?.accountHead || parsedWo.headOfAccount || '4-71 ELR Capital Loss Reduction';
 
   // Calculations
   const totalProposalLosses = proposalALosses + proposalBLosses + proposalCLosses + proposalDLosses;
@@ -84,12 +95,17 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
         </div>
       </div>
 
-      {/* Project Cost Linkage Card */}
+      {/* Project Cost & 11-Digit Work Order Linkage Card */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs space-y-4">
-        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-          <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-bold">★</span>
-          Total Cost of Proposed Rehabilitation (Project Estimate)
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 text-xs flex items-center justify-center font-bold">★</span>
+            Total Cost & 11-Digit Work Order Tie-Up
+          </h2>
+          <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 text-[11px] font-mono font-bold border border-amber-300">
+            ELR Statutory Tie-Up
+          </span>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
           <div>
@@ -143,6 +159,62 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
               />
             </div>
           )}
+        </div>
+
+        {/* 11-Digit Work Order Tie-up Box */}
+        <div className="bg-gradient-to-r from-amber-500/10 via-blue-500/5 to-slate-50 border border-amber-300 rounded-xl p-3.5 space-y-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded bg-slate-900 text-amber-400 font-mono font-black text-xs flex items-center justify-center">#</span>
+              <span className="text-xs font-bold text-slate-900">
+                11-Digit Work Order Number: <strong className="font-mono text-slate-950 text-sm font-black tracking-wider">{format11DigitWorkOrder(effectiveWorkOrderNo)}</strong>
+                <span className="ml-1.5 text-[11px] text-slate-500 font-mono">[{effectiveWorkOrderNo}]</span>
+              </span>
+            </div>
+
+            {!useLinkedCost && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={manualWorkOrderNo}
+                  onChange={(e) => setManualWorkOrderNo(e.target.value)}
+                  placeholder="Enter 11-digit W.O."
+                  className="px-2.5 py-1 bg-white border border-amber-400 rounded-lg text-xs font-mono font-bold text-slate-900 w-36"
+                  maxLength={15}
+                />
+                <button
+                  type="button"
+                  onClick={() => setManualWorkOrderNo(generate11DigitWorkOrder({ categoryCode: '71' }))}
+                  className="px-2 py-1 text-[11px] font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 rounded border border-amber-400 flex items-center gap-1 cursor-pointer"
+                >
+                  <Zap className="w-3 h-3" />
+                  Auto-Gen
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <span className="text-slate-400 text-[10px] block font-sans uppercase">ELR Scheme Code</span>
+              <strong className="text-amber-900 font-bold">{effectiveElrCode}</strong>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <span className="text-slate-400 text-[10px] block font-sans uppercase">Head of Account</span>
+              <strong className="text-slate-900 font-bold">{effectiveAccountHead}</strong>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <span className="text-slate-400 text-[10px] block font-sans uppercase">Circle & Division</span>
+              <strong className="text-blue-900 font-bold">{parsedWo.circleName} · {parsedWo.divisionCode}</strong>
+            </div>
+            <div className="p-2 bg-white rounded-lg border border-slate-200">
+              <span className="text-slate-400 text-[10px] block font-sans uppercase">Tie-Up Status</span>
+              <span className="text-emerald-700 font-bold flex items-center gap-1 text-[11px]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Line & ELR Linked
+              </span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -441,6 +513,11 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
         isOpen={showPrintModal}
         onClose={() => setShowPrintModal(false)}
         data={{
+          workOrderNo: format11DigitWorkOrder(effectiveWorkOrderNo),
+          elrCode: effectiveElrCode,
+          estimateNo: effectiveEstimateNo,
+          schemeProjectName: effectiveSchemeName,
+          accountHead: effectiveAccountHead,
           totalCost,
           existingLosses5Yrs,
           proposalALosses,

@@ -159,6 +159,10 @@ export interface EstimateProjectInfo {
   estimateNo: string;
   revisionNo: string;
   estimateDate: string;
+  workOrderNo?: string;        // 11-digit WAPDA/DISCO Work Order Number (e.g. '26147126042' or '26-14-71-26-042')
+  schemeCategory?: string;     // 'ELR' | 'DOP' | 'LINE_EXTENSION' | 'SDI' | 'REHABILITATION' | 'DEPOSIT'
+  elrCode?: string;            // ELR Scheme reference code (e.g. 'ELR-71-26-042')
+  accountHead?: string;        // Head of Account (e.g. 'ELR-71 Capital Account / Loss Reduction')
   division: string;
   subDivision: string;
   circle: string;

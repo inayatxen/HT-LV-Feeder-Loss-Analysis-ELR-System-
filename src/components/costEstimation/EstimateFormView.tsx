@@ -21,7 +21,13 @@ import {
   calculateQuantitiesForLine, 
   computeEstimateCharges, 
   generateEstimateNumber, 
-  exportEstimateToExcelWorkbook 
+  exportEstimateToExcelWorkbook,
+  generate11DigitWorkOrder,
+  format11DigitWorkOrder,
+  parse11DigitWorkOrder,
+  WO_CIRCLE_CODES,
+  WO_DIVISION_CODES,
+  WO_SCHEME_CATEGORIES
 } from '../../utils/costEngine';
 import { calculateFoundationCharges } from '../../utils/foundationCharges';
 import { DismantleMaterialSection } from './DismantleMaterialSection';
@@ -83,6 +89,10 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     estimateNo: initialEstimate?.projectInfo.estimateNo || generateEstimateNumber('PESH'),
     revisionNo: initialEstimate?.projectInfo.revisionNo || 'Rev-00',
     estimateDate: initialEstimate?.projectInfo.estimateDate || new Date().toISOString().split('T')[0],
+    workOrderNo: initialEstimate?.projectInfo.workOrderNo || generate11DigitWorkOrder({ categoryCode: '71' }),
+    schemeCategory: initialEstimate?.projectInfo.schemeCategory || 'ELR',
+    elrCode: initialEstimate?.projectInfo.elrCode || 'ELR-71-26-042',
+    accountHead: initialEstimate?.projectInfo.accountHead || '4-71 ELR Capital Loss Reduction',
     division: initialEstimate?.projectInfo.division || 'Peshawar City',
     subDivision: initialEstimate?.projectInfo.subDivision || 'Gulbhar Sub-Division',
     circle: initialEstimate?.projectInfo.circle || 'Peshawar Circle-1',
@@ -93,7 +103,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     villageLocality: initialEstimate?.projectInfo.villageLocality || '',
     gpsLatitude: initialEstimate?.projectInfo.gpsLatitude || '34.0151 N',
     gpsLongitude: initialEstimate?.projectInfo.gpsLongitude || '71.5249 E',
-    applicantDepartment: initialEstimate?.projectInfo.applicantDepartment || '',
+    applicantDepartment: initialEstimate?.projectInfo.applicantDepartment || 'PESCO ELR Division / Operations',
     schemeProjectName: initialEstimate?.projectInfo.schemeProjectName || '',
     purposeOfWork: initialEstimate?.projectInfo.purposeOfWork || '',
     preparedBy: initialEstimate?.projectInfo.preparedBy || userName || 'Engr. M. Inayat',
@@ -1292,6 +1302,160 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono text-slate-900"
                 />
               </div>
+            </div>
+
+            {/* ========================================================
+                11-DIGIT WORK ORDER & ELR TIE-UP SECTION
+               ======================================================== */}
+            <div className="bg-gradient-to-r from-amber-500/10 via-blue-500/5 to-slate-50 border border-amber-300/80 rounded-xl p-3.5 space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-md bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center shadow-xs">#</span>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      11-Digit Work Order & ELR Tie-Up
+                      <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 text-[10px] font-mono font-bold border border-amber-300">
+                        WAPDA / DISCO Statutory Standard
+                      </span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500">
+                      Ties this Line Cost Estimate directly to the ELR (Energy Loss Reduction) Scheme & Justification Slip.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const parsed = parse11DigitWorkOrder(projectInfo.workOrderNo);
+                    const newWo = generate11DigitWorkOrder({
+                      circleCode: parsed.circleCode || '26',
+                      divisionCode: parsed.divisionCode || '14',
+                      categoryCode: '71'
+                    });
+                    const p = parse11DigitWorkOrder(newWo);
+                    setProjectInfo({
+                      ...projectInfo,
+                      workOrderNo: newWo,
+                      schemeCategory: 'ELR',
+                      elrCode: p.elrCode,
+                      accountHead: p.headOfAccount
+                    });
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-bold text-amber-900 bg-amber-200 hover:bg-amber-300 border border-amber-400 rounded-lg transition-colors flex items-center gap-1 shadow-xs cursor-pointer"
+                >
+                  <Zap className="w-3 h-3 text-amber-800" />
+                  <span>Auto-Gen ELR W.O.</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-800 mb-1 flex items-center justify-between">
+                    <span>11-Digit Work Order No</span>
+                    {projectInfo.workOrderNo && projectInfo.workOrderNo.replace(/\D/g, '').length === 11 ? (
+                      <span className="text-[10px] text-emerald-700 font-mono font-bold">✓ 11-Digits OK</span>
+                    ) : (
+                      <span className="text-[10px] text-amber-700 font-mono">11 numeric digits</span>
+                    )}
+                  </label>
+                  <input
+                    type="text"
+                    value={projectInfo.workOrderNo || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const parsed = parse11DigitWorkOrder(val);
+                      setProjectInfo({
+                        ...projectInfo,
+                        workOrderNo: val,
+                        elrCode: parsed.isValid ? parsed.elrCode : projectInfo.elrCode,
+                        accountHead: parsed.isValid ? parsed.headOfAccount : projectInfo.accountHead
+                      });
+                    }}
+                    placeholder="e.g. 26147126042 or 26-14-71-26-042"
+                    className="w-full px-3 py-1.5 bg-white border border-amber-400 focus:border-amber-600 rounded-lg text-xs font-mono font-black text-slate-900 tracking-wider shadow-xs"
+                    maxLength={15}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">ELR Scheme Code / Ref</label>
+                  <input
+                    type="text"
+                    value={projectInfo.elrCode || ''}
+                    onChange={(e) => setProjectInfo({ ...projectInfo, elrCode: e.target.value })}
+                    placeholder="e.g. ELR-71-26-042"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-700 mb-1">Scheme Category & Head</label>
+                  <select
+                    value={(() => {
+                      const p = parse11DigitWorkOrder(projectInfo.workOrderNo);
+                      return p.categoryCode || '71';
+                    })()}
+                    onChange={(e) => {
+                      const catCode = e.target.value;
+                      const p = parse11DigitWorkOrder(projectInfo.workOrderNo);
+                      const newWo = generate11DigitWorkOrder({
+                        circleCode: p.circleCode || '26',
+                        divisionCode: p.divisionCode || '14',
+                        categoryCode: catCode,
+                        fiscalYear: p.fiscalYearShort || '26',
+                        serialNo: p.serialNo || '042'
+                      });
+                      const parsedNew = parse11DigitWorkOrder(newWo);
+                      setProjectInfo({
+                        ...projectInfo,
+                        workOrderNo: newWo,
+                        schemeCategory: parsedNew.categoryPrefix,
+                        elrCode: parsedNew.elrCode,
+                        accountHead: parsedNew.headOfAccount
+                      });
+                    }}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800"
+                  >
+                    <option value="71">71 - ELR (Energy Loss Reduction Scheme)</option>
+                    <option value="72">72 - DOP (Distribution Optimization Program)</option>
+                    <option value="73">73 - SDI (System Deposit Improvement Scheme)</option>
+                    <option value="74">74 - LE (HT/LT Line Extension)</option>
+                    <option value="75">75 - TRF (Transformer Augmentation & Relief)</option>
+                    <option value="76">76 - VE (Village Electrification)</option>
+                    <option value="77">77 - REHAB (System Rehabilitation)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Live 11-Digit Code Breakdown Pills */}
+              {(() => {
+                const p = parse11DigitWorkOrder(projectInfo.workOrderNo);
+                return (
+                  <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                    <span className="text-slate-500 font-sans font-semibold">Breakdown:</span>
+                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 border border-blue-200" title="Circle Code">
+                      Circle: <strong>{p.circleCode || '26'}</strong> ({p.circleName})
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 border border-indigo-200" title="Division Code">
+                      Div: <strong>{p.divisionCode || '14'}</strong> ({p.divisionName})
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-950 font-bold border border-amber-300" title="Category / ELR Code">
+                      Category: <strong>{p.categoryCode || '71'}</strong> ({p.categoryName})
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 border border-emerald-200" title="Fiscal Year">
+                      FY: <strong>{p.fiscalYearShort || '26'}</strong> ({p.fiscalYear || '2026'})
+                    </span>
+                    <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-900 border border-purple-200" title="Work Order Serial">
+                      Seq: <strong>{p.serialNo || '042'}</strong>
+                    </span>
+                    <span className="ml-auto text-slate-600 font-sans text-[11px] font-bold">
+                      Formatted: <span className="font-mono text-slate-900 font-black">{format11DigitWorkOrder(projectInfo.workOrderNo) || '26-14-71-26-042'}</span>
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

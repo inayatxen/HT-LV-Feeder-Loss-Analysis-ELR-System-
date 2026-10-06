@@ -10,7 +10,7 @@ import {
   EstimateType, 
   UserRole 
 } from '../../types/costEstimation';
-import { exportEstimateToExcelWorkbook } from '../../utils/costEngine';
+import { exportEstimateToExcelWorkbook, format11DigitWorkOrder } from '../../utils/costEngine';
 import { 
   Plus, 
   Search, 
@@ -268,12 +268,18 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
 
   // Filtered estimates list
   const filteredEstimates = useMemo(() => {
+    const search = searchTerm.toLowerCase();
+    const cleanSearch = search.replace(/\D/g, '');
+
     return estimates.filter(e => {
       const matchesSearch = 
-        e.projectInfo.estimateNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.projectInfo.schemeProjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.projectInfo.proposedLocation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        e.projectInfo.feederName.toLowerCase().includes(searchTerm.toLowerCase());
+        e.projectInfo.estimateNo.toLowerCase().includes(search) ||
+        (e.projectInfo.workOrderNo && e.projectInfo.workOrderNo.toLowerCase().includes(search)) ||
+        (e.projectInfo.workOrderNo && cleanSearch.length > 2 && e.projectInfo.workOrderNo.replace(/\D/g, '').includes(cleanSearch)) ||
+        (e.projectInfo.elrCode && e.projectInfo.elrCode.toLowerCase().includes(search)) ||
+        e.projectInfo.schemeProjectName.toLowerCase().includes(search) ||
+        e.projectInfo.proposedLocation.toLowerCase().includes(search) ||
+        e.projectInfo.feederName.toLowerCase().includes(search);
       
       const matchesStatus = statusFilter === 'ALL' || e.status === statusFilter;
       const matchesType = typeFilter === 'ALL' || e.type === typeFilter;
@@ -452,14 +458,26 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
                   return (
                     <tr key={est.id} className="hover:bg-slate-50/80 transition-colors">
                       
-                      {/* Estimate No & Revision */}
+                      {/* Estimate No, 11-Digit Work Order & Revision */}
                       <td className="py-3 px-3">
                         <span className="font-bold text-slate-900 block leading-tight">
                           {est.projectInfo.estimateNo}
                         </span>
-                        <span className="text-[11px] text-slate-400 block font-normal">
-                          {est.projectInfo.revisionNo}
-                        </span>
+                        {est.projectInfo.workOrderNo ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-950 font-mono text-[10px] font-black border border-amber-300 mt-1">
+                            <span className="text-amber-600 font-bold">W.O:</span>
+                            {format11DigitWorkOrder(est.projectInfo.workOrderNo)}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-slate-400 block font-normal">
+                            {est.projectInfo.revisionNo}
+                          </span>
+                        )}
+                        {est.projectInfo.elrCode && (
+                          <span className="text-[10px] text-blue-700 font-mono block font-semibold mt-0.5">
+                            {est.projectInfo.elrCode}
+                          </span>
+                        )}
                       </td>
 
                       {/* Scheme & Location */}

@@ -1148,6 +1148,140 @@ export function computeEstimateCharges(
 }
 
 /**
+ * Official WAPDA/PESCO 11-Digit Work Order Code References
+ * Structure: [Circle 2D][Division 2D][Category/ELR 2D][FiscalYear 2D][Serial 3D] = 11 Digits
+ */
+export const WO_CIRCLE_CODES: Record<string, string> = {
+  '26': 'Peshawar Circle (26)',
+  '27': 'Khyber Circle (27)',
+  '28': 'Mardan Circle (28)',
+  '29': 'Swat Circle (29)',
+  '30': 'Hazara-1 Circle (30)',
+  '31': 'Bannu Circle (31)',
+  '32': 'D.I. Khan Circle (32)'
+};
+
+export const WO_DIVISION_CODES: Record<string, string> = {
+  '14': 'Peshawar Cantt Division (14)',
+  '15': 'Peshawar City Division (15)',
+  '16': 'Khyber Division (16)',
+  '17': 'Charsadda Division (17)',
+  '18': 'Nowshera Division (18)',
+  '19': 'Mardan-1 Division (19)',
+  '20': 'Swabi Division (20)'
+};
+
+export const WO_SCHEME_CATEGORIES: Record<string, { name: string; prefix: string; head: string }> = {
+  '71': { name: 'ELR - Energy Loss Reduction Scheme', prefix: 'ELR', head: '4-71 ELR Capital Loss Reduction' },
+  '72': { name: 'DOP - Distribution Optimization Program', prefix: 'DOP', head: '4-72 DOP Network Optimization' },
+  '73': { name: 'SDI - System Deposit Improvement Scheme', prefix: 'SDI', head: '4-73 SDI Deposit Works' },
+  '74': { name: 'LE - HT/LT Line Extension (Capital Works)', prefix: 'LE', head: '4-74 HT/LT Line Extension' },
+  '75': { name: 'TRF - Transformer Augmentation & Relief', prefix: 'TRF', head: '4-75 Substation/Trf Augmentation' },
+  '76': { name: 'VE - Village Electrification Scheme', prefix: 'VE', head: '4-76 Village Electrification' },
+  '77': { name: 'REHAB - Conductor & Line Rehabilitation', prefix: 'REHAB', head: '4-77 System Rehabilitation' }
+};
+
+/**
+ * Generate 11-Digit WAPDA/DISCO Work Order Number (e.g., '26147126042')
+ */
+export function generate11DigitWorkOrder(options?: {
+  circleCode?: string;
+  divisionCode?: string;
+  categoryCode?: string;
+  fiscalYear?: string;
+  serialNo?: string | number;
+}): string {
+  const circle = (options?.circleCode || '26').padStart(2, '0').slice(-2);
+  const division = (options?.divisionCode || '14').padStart(2, '0').slice(-2);
+  const category = (options?.categoryCode || '71').padStart(2, '0').slice(-2); // default 71 = ELR
+  
+  // Fiscal Year 2 digits (e.g. 2026 -> 26)
+  const currentYear = new Date().getFullYear();
+  const defaultFy = String(currentYear).slice(-2);
+  const fy = (options?.fiscalYear || defaultFy).padStart(2, '0').slice(-2);
+  
+  // 3-digit sequential number
+  const defaultSerial = Math.floor(10 + Math.random() * 900);
+  const serial = String(options?.serialNo ?? defaultSerial).padStart(3, '0').slice(-3);
+  
+  return `${circle}${division}${category}${fy}${serial}`;
+}
+
+/**
+ * Format 11-Digit Work Order into standardized hyphenated format: CC-DD-KK-YY-SSS
+ */
+export function format11DigitWorkOrder(wo?: string): string {
+  if (!wo) return '';
+  const digits = wo.replace(/\D/g, '');
+  if (digits.length !== 11) return wo;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}-${digits.slice(8, 11)}`;
+}
+
+/**
+ * Parse and validate 11-Digit Work Order breakdown
+ */
+export function parse11DigitWorkOrder(wo?: string) {
+  const digits = (wo || '').replace(/\D/g, '');
+  const isValid = digits.length === 11;
+  
+  if (!isValid) {
+    return {
+      isValid: false,
+      raw: wo || '',
+      digits,
+      formatted: wo || '',
+      circleCode: '',
+      circleName: 'Unknown Circle',
+      divisionCode: '',
+      divisionName: 'Unknown Division',
+      categoryCode: '',
+      categoryName: 'Standard Works',
+      categoryPrefix: 'GEN',
+      headOfAccount: '',
+      fiscalYear: '',
+      serialNo: '',
+      elrCode: ''
+    };
+  }
+
+  const circleCode = digits.slice(0, 2);
+  const divisionCode = digits.slice(2, 4);
+  const categoryCode = digits.slice(4, 6);
+  const fiscalYear = digits.slice(6, 8);
+  const serialNo = digits.slice(8, 11);
+
+  const categoryMeta = WO_SCHEME_CATEGORIES[categoryCode] || {
+    name: 'General Line Scheme',
+    prefix: 'GEN',
+    head: '4-74 General Line Works'
+  };
+
+  const circleName = WO_CIRCLE_CODES[circleCode] || `Circle ${circleCode}`;
+  const divisionName = WO_DIVISION_CODES[divisionCode] || `Division ${divisionCode}`;
+  const formatted = `${circleCode}-${divisionCode}-${categoryCode}-${fiscalYear}-${serialNo}`;
+  const elrCode = `${categoryMeta.prefix}-${categoryCode}-${fiscalYear}-${serialNo}`;
+
+  return {
+    isValid: true,
+    raw: wo || '',
+    digits,
+    formatted,
+    circleCode,
+    circleName,
+    divisionCode,
+    divisionName,
+    categoryCode,
+    categoryName: categoryMeta.name,
+    categoryPrefix: categoryMeta.prefix,
+    headOfAccount: categoryMeta.head,
+    fiscalYear: `20${fiscalYear}`,
+    fiscalYearShort: fiscalYear,
+    serialNo,
+    elrCode
+  };
+}
+
+/**
  * Generate formatted official Estimate number
  */
 export function generateEstimateNumber(divisionCode: string = 'PESH'): string {
@@ -1168,6 +1302,8 @@ export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): voi
     ['DETAILED ELECTRICAL LINE ESTIMATE & BOQ SUMMARY'],
     [],
     ['Estimate Number:', estimate.projectInfo.estimateNo, 'Revision No:', estimate.projectInfo.revisionNo],
+    ['11-Digit Work Order:', estimate.projectInfo.workOrderNo || '26147126042', 'ELR Scheme Code:', estimate.projectInfo.elrCode || 'ELR-71-26-042'],
+    ['Head of Account:', estimate.projectInfo.accountHead || '4-71 ELR Capital Loss Reduction', 'Scheme Category:', estimate.projectInfo.schemeCategory || 'ELR'],
     ['Date:', estimate.projectInfo.estimateDate, 'Status:', estimate.status],
     ['Division:', estimate.projectInfo.division, 'Sub-Division:', estimate.projectInfo.subDivision],
     ['Circle:', estimate.projectInfo.circle, 'District:', estimate.projectInfo.district],
