@@ -6,12 +6,14 @@
 import React, { useState } from 'react';
 import { CostEstimateRecord } from '../../types/costEstimation';
 import { Calculator, Printer, FileText, CheckCircle2, AlertTriangle, Layers, Info } from 'lucide-react';
+import { JustificationSlipPrintModal } from './JustificationSlipPrintModal';
 
 interface JustificationSlipViewProps {
   estimates: CostEstimateRecord[];
 }
 
 export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ estimates }) => {
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   // Selected Estimate linkage
   const [selectedEstimateId, setSelectedEstimateId] = useState<string>('default');
   const [useLinkedCost, setUseLinkedCost] = useState<boolean>(true);
@@ -73,7 +75,7 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => setShowPrintModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4 text-slate-600" />
@@ -434,6 +436,36 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
           </div>
         </div>
       </div>
+
+      <JustificationSlipPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        data={{
+          totalCost,
+          existingLosses5Yrs,
+          proposalALosses,
+          proposalBLosses,
+          proposalCLosses,
+          proposalDLosses,
+          totalProposalLosses,
+          energySavingsKwh,
+          energyRateA,
+          annualBenefitA,
+          existingTrfRating,
+          trfLoadingPresent,
+          trfLoading5Yrs,
+          loadingAboveRated5Yrs,
+          peakKwSaving,
+          transformerAnnualKwh,
+          benefitRateB,
+          annualBenefitB,
+          studyPeriodYears,
+          totalAnnualBenefit,
+          totalStudyPeriodBenefit: totalAnnualBenefit * studyPeriodYears,
+          benefitCostRatio,
+          isViable
+        }}
+      />
 
     </div>
   );

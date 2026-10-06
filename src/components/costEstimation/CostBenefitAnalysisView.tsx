@@ -16,12 +16,14 @@ import {
   RefreshCw,
   Info
 } from 'lucide-react';
+import { CostBenefitAnalysisPrintModal } from './CostBenefitAnalysisPrintModal';
 
 interface CostBenefitAnalysisViewProps {
   estimates: CostEstimateRecord[];
 }
 
 export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = ({ estimates }) => {
+  const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
   // Selected Estimate to link Project Cost
   const [selectedEstimateId, setSelectedEstimateId] = useState<string>('default');
 
@@ -135,7 +137,7 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => setShowPrintModal(true)}
             className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl shadow-xs transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4 text-slate-600" />
@@ -518,6 +520,30 @@ export const CostBenefitAnalysisView: React.FC<CostBenefitAnalysisViewProps> = (
           </table>
         </div>
       </div>
+
+      <CostBenefitAnalysisPrintModal
+        isOpen={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        data={{
+          projectCost,
+          existingPowerLossKw,
+          existingEnergyLossKwh,
+          existingPowerFactor,
+          existingVoltageDrop,
+          improvedPowerLossKw,
+          improvedEnergyLossKwh,
+          improvedPowerFactor,
+          improvedVoltageDrop,
+          reductionPowerLossKw,
+          baseEnergyLossReductionKwh,
+          loadGrowthPercent,
+          discountRatePercent,
+          studyPeriodYears,
+          demandChargesRate,
+          energyChargesRate,
+          yearlyProjections
+        }}
+      />
 
     </div>
   );
