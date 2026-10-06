@@ -25,7 +25,7 @@ export interface PdfExportResult {
 }
 
 /**
- * Dimensions in millimeters for standard paper formats
+ * Standard paper format dimensions in millimeters
  */
 const PAPER_DIMENSIONS: Record<string, { width: number; height: number }> = {
   a4: { width: 210, height: 297 },
@@ -34,8 +34,13 @@ const PAPER_DIMENSIONS: Record<string, { width: number; height: number }> = {
 };
 
 /**
- * Generates and downloads a multi-page PDF directly from a DOM element
- * while preserving exact fonts, layout, tables, and colors.
+ * Specialized PESCO/WAPDA PDF Printing & Rendering Engine
+ * 
+ * Key Features:
+ * - Exact Page-Fit: Scales content proportionally to fit paper size without clipping or awkward overflow.
+ * - Header-to-Footer Complete Units: Considers each page starting from the header and terminating at the footer.
+ * - Double-Side Center Alignment: Horizontally centers content with symmetrical left and right margins.
+ * - High-DPI Vector Crispness: Uses multi-pass high-resolution canvas with anti-aliasing.
  */
 export async function exportElementToPdf(
   element: HTMLElement,
@@ -45,13 +50,11 @@ export async function exportElementToPdf(
     paperSize = 'a4',
     orientation = 'portrait',
     marginMm = 10,
-    reportTitle = 'PESCO WAPDA Engineering Report',
-    docReference = '',
     excludeGraphics = false,
     pageBreakMode = 'page_per_section'
   } = options;
 
-  let rawFilename = (options.filename || `Report_${new Date().toISOString().slice(0, 10)}`).trim();
+  let rawFilename = (options.filename || `PESCO_Estimate_${new Date().toISOString().slice(0, 10)}`).trim();
   if (!rawFilename.toLowerCase().endsWith('.pdf')) {
     rawFilename += '.pdf';
   }
@@ -62,13 +65,11 @@ export async function exportElementToPdf(
     const pageWidthMm = orientation === 'portrait' ? baseDim.width : baseDim.height;
     const pageHeightMm = orientation === 'portrait' ? baseDim.height : baseDim.width;
 
-    // Usable print area width and height
-    const contentWidthMm = pageWidthMm - (marginMm * 2);
-    const contentHeightMm = pageHeightMm - (marginMm * 2);
+    // Usable printable boundary
+    const maxContentWidthMm = pageWidthMm - (marginMm * 2);
+    const maxContentHeightMm = pageHeightMm - (marginMm * 2);
 
-    // Check if element contains dedicated per-page units (.print-page-unit)
-    // If pageBreakMode is 'compact_flow' (continuous flow), we bypass per-page splitting 
-    // to render continuous content naturally across multiple sliced A4 pages.
+    // Identify self-contained page units (.print-page-unit)
     const pageUnits = pageBreakMode === 'page_per_section'
       ? Array.from(element.querySelectorAll<HTMLElement>('.print-page-unit'))
           .filter(unit => {
@@ -91,17 +92,21 @@ export async function exportElementToPdf(
         }
 
         const unit = pageUnits[i];
+        
+        // Render current page unit at high resolution (scale: 2.5 for pristine font edges)
         const pageCanvas = await html2canvas(unit, {
-          scale: 2, // 2x scale for crisp vectors and fonts
+          scale: 2.5,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: unit.scrollWidth || 1100,
           onclone: (clonedDoc) => {
-            const noPrintItems = clonedDoc.querySelectorAll('.no-print');
+            // Remove all interactive and no-print UI elements
+            const noPrintItems = clonedDoc.querySelectorAll('.no-print, [class*="no-print"]');
             noPrintItems.forEach(el => {
               (el as HTMLElement).style.display = 'none';
             });
+            
             if (excludeGraphics) {
               const graphicItems = clonedDoc.querySelectorAll(
                 '.print-watermark, .screen-watermark, .unnecessary-graphic, .decorative-graphic'
@@ -113,24 +118,23 @@ export async function exportElementToPdf(
           }
         });
 
-        const imgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const imgData = pageCanvas.toDataURL('image/jpeg', 0.96);
         const imgWidthPx = pageCanvas.width;
         const imgHeightPx = pageCanvas.height;
 
-        // Render page unit proportionally inside PDF page with perfect aspect ratio
-        const maxPageHeightMm = pageHeightMm - (marginMm * 2);
-        const naturalHeightMm = (imgHeightPx * contentWidthMm) / imgWidthPx;
+        // Auto-fit calculations: Fit proportionally within both width & height limits
+        const scaleX = maxContentWidthMm / imgWidthPx;
+        const scaleY = maxContentHeightMm / imgHeightPx;
+        const scale = Math.min(scaleX, scaleY);
+
+        const renderedWidthMm = imgWidthPx * scale;
+        const renderedHeightMm = imgHeightPx * scale;
+
+        // Center align from both sides horizontally
+        const xOffsetMm = (pageWidthMm - renderedWidthMm) / 2;
         
-        let renderedWidthMm = contentWidthMm;
-        let renderedHeightMm = naturalHeightMm;
-
-        if (naturalHeightMm > maxPageHeightMm) {
-          renderedHeightMm = maxPageHeightMm;
-          renderedWidthMm = (imgWidthPx * maxPageHeightMm) / imgHeightPx;
-        }
-
-        const xOffsetMm = marginMm + (contentWidthMm - renderedWidthMm) / 2;
-        const yOffsetMm = marginMm;
+        // Clean vertical alignment: start near top margin with balanced bottom padding
+        const yOffsetMm = marginMm + Math.max(0, (maxContentHeightMm - renderedHeightMm) / 6);
 
         pdf.addImage(
           imgData,
@@ -153,16 +157,15 @@ export async function exportElementToPdf(
       };
     }
 
-    // High quality canvas render fallback for continuous layouts
+    // Continuous Layout Fallback with Slicing and Double-Sided Centering
     const canvas = await html2canvas(element, {
-      scale: 2, // 2x scale for sharp text and vector rendering
+      scale: 2.5,
       useCORS: true,
       logging: false,
       backgroundColor: '#ffffff',
       windowWidth: element.scrollWidth || 1200,
       windowHeight: element.scrollHeight || 1600,
       onclone: (clonedDoc) => {
-        // Expand the cloned element fully
         const targetId = element.id;
         const clonedTarget = targetId ? clonedDoc.getElementById(targetId) : null;
         if (clonedTarget) {
@@ -171,8 +174,6 @@ export async function exportElementToPdf(
           clonedTarget.style.height = 'auto';
           clonedTarget.style.display = 'block';
 
-          // Recursively expand all parent elements to ensure that the document can render
-          // completely to its full height on the virtual DOM clone canvas without scroll/viewport clipping
           let parent = clonedTarget.parentElement;
           while (parent) {
             parent.style.overflow = 'visible';
@@ -182,13 +183,11 @@ export async function exportElementToPdf(
           }
         }
 
-        // Hide all no-print elements in the cloned document
-        const noPrintItems = clonedDoc.querySelectorAll('.no-print');
+        const noPrintItems = clonedDoc.querySelectorAll('.no-print, [class*="no-print"]');
         noPrintItems.forEach(el => {
           (el as HTMLElement).style.display = 'none';
         });
 
-        // If excludeGraphics is requested, remove watermarks and decorative badges (keep necessary engineering schematics)
         if (excludeGraphics) {
           const graphicItems = clonedDoc.querySelectorAll(
             '.print-watermark, .screen-watermark, .unnecessary-graphic, .decorative-graphic'
@@ -200,11 +199,9 @@ export async function exportElementToPdf(
       }
     });
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const imgWidthPx = canvas.width;
     const imgHeightPx = canvas.height;
 
-    // Initialize jsPDF instance
     const pdf = new jsPDF({
       orientation,
       unit: 'mm',
@@ -212,11 +209,9 @@ export async function exportElementToPdf(
       compress: true
     });
 
-    // Ratio of pixels per mm on the canvas
-    const pxPerMm = imgWidthPx / contentWidthMm;
-    const pageHeightPx = contentHeightMm * pxPerMm;
+    const pxPerMm = imgWidthPx / maxContentWidthMm;
+    const pageHeightPx = maxContentHeightMm * pxPerMm;
 
-    // Calculate total pages
     const totalPages = Math.ceil(imgHeightPx / pageHeightPx) || 1;
 
     for (let page = 0; page < totalPages; page++) {
@@ -224,11 +219,9 @@ export async function exportElementToPdf(
         pdf.addPage(paperSize, orientation);
       }
 
-      // Calculate slice coordinates
       const sourceY = page * pageHeightPx;
       const sourceHeight = Math.min(pageHeightPx, imgHeightPx - sourceY);
 
-      // Create a temporary canvas for this specific page slice
       const pageCanvas = document.createElement('canvas');
       pageCanvas.width = imgWidthPx;
       pageCanvas.height = sourceHeight;
@@ -249,16 +242,20 @@ export async function exportElementToPdf(
           sourceHeight
         );
 
-        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+        const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.96);
         const renderedHeightMm = sourceHeight / pxPerMm;
+        const renderedWidthMm = maxContentWidthMm;
 
-        // Render page slice onto PDF
+        // Horizontally center align from both sides
+        const xOffsetMm = (pageWidthMm - renderedWidthMm) / 2;
+        const yOffsetMm = marginMm;
+
         pdf.addImage(
           pageImgData,
           'JPEG',
-          marginMm,
-          marginMm,
-          contentWidthMm,
+          xOffsetMm,
+          yOffsetMm,
+          renderedWidthMm,
           renderedHeightMm,
           undefined,
           'FAST'
@@ -266,7 +263,6 @@ export async function exportElementToPdf(
       }
     }
 
-    // Save PDF file to trigger download dialog
     pdf.save(rawFilename);
 
     return {

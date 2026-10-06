@@ -15,6 +15,11 @@
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
   /* Complete eradication of all scrollbars, slide bars, and constrained overflows on printable/PDF pages */
   *,
   *::before,
@@ -24,6 +29,7 @@
     overflow-y: visible !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
+    box-sizing: border-box !important;
   }
 
   *::-webkit-scrollbar,
@@ -46,8 +52,15 @@
     overflow-y: visible !important;
     height: auto !important;
     min-height: 100% !important;
-    margin: 0 !important;
+    width: 100% !important;
+    margin: 0 auto !important;
     padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .overflow-x-auto,
@@ -82,15 +95,41 @@
     height: auto !important;
     min-height: auto !important;
     background: transparent !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Self-contained page units fitted cleanly from header to footer, center aligned from both sides */
+  .print-page-unit {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 96vh !important;
+  }
+
+  .print-page-unit:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
   }
 
   .print-only {
     display: block !important;
   }
   
-  .print-break-inside-avoid {
+  .print-break-inside-avoid,
+  .print-avoid-break {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
@@ -98,5 +137,18 @@
   .print-page-break {
     break-before: page !important;
     page-break-before: always !important;
+  }
+
+  #printable-estimate-container,
+  #printable-estimate-content,
+  #printable-cba-report,
+  #printable-justification-slip,
+  .printable-document-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
   }
 }

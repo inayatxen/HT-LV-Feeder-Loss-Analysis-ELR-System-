@@ -55,7 +55,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
           </div>
         )}
 
-        <div className="relative z-10 space-y-6">
+        <div className="relative z-10 print-page-unit space-y-6">
           <header className="border-b-2 border-slate-900 pb-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
