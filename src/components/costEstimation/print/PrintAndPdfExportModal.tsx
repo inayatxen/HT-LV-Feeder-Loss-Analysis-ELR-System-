@@ -118,7 +118,8 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
         orientation,
         marginMm,
         reportTitle: `Estimate ${estimate.projectInfo.estimateNo}`,
-        docReference: estimate.projectInfo.estimateNo
+        docReference: estimate.projectInfo.estimateNo,
+        pageBreakMode: 'page_per_section'
       });
 
       if (result.success) {
@@ -465,7 +466,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
               marginBottom: zoomLevel > 100 ? `${(zoomLevel - 100) * 15}px` : undefined
             }}
           >
-            <div ref={printContentRef}>
+            <div ref={printContentRef} id="printable-estimate-content" className="print-container">
               <PrintDocumentLayout
                 estimate={estimate}
                 orientation={orientation}

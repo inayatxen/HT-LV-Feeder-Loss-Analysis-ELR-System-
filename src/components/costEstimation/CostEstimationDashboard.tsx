@@ -42,6 +42,7 @@ interface CostEstimationDashboardProps {
   onPrintEstimate: (estimate: CostEstimateRecord, mode?: 'preview' | 'print' | 'pdf') => void;
   userRole: UserRole;
   userName: string;
+  onSaveEstimate?: (estimate: CostEstimateRecord) => void;
 }
 
 export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = ({
@@ -53,11 +54,194 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
   onReviseEstimate,
   onPrintEstimate,
   userRole,
-  userName
+  userName,
+  onSaveEstimate
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<EstimateStatus | 'ALL'>('ALL');
   const [typeFilter, setTypeFilter] = useState<EstimateType | 'ALL'>('ALL');
+  
+  // Merge Sub-Estimates Modal State
+  const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+  const [targetEstimateId, setTargetEstimateId] = useState('');
+  const [selectedSubEstimateIds, setSelectedSubEstimateIds] = useState<string[]>([]);
+  const [mergeLumpName, setMergeLumpName] = useState('');
+  const [mergeType, setMergeType] = useState<EstimateType>('COMBINED_HT_LT');
+
+  const handleOpenMergeModal = () => {
+    setIsMergeModalOpen(true);
+    if (estimates.length > 0) {
+      const defaultTarget = estimates[0];
+      setTargetEstimateId(defaultTarget.id);
+      setMergeLumpName(`${defaultTarget.projectInfo.schemeProjectName || 'Consolidated Project'} (Merged Lump Sum)`);
+      setMergeType('COMBINED_HT_LT');
+      setSelectedSubEstimateIds([]);
+    }
+  };
+
+  const handleTargetChange = (id: string) => {
+    setTargetEstimateId(id);
+    const target = estimates.find(e => e.id === id);
+    if (target) {
+      setMergeLumpName(`${target.projectInfo.schemeProjectName || 'Consolidated Project'} (Merged Lump Sum)`);
+      setSelectedSubEstimateIds(prev => prev.filter(subId => subId !== id));
+    }
+  };
+
+  const handleToggleSubEstimate = (id: string) => {
+    setSelectedSubEstimateIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(subId => subId !== id);
+      } else {
+        return [...prev, id];
+      }
+    });
+  };
+
+  const handleMergeEstimates = () => {
+    const target = estimates.find(e => e.id === targetEstimateId);
+    if (!target) return;
+
+    const subs = estimates.filter(e => selectedSubEstimateIds.includes(e.id));
+    if (subs.length === 0) return;
+
+    // Merge line details
+    const combinedLineDetails = { ...target.lineDetails };
+    subs.forEach(s => {
+      combinedLineDetails.htLengthKm = Number(((combinedLineDetails.htLengthKm || 0) + (s.lineDetails.htLengthKm || 0)).toFixed(3));
+      combinedLineDetails.ltLengthKm = Number(((combinedLineDetails.ltLengthKm || 0) + (s.lineDetails.ltLengthKm || 0)).toFixed(3));
+      combinedLineDetails.htPoles = (combinedLineDetails.htPoles || 0) + (s.lineDetails.htPoles || 0);
+      combinedLineDetails.ltPoles = (combinedLineDetails.ltPoles || 0) + (s.lineDetails.ltPoles || 0);
+      combinedLineDetails.staySets = (combinedLineDetails.staySets || 0) + (s.lineDetails.staySets || 0);
+      combinedLineDetails.roadCrossings = (combinedLineDetails.roadCrossings || 0) + (s.lineDetails.roadCrossings || 0);
+      combinedLineDetails.canalCrossings = (combinedLineDetails.canalCrossings || 0) + (s.lineDetails.canalCrossings || 0);
+      combinedLineDetails.transformerStructures = (combinedLineDetails.transformerStructures || 0) + (s.lineDetails.transformerStructures || 0);
+      combinedLineDetails.transformerCount = (combinedLineDetails.transformerCount || 0) + (s.lineDetails.transformerCount || 0);
+      if (s.lineDetails.transformerCapacityKva > (combinedLineDetails.transformerCapacityKva || 0)) {
+        combinedLineDetails.transformerCapacityKva = s.lineDetails.transformerCapacityKva;
+      }
+    });
+
+    // Merge materials items list (combine matching codes)
+    const itemMap = new Map<string, typeof target.items[0]>();
+
+    const addItemToMerged = (item: typeof target.items[0], sourceNo: string) => {
+      const existing = itemMap.get(item.materialCode);
+      if (existing) {
+        const newQty = Number((existing.quantity + item.quantity).toFixed(3));
+        const materialAmount = Math.round(newQty * item.unitRate);
+        const labourAmount = Math.round(newQty * (item.labourRate || 0));
+        const transportAmount = Math.round(newQty * (item.transportRate || 0));
+        const totalAmount = materialAmount + labourAmount + transportAmount;
+
+        itemMap.set(item.materialCode, {
+          ...existing,
+          quantity: newQty,
+          materialAmount,
+          labourAmount,
+          transportAmount,
+          totalAmount,
+          remarks: `Merged from ${target.projectInfo.estimateNo} & ${sourceNo}`
+        });
+      } else {
+        itemMap.set(item.materialCode, {
+          ...item,
+          remarks: `Source: ${sourceNo}`
+        });
+      }
+    };
+
+    // Add target items
+    target.items.forEach(item => addItemToMerged(item, target.projectInfo.estimateNo));
+    // Add sub estimates items
+    subs.forEach(s => {
+      s.items.forEach(item => addItemToMerged(item, s.projectInfo.estimateNo));
+    });
+
+    const mergedItems = Array.from(itemMap.values());
+
+    // Calculate aggregated base costs
+    const materialCost = mergedItems.reduce((sum, i) => sum + i.materialAmount, 0);
+    const labourCost = mergedItems.reduce((sum, i) => sum + i.labourAmount, 0);
+    const transportationCost = mergedItems.reduce((sum, i) => sum + (i.transportAmount || 0), 0);
+    const civilWorksCost = target.charges.civilWorksCost + subs.reduce((sum, s) => sum + (s.charges.civilWorksCost || 0), 0);
+
+    // Compute overheads based on Target's CSR percentages
+    const engPct = target.charges.engineeringChargesPercent || 5;
+    const contPct = target.charges.contingencyPercent || 2;
+    const deptPct = target.charges.departmentalOverheadPercent || 10;
+    const contOverPct = target.charges.contractorOverheadPercent || 0;
+    const taxPct = target.charges.taxGstPercent || 18;
+
+    const baseForOverhead = materialCost + labourCost;
+
+    const engineeringChargesAmount = Math.round(baseForOverhead * engPct / 100);
+    const contingencyAmount = Math.round(baseForOverhead * contPct / 100);
+    const departmentalOverheadAmount = Math.round(baseForOverhead * deptPct / 100);
+    const contractorOverheadAmount = Math.round(baseForOverhead * contOverPct / 100);
+
+    const subTotal = materialCost + labourCost + transportationCost + civilWorksCost + 
+                     engineeringChargesAmount + contingencyAmount + departmentalOverheadAmount + contractorOverheadAmount;
+
+    const taxGstAmount = Math.round(subTotal * taxPct / 100);
+    const grandTotal = subTotal + taxGstAmount;
+
+    const totalKm = (combinedLineDetails.htLengthKm || 0) + (combinedLineDetails.ltLengthKm || 0);
+    const costPerKm = totalKm > 0 ? Math.round(grandTotal / totalKm) : 0;
+
+    const combinedCharges: typeof target.charges = {
+      ...target.charges,
+      materialCost,
+      labourCost,
+      transportationCost,
+      civilWorksCost,
+      engineeringChargesAmount,
+      contingencyAmount,
+      departmentalOverheadAmount,
+      contractorOverheadAmount,
+      subTotal,
+      taxGstAmount,
+      grandTotal,
+      costPerKm
+    };
+
+    const year = new Date().getFullYear();
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const mergedNo = `EST-LUMP-${year}-${rand}`;
+
+    const mergedEstimate: CostEstimateRecord = {
+      id: `est-merge-${Date.now()}`,
+      status: 'DRAFT',
+      type: mergeType,
+      projectInfo: {
+        ...target.projectInfo,
+        estimateNo: mergedNo,
+        revisionNo: 'Rev-00',
+        estimateDate: new Date().toISOString().split('T')[0],
+        schemeProjectName: mergeLumpName,
+        purposeOfWork: `Consolidated Lump Sum Estimate merging sub-estimates ${subs.map(e => e.projectInfo.estimateNo).join(', ')} into target ${target.projectInfo.estimateNo}`
+      },
+      lineDetails: combinedLineDetails,
+      items: mergedItems,
+      charges: combinedCharges,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      auditTrail: [
+        {
+          id: `aud-${Date.now()}`,
+          timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+          user: userName,
+          role: userRole,
+          action: `Consolidated Merge: Merged ${subs.length} sub-estimates into target ${target.projectInfo.estimateNo}`
+        }
+      ]
+    };
+
+    if (onSaveEstimate) {
+      onSaveEstimate(mergedEstimate);
+    }
+    setIsMergeModalOpen(false);
+  };
   const [divisionFilter, setDivisionFilter] = useState<string>('ALL');
 
   // KPI Calculations
@@ -161,15 +345,29 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
             />
           </div>
 
-          {/* Action Button: Create New Estimate */}
-          <button
-            type="button"
-            onClick={onNewEstimate}
-            className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Create New Estimate</span>
-          </button>
+          {/* Action Buttons Row */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {estimates.length > 1 && (
+              <button
+                type="button"
+                onClick={handleOpenMergeModal}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg shadow-2xs transition-all cursor-pointer"
+                title="Merge additional sub-estimates into a single consolidated lump estimate"
+              >
+                <GitBranch className="w-4 h-4 text-indigo-600 rotate-180" />
+                <span>Merge Sub-Estimates</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onNewEstimate}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create New Estimate</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter Controls Row */}
@@ -421,6 +619,141 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
           </table>
         </div>
       </div>
+
+      {/* ========================================================
+          MERGE SUB-ESTIMATES MODAL
+         ======================================================== */}
+      {isMergeModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col my-8">
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-indigo-900 to-indigo-805 px-6 py-4 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <GitBranch className="w-5 h-5 text-indigo-300 rotate-180" />
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-wider">Merge Additional Sub-Estimates</h3>
+                  <p className="text-[11px] text-indigo-200 mt-0.5">Aggregate multiple sub-estimates into a single consolidated Lump Estimate</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMergeModalOpen(false)}
+                className="text-indigo-200 hover:text-white transition-colors text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+              {/* Target Selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">1. Select Target Lump Estimate (Parent Record)</label>
+                <p className="text-[11px] text-slate-500 leading-tight">This estimate acts as the main base. Its division details, design factors, and overhead percentage rates will be used for the combined project.</p>
+                <select
+                  value={targetEstimateId}
+                  onChange={(e) => handleTargetChange(e.target.value)}
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                >
+                  {estimates.map(e => (
+                    <option key={e.id} value={e.id}>
+                      {e.projectInfo.estimateNo} — {e.projectInfo.schemeProjectName} (Rs. {e.charges.grandTotal.toLocaleString()})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Sub-estimates Checklist */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 block">2. Select Additional Sub-Estimates to Merge</label>
+                <p className="text-[11px] text-slate-500 leading-tight">Check the sub-estimates whose material items, poles, lengths, and line costs should be merged into the consolidated lump estimate.</p>
+                
+                <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-slate-100 bg-slate-50">
+                  {estimates
+                    .filter(e => e.id !== targetEstimateId)
+                    .map(est => {
+                      const isChecked = selectedSubEstimateIds.includes(est.id);
+                      return (
+                        <label
+                          key={est.id}
+                          className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100/60 cursor-pointer transition-colors text-xs font-medium"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSubEstimate(est.id)}
+                            className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-slate-900 block truncate">{est.projectInfo.estimateNo} — {est.projectInfo.schemeProjectName}</span>
+                            <span className="text-[10px] text-slate-500 block font-mono">
+                              Type: {est.type.replace(/_/g, ' ')} · Total: Rs. {est.charges.grandTotal.toLocaleString()} · {((est.lineDetails.htLengthKm || 0) + (est.lineDetails.ltLengthKm || 0)).toFixed(2)} km
+                            </span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  {estimates.filter(e => e.id !== targetEstimateId).length === 0 && (
+                    <div className="py-8 text-center text-slate-400">
+                      No other sub-estimates available to merge.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Combined Estimate Details */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">3. Combined Project Name</label>
+                  <input
+                    type="text"
+                    value={mergeLumpName}
+                    onChange={(e) => setMergeLumpName(e.target.value)}
+                    placeholder="E.g. Consolidated Feeder Reconductoring"
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-700 block">4. Combined Estimate Type</label>
+                  <select
+                    value={mergeType}
+                    onChange={(e) => setMergeType(e.target.value as EstimateType)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:bg-white"
+                  >
+                    <option value="COMBINED_HT_LT">Combined HT+LT Line Extension</option>
+                    <option value="COMPLETE_HT_FEEDER">Complete HT Feeder Package</option>
+                    <option value="NEW_DISTRIBUTION_TRANSFORMER">Consolidated Distribution Transformers</option>
+                    <option value="LT_LINE_EXTENSION">Consolidated LT Line Extensions</option>
+                    <option value="OTHER">Other Consolidated Lump Sum Project</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 border-t border-slate-200 px-6 py-4 flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsMergeModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-250 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleMergeEstimates}
+                disabled={selectedSubEstimateIds.length === 0 || !mergeLumpName}
+                className={`px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+                  (selectedSubEstimateIds.length === 0 || !mergeLumpName) ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                <GitBranch className="w-3.5 h-3.5 rotate-180" />
+                <span>Perform Consolidated Merge</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

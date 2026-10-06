@@ -909,6 +909,42 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     }));
   };
 
+  // Handler: Toggle Dismantle Status
+  const handleToggleDismantle = (itemId: string, isDismantled: boolean) => {
+    setItems(prev => prev.map(item => {
+      if (item.id !== itemId) return item;
+      
+      const mat = materials.find(m => m.code === item.materialCode);
+      const originalMaterialRate = mat ? mat.materialRate : (item.isDismantled ? Math.round(item.unitRate * 3) : item.unitRate);
+      const originalLabourRate = mat ? mat.labourRate : (item.isDismantled ? Math.round(item.labourRate * 10) : item.labourRate);
+
+      const updated = { 
+        ...item, 
+        isDismantled,
+        manualOverride: true 
+      };
+
+      if (isDismantled) {
+        updated.unitRate = Math.round(originalMaterialRate / 3);
+        updated.labourRate = Math.round(originalLabourRate * 0.10);
+        updated.calculationNotes = `Dismantled: retired on 1/3 material rate (Rs. ${updated.unitRate}) and 10% labour rate (Rs. ${updated.labourRate})`;
+      } else {
+        updated.unitRate = originalMaterialRate;
+        updated.labourRate = originalLabourRate;
+        updated.calculationNotes = mat ? 'Standard material from catalog' : '';
+      }
+
+      updated.materialAmount = Math.round(updated.quantity * updated.unitRate);
+      updated.labourAmount = Math.round(updated.quantity * updated.labourRate);
+      updated.totalAmount = updated.materialAmount + updated.labourAmount;
+
+      return updated;
+    }));
+
+    setSaveToast(isDismantled ? "Item converted to Dismantle/Retirement Schedule (1/3 Rate, 10% Labour)" : "Item restored to Standard Erection Schedule");
+    setTimeout(() => setSaveToast(''), 3000);
+  };
+
   // Handler: Add Custom Material from Catalog
   const handleAddMaterialToBoq = (matCode: string, qtyToAdd: number = 1) => {
     const mat = materials.find(m => m.code === matCode);
@@ -2263,6 +2299,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     <th className="py-2.5 px-3">Material Code</th>
                     <th className="py-2.5 px-3">Description</th>
                     <th className="py-2.5 px-2 text-center">Unit</th>
+                    <th className="py-2.5 px-2 text-center w-24">Dismantle?</th>
                     <th className="py-2.5 px-3 text-right w-24">Quantity</th>
                     <th className="py-2.5 px-3 text-right">Unit Rate (PKR)</th>
                     <th className="py-2.5 px-3 text-right">Material (PKR)</th>
@@ -2274,7 +2311,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
                   {filteredBoqItems.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-slate-400 font-sans">
+                      <td colSpan={11} className="py-8 text-center text-slate-400 font-sans">
                         {tableFilterQuery 
                           ? `No items found in BOQ matching "${tableFilterQuery}". Clear search filter above.`
                           : 'No materials in BOQ yet. Use the search bar above or click "Calculate Required Materials".'}
@@ -2303,6 +2340,21 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                           )}
                         </td>
                         <td className="py-2 px-2 text-center font-sans text-slate-600 font-medium">{item.unit}</td>
+                        <td className="py-2 px-2 text-center">
+                          <label className="inline-flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!item.isDismantled}
+                              onChange={(e) => handleToggleDismantle(item.id, e.target.checked)}
+                              className="rounded border-slate-300 text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+                            />
+                            {item.isDismantled && (
+                              <span className="text-[9px] font-black text-amber-700 bg-amber-50 px-1 py-0.2 rounded border border-amber-300">
+                                RETIRED
+                              </span>
+                            )}
+                          </label>
+                        </td>
                         <td className="py-2 px-3 text-right">
                           <input
                             type="number"
@@ -2360,20 +2412,40 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             </div>
 
             {/* BOQ Subtotals Summary */}
-            <div className="flex flex-wrap items-center justify-end gap-6 pt-3 text-xs border-t border-slate-200">
-              <div>
-                <span className="text-slate-500">Material Subtotal: </span>
-                <strong className="text-slate-900 font-mono">PKR {computedCharges.materialCost.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span className="text-slate-500">Labour Subtotal: </span>
-                <strong className="text-slate-900 font-mono">PKR {computedCharges.labourCost.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span className="text-slate-500">Combined Base Prime: </span>
-                <strong className="text-blue-900 font-mono font-bold">
-                  PKR {(computedCharges.materialCost + computedCharges.labourCost).toLocaleString()}
-                </strong>
+            <div className="flex flex-col space-y-2 pt-3 border-t border-slate-200">
+              {computedCharges.dismantleNetTotal !== undefined && computedCharges.dismantleNetTotal !== 0 && (
+                <div className="flex flex-wrap items-center justify-end gap-6 text-xs text-amber-900 bg-amber-50 px-3 py-1.5 rounded border border-amber-200 font-mono">
+                  <div>
+                    <span>Retired Mat. Credit (1/3 Rate): </span>
+                    <strong>PKR -{computedCharges.dismantleMaterialCredit?.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <span>Dismantling Labour (10% Cost): </span>
+                    <strong>PKR {computedCharges.dismantleLabourCost?.toLocaleString()}</strong>
+                  </div>
+                  <div>
+                    <span>Net Dismantling Impact: </span>
+                    <strong className={computedCharges.dismantleNetTotal < 0 ? "text-emerald-700 font-black" : "text-slate-900 font-black"}>
+                      PKR {computedCharges.dismantleNetTotal?.toLocaleString()}
+                    </strong>
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center justify-end gap-6 text-xs">
+                <div>
+                  <span className="text-slate-500">Erection Material: </span>
+                  <strong className="text-slate-900 font-mono">PKR {computedCharges.materialCost.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Erection Labour: </span>
+                  <strong className="text-slate-900 font-mono">PKR {computedCharges.labourCost.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span className="text-slate-500">Combined Erection: </span>
+                  <strong className="text-blue-900 font-mono font-bold">
+                    PKR {(computedCharges.materialCost + computedCharges.labourCost).toLocaleString()}
+                  </strong>
+                </div>
               </div>
             </div>
           </div>
@@ -2609,6 +2681,19 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     <span className="text-slate-200">Rs. {computedCharges.taxGstAmount.toLocaleString()}</span>
                   </div>
                 )}
+
+                {computedCharges.dismantleNetTotal !== undefined && computedCharges.dismantleNetTotal !== 0 && (
+                  <>
+                    <div className="flex items-center justify-between pt-1 text-amber-300 font-bold">
+                      <span className="font-sans">Dismantling Labour (10%):</span>
+                      <span>Rs. {computedCharges.dismantleLabourCost?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-emerald-400 font-bold">
+                      <span className="font-sans">Retired Mat. Credit (1/3):</span>
+                      <span>Rs. -{computedCharges.dismantleMaterialCredit?.toLocaleString()}</span>
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="space-y-2 text-xs divide-y divide-slate-800/80 font-mono">
@@ -2659,6 +2744,19 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     <span className="text-slate-400 font-sans">Other Charges:</span>
                     <span className="text-slate-200">Rs. {computedCharges.otherChargesAmount.toLocaleString()}</span>
                   </div>
+                )}
+
+                {computedCharges.dismantleNetTotal !== undefined && computedCharges.dismantleNetTotal !== 0 && (
+                  <>
+                    <div className="flex items-center justify-between pt-1 text-amber-300 font-bold">
+                      <span className="font-sans">Dismantling Labour (10%):</span>
+                      <span>Rs. {computedCharges.dismantleLabourCost?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 text-emerald-400 font-bold">
+                      <span className="font-sans">Retired Mat. Credit (1/3):</span>
+                      <span>Rs. -{computedCharges.dismantleMaterialCredit?.toLocaleString()}</span>
+                    </div>
+                  </>
                 )}
               </div>
             )}

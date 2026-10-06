@@ -125,6 +125,7 @@ export interface EstimateItem {
   manualOverride?: boolean;
   calculationNotes?: string;
   remarks?: string;
+  isDismantled?: boolean;
 }
 
 export interface EstimateCharges {
@@ -148,6 +149,9 @@ export interface EstimateCharges {
   costPerKm: number;
   overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   totalOverheadsOnMaterial?: number;
+  dismantleMaterialCredit?: number;
+  dismantleLabourCost?: number;
+  dismantleNetTotal?: number;
 }
 
 export interface EstimateProjectInfo {

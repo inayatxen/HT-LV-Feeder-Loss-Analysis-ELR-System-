@@ -1043,15 +1043,22 @@ export function computeEstimateCharges(
     overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   }
 ): EstimateCharges {
-  const materialCost = Number(items.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
-  const labourCost = Number(items.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+  const standardItems = items.filter(i => !i.isDismantled);
+  const dismantledItems = items.filter(i => !!i.isDismantled);
+
+  const materialCost = Number(standardItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
+  const labourCost = Number(standardItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+
+  const dismantleMaterialCredit = Number(dismantledItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
+  const dismantleLabourCost = Number(dismantledItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+  const dismantleNetTotal = Number((dismantleLabourCost - dismantleMaterialCredit).toFixed(2));
 
   // Detect whether this estimate is the 25 kVA, 50 kVA or 100 kVA Transformer lump sum package
   const isLumpSumPackage = Boolean(
     percentages?.overheadBasis === 'MATERIAL' ||
-    (items.some(i => i.materialCode === '08110') && Math.abs(materialCost - LUMP_SUM_25KVA_TOTALS.materialCost) < 5) ||
-    (items.some(i => i.materialCode === '08120') && Math.abs(materialCost - LUMP_SUM_50KVA_TOTALS.materialCost) < 5) ||
-    (items.some(i => i.materialCode === '08130') && Math.abs(materialCost - LUMP_SUM_100KVA_TOTALS.materialCost) < 5)
+    (standardItems.some(i => i.materialCode === '08110') && Math.abs(materialCost - LUMP_SUM_25KVA_TOTALS.materialCost) < 5) ||
+    (standardItems.some(i => i.materialCode === '08120') && Math.abs(materialCost - LUMP_SUM_50KVA_TOTALS.materialCost) < 5) ||
+    (standardItems.some(i => i.materialCode === '08130') && Math.abs(materialCost - LUMP_SUM_100KVA_TOTALS.materialCost) < 5)
   );
 
   const overheadBasis = isLumpSumPackage || percentages?.overheadBasis === 'MATERIAL' ? 'MATERIAL' : 'PRIME_COST';
@@ -1104,9 +1111,11 @@ export function computeEstimateCharges(
     ? Number((materialCost + labourCost).toFixed(2))
     : Number((basePrimeCost + engineeringChargesAmount + contingencyAmount).toFixed(2));
 
-  const grandTotal = overheadBasis === 'MATERIAL'
+  const rawGrandTotal = overheadBasis === 'MATERIAL'
     ? Number((materialCost + labourCost + departmentalOverheadAmount + contractorOverheadAmount + transportationCost + taxGstAmount + otherCharges).toFixed(2))
     : Number((subTotal + departmentalOverheadAmount + contractorOverheadAmount + taxGstAmount + otherCharges).toFixed(2));
+
+  const grandTotal = Number((rawGrandTotal + dismantleNetTotal).toFixed(2));
 
   const effectiveKm = Math.max(0.01, lineKm);
   const costPerKm = Math.round(grandTotal / effectiveKm);
@@ -1131,7 +1140,10 @@ export function computeEstimateCharges(
     grandTotal,
     costPerKm,
     overheadBasis,
-    totalOverheadsOnMaterial
+    totalOverheadsOnMaterial,
+    dismantleMaterialCredit,
+    dismantleLabourCost,
+    dismantleNetTotal
   };
 }
 

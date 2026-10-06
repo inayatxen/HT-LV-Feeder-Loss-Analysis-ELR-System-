@@ -326,6 +326,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           onPrintEstimate={handleOpenPrint}
           userRole={userRole}
           userName={userName}
+          onSaveEstimate={handleSaveEstimate}
         />
       )}
 
