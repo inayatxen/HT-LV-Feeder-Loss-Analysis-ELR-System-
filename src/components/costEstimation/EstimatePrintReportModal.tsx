@@ -163,9 +163,6 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
           thead.print-running-header {
             display: table-header-group !important;
           }
-          tfoot.print-running-footer {
-            display: table-footer-group !important;
-          }
           table.print-doc-table {
             border-collapse: collapse !important;
             width: 100% !important;
@@ -685,27 +682,6 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                 </td>
               </tr>
             </tbody>
-
-            {/* ========================================================
-                RUNNING FOOTER FOR ALL PDF PAGES (repeats via table-footer-group)
-               ======================================================== */}
-            <tfoot className="print-running-footer">
-              <tr>
-                <td className="p-0 pt-3 border-t border-slate-300 text-[10px] text-slate-500">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-semibold text-slate-700">
-                      PESCO Distribution Works · Technical Sanction & Cost Estimation Dossier (CSR-2026)
-                    </span>
-                    <span className="font-mono text-slate-600">
-                      Doc Ref: {estimate.projectInfo.estimateNo} ({estimate.projectInfo.revisionNo})
-                    </span>
-                    <span className="font-medium">
-                      Official Security Document · PESCO WAPDA
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
           </table>
 
         </div>

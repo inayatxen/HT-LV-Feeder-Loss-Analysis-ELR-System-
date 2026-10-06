@@ -102,9 +102,6 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
           thead.print-running-header {
             display: table-header-group !important;
           }
-          tfoot.print-running-footer {
-            display: table-footer-group !important;
-          }
           table.print-doc-table {
             border-collapse: collapse !important;
             width: 100% !important;
@@ -372,17 +369,6 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
                 </td>
               </tr>
             </tbody>
-
-            <tfoot className="print-running-footer">
-              <tr>
-                <td className="p-0 pt-4 border-t border-slate-300 text-[10px] text-slate-500">
-                  <div className="flex justify-between items-center">
-                    <span>PESCO Planning & Engineering Division · Economic Cost Benefit Analysis Dossier</span>
-                    <span className="font-mono">Date: {new Date().toLocaleDateString('en-GB')}</span>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
           </table>
         </div>
       </div>

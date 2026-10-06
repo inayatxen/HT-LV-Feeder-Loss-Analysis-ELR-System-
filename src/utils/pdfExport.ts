@@ -64,7 +64,7 @@ export async function exportElementToPdf(
 
     // Usable print area width and height
     const contentWidthMm = pageWidthMm - (marginMm * 2);
-    const contentHeightMm = pageHeightMm - (marginMm * 2) - 8; // Leave 8mm for running footer
+    const contentHeightMm = pageHeightMm - (marginMm * 2);
 
     // Check if element contains dedicated per-page units (.print-page-unit)
     // If pageBreakMode is 'compact_flow' (continuous flow), we bypass per-page splitting 
@@ -141,47 +141,6 @@ export async function exportElementToPdf(
           renderedHeightMm,
           undefined,
           'FAST'
-        );
-
-        // -------------------------------------------------------------
-        // Running Footer on every page
-        // -------------------------------------------------------------
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(8);
-        pdf.setTextColor(100, 116, 139); // slate-500
-
-        const footerY = pageHeightMm - 5;
-        const timestamp = new Date().toLocaleString('en-GB', {
-          year: 'numeric',
-          month: 'short',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-
-        // Left: System & Doc Reference
-        pdf.text(
-          `PESCO / WAPDA Official Estimate Dossier ${docReference ? `· Ref: ${docReference}` : ''}`,
-          marginMm,
-          footerY
-        );
-
-        // Center: Timestamp
-        pdf.text(
-          `Generated: ${timestamp}`,
-          pageWidthMm / 2,
-          footerY,
-          { align: 'center' }
-        );
-
-        // Right: Page X of Y
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(15, 23, 42); // slate-900
-        pdf.text(
-          `Page ${i + 1} of ${pageUnits.length}`,
-          pageWidthMm - marginMm,
-          footerY,
-          { align: 'right' }
         );
       }
 
@@ -305,47 +264,6 @@ export async function exportElementToPdf(
           'FAST'
         );
       }
-
-      // -------------------------------------------------------------
-      // Running Footer on every page
-      // -------------------------------------------------------------
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(8);
-      pdf.setTextColor(100, 116, 139); // slate-500
-
-      const footerY = pageHeightMm - 5;
-      const timestamp = new Date().toLocaleString('en-GB', {
-        year: 'numeric',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-
-      // Left: System & Doc Reference
-      pdf.text(
-        `PESCO / WAPDA Official Estimate Dossier ${docReference ? `· Ref: ${docReference}` : ''}`,
-        marginMm,
-        footerY
-      );
-
-      // Center: Timestamp
-      pdf.text(
-        `Generated: ${timestamp}`,
-        pageWidthMm / 2,
-        footerY,
-        { align: 'center' }
-      );
-
-      // Right: Page X of Y
-      pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(15, 23, 42); // slate-900
-      pdf.text(
-        `Page ${page + 1} of ${totalPages}`,
-        pageWidthMm - marginMm,
-        footerY,
-        { align: 'right' }
-      );
     }
 
     // Save PDF file to trigger download dialog
