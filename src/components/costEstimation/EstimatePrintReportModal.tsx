@@ -566,6 +566,84 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
             </div>
           </div>
 
+          {/* Dismantle Material Estimate Section (Part-II) */}
+          {estimate.dismantledItems && estimate.dismantledItems.length > 0 && (
+            <div className="print-avoid-break space-y-3 pt-6 border-t-2 border-dashed border-slate-350">
+              <div className="bg-slate-50 border-l-4 border-amber-600 p-2 rounded-r-lg">
+                <h3 className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[10px] flex items-center justify-center font-bold">II</span>
+                  <span>Part-II: Retired & Dismantled Material Credit Estimate Schedule</span>
+                </h3>
+                <p className="text-[10px] text-amber-800 mt-0.5">
+                  Estimate prepared for the materials retired and dismantled from site. Credit value of retired materials is calculated at 1/3 (one-third) of standard CSR CSR-2026 rates.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                <table className="w-full text-left text-[11px] font-mono tabular-nums">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-semibold border-b border-slate-200">
+                      <th className="py-1.5 px-2 text-center w-8">Sr.</th>
+                      <th className="py-1.5 px-2.5">Code</th>
+                      <th className="py-1.5 px-3">Retired Material Description</th>
+                      <th className="py-1.5 px-2 text-center">Unit</th>
+                      <th className="py-1.5 px-2.5 text-right">Qty</th>
+                      <th className="py-1.5 px-3 text-right">Standard Rate</th>
+                      <th className="py-1.5 px-3 text-right">Dismantled Rate (1/3)</th>
+                      <th className="py-1.5 px-3 text-right">Material Credit (PKR)</th>
+                      <th className="py-1.5 px-3 text-right">Dismantling Labour (PKR)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-[10px]">
+                    {estimate.dismantledItems.map((item, idx) => {
+                      const stdRate = item.unitRate * 3; // backtrack standard rate for display
+                      return (
+                        <tr key={item.id} className="hover:bg-slate-50/50">
+                          <td className="py-1 px-2 text-center text-slate-500 font-sans">{idx + 1}</td>
+                          <td className="py-1 px-2.5 font-bold text-slate-900">{item.materialCode}</td>
+                          <td className="py-1 px-3 font-sans">
+                            <span className="font-bold text-slate-900 block leading-tight">{item.description}</span>
+                            <span className="text-[9px] text-slate-500 block leading-tight">{item.specification}</span>
+                          </td>
+                          <td className="py-1 px-2 text-center font-sans text-slate-600">{item.unit}</td>
+                          <td className="py-1 px-2.5 text-right font-bold text-slate-900">{item.quantity}</td>
+                          <td className="py-1 px-3 text-right text-slate-500">{stdRate.toLocaleString()}</td>
+                          <td className="py-1 px-3 text-right font-semibold text-amber-700">{item.unitRate.toLocaleString()}</td>
+                          <td className="py-1 px-3 text-right font-bold text-slate-900">{item.materialAmount.toLocaleString()}</td>
+                          <td className="py-1 px-3 text-right text-slate-600">{(item.labourAmount || 0).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                    {/* Totals Row */}
+                    {estimate.dismantledCharges && (
+                      <tr className="bg-amber-50/40 font-bold text-slate-900 border-t border-amber-200">
+                        <td colSpan={7} className="py-1.5 px-3 text-right font-sans uppercase text-[10px]">
+                          Total Dismantle Estimate Salvage Credit:
+                        </td>
+                        <td className="py-1.5 px-3 text-right text-amber-900">
+                          Rs. {estimate.dismantledCharges.materialCost.toLocaleString()}
+                        </td>
+                        <td className="py-1.5 px-3 text-right text-slate-700">
+                          Rs. {estimate.dismantledCharges.labourCost.toLocaleString()}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Net Summary Bar */}
+              {estimate.dismantledCharges && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs font-mono font-semibold flex items-center justify-between text-amber-900 print:mb-6">
+                  <span>NET SALVAGE VALUE / ASSET RETIREMENT CREDIT:</span>
+                  <span className="font-black text-sm">
+                    Rs. {(estimate.dismantledCharges.materialCost + estimate.dismantledCharges.labourCost).toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 6. Official Signatures Section */}
           <div className="print-avoid-break pt-8 border-t-2 border-slate-900">
             <div className="grid grid-cols-3 gap-6 text-center text-xs">

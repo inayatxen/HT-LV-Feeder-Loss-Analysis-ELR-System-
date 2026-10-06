@@ -92,6 +92,7 @@ export interface EstimateLineDetails {
   is100KvaLumpSumPackage?: boolean;
   is200KvaLumpSumPackage?: boolean;
   is1KmHtDogHTypePackage?: boolean;
+  foundationEnabled?: boolean;
   // Tracking whether values were auto-calculated or manually overridden
   autoCalculatedFlags?: Record<string, boolean>;
 }
@@ -229,6 +230,8 @@ export interface CostEstimateRecord {
   lineDetails: EstimateLineDetails;
   items: EstimateItem[];
   charges: EstimateCharges;
+  dismantledItems?: EstimateItem[];
+  dismantledCharges?: EstimateCharges;
   calculationSteps?: CalculationStep[];
   auditTrail: EstimateAuditLog[];
   transportationSettings?: {

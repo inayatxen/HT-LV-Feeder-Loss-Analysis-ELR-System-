@@ -23,6 +23,8 @@ import { CostEstimationDashboard } from './CostEstimationDashboard';
 import { EstimateFormView } from './EstimateFormView';
 import { MaterialMasterView } from './MaterialMasterView';
 import { DesignFactorsView } from './DesignFactorsView';
+import { CostBenefitAnalysisView } from './CostBenefitAnalysisView';
+import { JustificationSlipView } from './JustificationSlipView';
 import { PrintAndPdfExportModal } from './print/PrintAndPdfExportModal';
 import { 
   Calculator, 
@@ -32,7 +34,9 @@ import {
   FileText, 
   ShieldCheck, 
   RotateCcw,
-  Sparkles
+  Sparkles,
+  TrendingUp,
+  FileCheck2
 } from 'lucide-react';
 import { DEFAULT_DESIGN_FACTORS, INITIAL_MATERIALS, STANDARD_TEMPLATES } from '../../data/materialMaster';
 
@@ -43,7 +47,7 @@ interface CostEstimationModuleProps {
 export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
   currentJobTitle = 'SDO'
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'materials' | 'design_factors'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'materials' | 'design_factors' | 'cost_benefit' | 'justification_slip'>('dashboard');
   const [estimates, setEstimates] = useState<CostEstimateRecord[]>([]);
   const [materials, setMaterials] = useState<MaterialItem[]>(INITIAL_MATERIALS);
   const [designFactors, setDesignFactors] = useState<DesignFactorsConfig>(DEFAULT_DESIGN_FACTORS);
@@ -287,6 +291,32 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
             <Sliders className="w-3.5 h-3.5 text-emerald-600" />
             <span>Design Factors & Templates</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('cost_benefit')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'cost_benefit'
+                ? 'bg-white text-slate-950 shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-amber-600" />
+            <span>Cost Benefit Analysis (BCR)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('justification_slip')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+              activeTab === 'justification_slip'
+                ? 'bg-white text-slate-950 shadow-xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileCheck2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Justification Slip</span>
+          </button>
         </div>
 
         {/* Role & User Indicator */}
@@ -333,6 +363,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
       {activeTab === 'form' && (
         <EstimateFormView
           initialEstimate={selectedEstimate}
+          estimates={estimates}
           materials={materials}
           designFactors={designFactors}
           templates={templates}
@@ -360,6 +391,18 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           factors={factorsState || designFactors}
           templates={templates}
           onSaveFactors={handleSaveFactors}
+        />
+      )}
+
+      {activeTab === 'cost_benefit' && (
+        <CostBenefitAnalysisView
+          estimates={estimates}
+        />
+      )}
+
+      {activeTab === 'justification_slip' && (
+        <JustificationSlipView
+          estimates={estimates}
         />
       )}
 

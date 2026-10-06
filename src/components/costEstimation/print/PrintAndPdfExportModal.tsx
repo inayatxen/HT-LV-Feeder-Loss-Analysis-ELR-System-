@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { CostEstimateRecord } from '../../../types/costEstimation';
 import { exportEstimateToExcelWorkbook } from '../../../utils/costEngine';
 import { exportElementToPdf } from '../../../utils/pdfExport';
@@ -47,7 +47,26 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
   const [showWatermark, setShowWatermark] = useState(true);
   const [showAuditSteps, setShowAuditSteps] = useState(true);
   const [showSignatures, setShowSignatures] = useState(true);
+  const [printScope, setPrintScope] = useState<'full' | 'dismantle_only'>('full');
   const [sldScheme, setSldScheme] = useState<string>('All Combined');
+
+  // Computed printable estimate based on scope
+  const printableEstimate = useMemo(() => {
+    if (printScope === 'dismantle_only' && estimate.dismantledItems) {
+      return {
+        ...estimate,
+        items: estimate.dismantledItems,
+        charges: estimate.dismantledCharges || {
+          materialCost: 0, labourCost: 0, transportationCost: 0, civilWorksCost: 0, engineeringChargesPercent: 0, engineeringChargesAmount: 0, contingencyPercent: 0, contingencyAmount: 0, departmentalOverheadPercent: 0, departmentalOverheadAmount: 0, contractorOverheadPercent: 0, contractorOverheadAmount: 0, taxGstPercent: 0, taxGstAmount: 0, otherChargesAmount: 0, subTotal: 0, grandTotal: 0, costPerKm: 0
+        },
+        dismantledItems: [],
+        dismantledCharges: undefined,
+        lineDetails: { ...estimate.lineDetails, htLengthKm: 0, ltLengthKm: 0, htPoles: 0, ltPoles: 0, staySets: 0 },
+        projectInfo: { ...estimate.projectInfo, schemeProjectName: `${estimate.projectInfo.schemeProjectName} (Dismantle Section Only)` }
+      };
+    }
+    return estimate;
+  }, [estimate, printScope]);
 
   // Zoom & View State
   const [zoomLevel, setZoomLevel] = useState<number>(100);
@@ -118,8 +137,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
         orientation,
         marginMm,
         reportTitle: `Estimate ${estimate.projectInfo.estimateNo}`,
-        docReference: estimate.projectInfo.estimateNo,
-        pageBreakMode: 'page_per_section'
+        docReference: estimate.projectInfo.estimateNo
       });
 
       if (result.success) {
@@ -154,6 +172,19 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
       
       {/* Dynamic @page CSS injected specifically for the user's selected orientation, size, and margins */}
       <style>{`
+        @media screen {
+          .print-page-unit {
+            background: white !important;
+            border-bottom: 2px dashed #cbd5e1;
+            padding-bottom: 2.5rem;
+            margin-bottom: 2.5rem;
+          }
+          .print-page-unit:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+            margin-bottom: 0;
+          }
+        }
         @media print {
           @page {
             size: ${paperSize} ${orientation};
@@ -181,6 +212,18 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
           .print-page-break {
             break-before: page !important;
             page-break-before: always !important;
+          }
+          .print-page-unit {
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 0 !important;
+            padding-bottom: 0 !important;
+          }
+          .print-page-unit:last-child {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
         }
       `}</style>
@@ -368,6 +411,27 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
                 </select>
               </div>
 
+              {/* Print Scope Selector */}
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-slate-300">Print Scope:</span>
+                <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded border border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => setPrintScope('full')}
+                    className={`px-2 py-0.5 rounded ${printScope === 'full' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    Full Estimate
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPrintScope('dismantle_only')}
+                    className={`px-2 py-0.5 rounded ${printScope === 'dismantle_only' ? 'bg-amber-400 text-slate-950 font-bold' : 'text-slate-300 hover:text-white'}`}
+                  >
+                    Dismantle Only
+                  </button>
+                </div>
+              </div>
+
               {/* Margins */}
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-slate-300">Margins:</span>
@@ -466,9 +530,9 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
               marginBottom: zoomLevel > 100 ? `${(zoomLevel - 100) * 15}px` : undefined
             }}
           >
-            <div ref={printContentRef} id="printable-estimate-content" className="print-container">
+            <div ref={printContentRef} id="printable-estimate-container">
               <PrintDocumentLayout
-                estimate={estimate}
+                estimate={printableEstimate}
                 orientation={orientation}
                 paperSize={paperSize}
                 marginSize={marginSize}
@@ -476,6 +540,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
                 showAuditSteps={showAuditSteps}
                 showSignatures={showSignatures}
                 sldScheme={sldScheme}
+                printScope={printScope}
               />
             </div>
           </div>
