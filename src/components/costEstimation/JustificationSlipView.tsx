@@ -431,7 +431,7 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
 
           <div className="pt-2 text-xs text-slate-300 italic text-center">
             {isViable 
-              ? `✨ It is a VIABLE Proposal. The {studyPeriodYears}-year total benefits exceed project costs (BCR ${benefitCostRatio.toFixed(2)} ≥ 1.0).`
+              ? `✨ It is a VIABLE Proposal. The ${studyPeriodYears}-year total benefits exceed project costs (BCR ${benefitCostRatio.toFixed(2)} ≥ 1.0).`
               : '⚠️ It is Not a Viable Proposal. BCR is below 1.0.'}
           </div>
         </div>
