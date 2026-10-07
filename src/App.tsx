@@ -442,7 +442,16 @@ export default function App() {
       <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 space-y-6 print:hidden">
         
         {activeSystemModule === 'line_cost_estimation' ? (
-          <CostEstimationModule currentJobTitle={selectedJobTitle} />
+          <CostEstimationModule 
+            currentJobTitle={selectedJobTitle}
+            activeFeeder={activeFeeder}
+            activeSummary={hasActiveInterventions ? proposedSummary : existingSummary}
+            bifurcationConfig={bifurcationConfig}
+            onUpdateFeeder={handleSaveFeeder}
+            onSwitchToAnalysis={() => setActiveSystemModule('elr_loss_analysis')}
+            onSelectFeeder={handleSelectFeeder}
+            availableFeeders={availableFeeders}
+          />
         ) : (
           <>
             {/* Executive KPI Summary Cards */}

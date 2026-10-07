@@ -7,7 +7,9 @@ import {
   CostEstimateRecord, 
   MaterialItem, 
   DesignFactorsConfig, 
-  ConstructionTemplate 
+  ConstructionTemplate,
+  EstimateType,
+  EstimateLineDetails
 } from '../types/costEstimation';
 import { 
   INITIAL_MATERIALS, 
@@ -19,6 +21,8 @@ import {
   computeEstimateCharges, 
   generateEstimateNumber 
 } from './costEngine';
+import { PRESET_FEEDERS } from '../data/presetFeeders';
+import { FeederData } from '../types/feeder';
 
 const DB_NAME = 'pesco_cost_estimation_db';
 const DB_VERSION = 1;
@@ -904,7 +908,131 @@ function createSeedEstimates(materials: MaterialItem[], factors: DesignFactorsCo
     updatedAt: '2026-10-03T12:00:00.000Z'
   };
 
-  return [est0, est0b, est0c, est0d, est0e, est1, est2, est3, est4, est5];
+  // Generate Linked Estimates for all Preset ELR Feeders
+  const presetLinkedEstimates = PRESET_FEEDERS.map(f => buildLinkedEstimateForFeeder(f, materials, factors));
+
+  return [
+    ...presetLinkedEstimates,
+    est0, 
+    est0b, 
+    est0c, 
+    est0d, 
+    est0e, 
+    est1, 
+    est2, 
+    est3, 
+    est4, 
+    est5
+  ];
+}
+
+/**
+ * Builds or synthesizes a linked Cost Estimate record for any given FeederData project.
+ * Automatically synchronizes 11-digit work order, scheme category, feeder name, sub-division,
+ * division, circle, conductor sizes, line lengths, and transformer capacity into a unified project.
+ */
+export function buildLinkedEstimateForFeeder(
+  feeder: FeederData,
+  materials: MaterialItem[],
+  factors: DesignFactorsConfig
+): CostEstimateRecord {
+  const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
+  const totalLengthKm = feeder.segments.reduce((acc, s) => acc + s.lengthKm, 0);
+  const totalPoles = feeder.nodes.length;
+  
+  // Calculate estimate type
+  const estType: EstimateType = isHt ? 'HT_LINE_EXTENSION' : 'LT_LINE_EXTENSION';
+  
+  // Find standard conductor used most in this feeder
+  const conductorUsage: Record<string, number> = {};
+  feeder.segments.forEach(s => {
+    conductorUsage[s.conductorCode] = (conductorUsage[s.conductorCode] || 0) + s.lengthKm;
+  });
+  let primaryConductor = isHt ? 'DOG' : 'ANT';
+  let maxLen = 0;
+  Object.entries(conductorUsage).forEach(([code, len]) => {
+    if (len > maxLen) {
+      maxLen = len;
+      primaryConductor = code;
+    }
+  });
+
+  const lineDetails: EstimateLineDetails = {
+    htLengthKm: isHt ? Number(totalLengthKm.toFixed(3)) : 0,
+    ltLengthKm: isHt ? 0 : Number(totalLengthKm.toFixed(3)),
+    htPoles: isHt ? Math.max(2, totalPoles) : 0,
+    ltPoles: isHt ? 0 : Math.max(2, totalPoles),
+    staySets: Math.max(2, Math.round(totalLengthKm * (isHt ? factors.staySetsPerKm : 4))),
+    roadCrossings: 0,
+    canalCrossings: 0,
+    transformerStructures: 1,
+    transformerCount: 1,
+    transformerCapacityKva: feeder.proposedTransformerKva || feeder.existingTransformerKva || (isHt ? 1200 : 100),
+    circuitsCount: 1,
+    conductorType: 'ACSR',
+    conductorSize: primaryConductor.toUpperCase(),
+    poleType: isHt ? 'PCC' : 'PCC',
+    poleHeightMeters: isHt ? 11 : 9.5,
+    insulatorType: 'PIN_DISC'
+  };
+
+  const calc = calculateQuantitiesForLine(estType, lineDetails, factors, materials);
+  const charges = computeEstimateCharges(calc.items, totalLengthKm, {
+    method: 'PER_KM',
+    distanceKm: 20,
+    ratePerKm: 180,
+    loadingUnloadingFixed: 8000
+  });
+
+  const year = new Date().getFullYear();
+  const wo = feeder.workOrderNo || '26147126042';
+
+  return {
+    id: feeder.linkedEstimateId || `est-elr-${feeder.id}`,
+    projectInfo: {
+      estimateNo: `EST-${feeder.id.slice(0, 4).toUpperCase()}-${year}-001`,
+      revisionNo: 'Rev-00',
+      estimateDate: new Date().toISOString().split('T')[0],
+      workOrderNo: wo,
+      schemeCategory: feeder.schemeCategory || 'ELR',
+      elrCode: feeder.elrCode || `ELR-71-26-${feeder.id.slice(0, 3).toUpperCase()}`,
+      accountHead: feeder.accountHead || '4-71 ELR Capital Loss Reduction',
+      division: feeder.division || 'Peshawar Cantt Division',
+      subDivision: feeder.subDivision || 'Gulbhar Sub-Division',
+      circle: feeder.circle || 'Peshawar Circle-1',
+      district: feeder.district || 'Peshawar',
+      feederName: feeder.name,
+      feederCode: `FDR-${feeder.id.slice(0, 4).toUpperCase()}-01`,
+      proposedLocation: feeder.substationName || 'Peshawar Grid Site',
+      villageLocality: feeder.villageLocality || feeder.name,
+      gpsLatitude: '34.0151 N',
+      gpsLongitude: '71.5249 E',
+      applicantDepartment: feeder.applicantDepartment || 'PESCO Planning & Engineering (ELR Directorate)',
+      schemeProjectName: feeder.schemeProjectName || `${feeder.name} - Loss Reduction & Line Cost Estimate`,
+      purposeOfWork: feeder.purposeOfWork || `Comprehensive Energy Loss Reduction (ELR), network augmentation, and line cost estimation for ${feeder.name}.`,
+      preparedBy: feeder.preparedBy || 'Engr. M. Inayat',
+      designation: 'Sub-Divisional Officer (SDO)',
+      checkedBy: feeder.checkedBy || 'Engr. Tariq Khan (XEN Peshawar)',
+      approvedBy: feeder.approvedBy || 'Engr. Abdul Rehman (SE Circle-1)'
+    },
+    type: estType,
+    status: 'APPROVED',
+    lineDetails,
+    items: calc.items,
+    charges,
+    calculationSteps: calc.steps,
+    auditTrail: [
+      {
+        id: `aud-elr-${Date.now()}`,
+        timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
+        user: feeder.preparedBy || 'Engr. M. Inayat',
+        role: 'SDO',
+        action: `Linked estimate created for unified project: ${feeder.name}`
+      }
+    ],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
 }
 
 // -------------------------------------------------------------

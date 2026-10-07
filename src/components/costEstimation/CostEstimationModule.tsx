@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   CostEstimateRecord, 
   MaterialItem, 
@@ -17,8 +17,10 @@ import {
   deleteEstimateFromDb, 
   saveMaterialToDb, 
   saveDesignFactorsToDb, 
-  resetCostDbToDefaults 
+  resetCostDbToDefaults,
+  buildLinkedEstimateForFeeder
 } from '../../utils/costDatabase';
+import { FeederData, FeederAnalysisSummary, BifurcationConfig } from '../../types/feeder';
 import { CostEstimationDashboard } from './CostEstimationDashboard';
 import { EstimateFormView } from './EstimateFormView';
 import { MaterialMasterView } from './MaterialMasterView';
@@ -36,16 +38,34 @@ import {
   RotateCcw,
   Sparkles,
   TrendingUp,
-  FileCheck2
+  FileCheck2,
+  Link2,
+  Zap,
+  CheckCircle2,
+  FolderOpen
 } from 'lucide-react';
 import { DEFAULT_DESIGN_FACTORS, INITIAL_MATERIALS, STANDARD_TEMPLATES } from '../../data/materialMaster';
 
 interface CostEstimationModuleProps {
   currentJobTitle?: string;
+  activeFeeder?: FeederData;
+  activeSummary?: FeederAnalysisSummary;
+  bifurcationConfig?: BifurcationConfig;
+  onUpdateFeeder?: (updatedFeeder: FeederData) => void;
+  onSwitchToAnalysis?: () => void;
+  onSelectFeeder?: (feederId: string) => void;
+  availableFeeders?: FeederData[];
 }
 
 export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
-  currentJobTitle = 'SDO'
+  currentJobTitle = 'SDO',
+  activeFeeder,
+  activeSummary,
+  bifurcationConfig,
+  onUpdateFeeder,
+  onSwitchToAnalysis,
+  onSelectFeeder,
+  availableFeeders = []
 }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'materials' | 'design_factors' | 'cost_benefit' | 'justification_slip'>('dashboard');
   const [estimates, setEstimates] = useState<CostEstimateRecord[]>([]);
@@ -108,7 +128,42 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     };
   }, []);
 
-  // Handler: Save Estimate
+  // Find linked estimate for active feeder
+  const linkedEstimate = useMemo(() => {
+    if (!activeFeeder || estimates.length === 0) return null;
+    return (
+      estimates.find(e => e.id === activeFeeder.linkedEstimateId) ||
+      estimates.find(e => e.id === `est-elr-${activeFeeder.id}`) ||
+      estimates.find(e => e.id.includes(activeFeeder.id)) ||
+      estimates.find(e => e.projectInfo.feederName?.trim().toLowerCase() === activeFeeder.name?.trim().toLowerCase()) ||
+      estimates.find(e => activeFeeder.workOrderNo && e.projectInfo.workOrderNo === activeFeeder.workOrderNo) ||
+      null
+    );
+  }, [activeFeeder, estimates]);
+
+  // Open the estimate of this particular analysis ELR
+  const handleOpenLinkedEstimate = () => {
+    if (linkedEstimate) {
+      setSelectedEstimate(linkedEstimate);
+      setActiveTab('form');
+    } else if (activeFeeder && materials.length > 0) {
+      // Synthesize linked estimate on the fly
+      const newLinked = buildLinkedEstimateForFeeder(activeFeeder, materials, designFactors);
+      setEstimates(prev => [newLinked, ...prev]);
+      saveEstimateToDb(newLinked).catch(console.error);
+      setSelectedEstimate(newLinked);
+      setActiveTab('form');
+      if (onUpdateFeeder) {
+        onUpdateFeeder({
+          ...activeFeeder,
+          linkedEstimateId: newLinked.id,
+          linkedEstimate: newLinked
+        });
+      }
+    }
+  };
+
+  // Handler: Save Estimate and synchronize unified project state
   const handleSaveEstimate = async (updated: CostEstimateRecord) => {
     setEstimates(prev => {
       const idx = prev.findIndex(e => e.id === updated.id);
@@ -122,6 +177,39 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     setSelectedEstimate(null);
     setActiveTab('dashboard');
     await saveEstimateToDb(updated);
+
+    // Keep unified Feeder project state strictly in sync!
+    if (activeFeeder && onUpdateFeeder) {
+      const isMatchingProject = 
+        updated.id === activeFeeder.linkedEstimateId ||
+        updated.id === `est-elr-${activeFeeder.id}` ||
+        updated.projectInfo.feederName === activeFeeder.name ||
+        updated.projectInfo.workOrderNo === activeFeeder.workOrderNo;
+
+      if (isMatchingProject) {
+        const updatedFeeder: FeederData = {
+          ...activeFeeder,
+          name: updated.projectInfo.feederName || activeFeeder.name,
+          workOrderNo: updated.projectInfo.workOrderNo || activeFeeder.workOrderNo,
+          schemeCategory: updated.projectInfo.schemeCategory || activeFeeder.schemeCategory,
+          elrCode: updated.projectInfo.elrCode || activeFeeder.elrCode,
+          accountHead: updated.projectInfo.accountHead || activeFeeder.accountHead,
+          circle: updated.projectInfo.circle || activeFeeder.circle,
+          division: updated.projectInfo.division || activeFeeder.division,
+          subDivision: updated.projectInfo.subDivision || activeFeeder.subDivision,
+          district: updated.projectInfo.district || activeFeeder.district,
+          villageLocality: updated.projectInfo.villageLocality || activeFeeder.villageLocality,
+          schemeProjectName: updated.projectInfo.schemeProjectName || activeFeeder.schemeProjectName,
+          purposeOfWork: updated.projectInfo.purposeOfWork || activeFeeder.purposeOfWork,
+          preparedBy: updated.projectInfo.preparedBy || activeFeeder.preparedBy,
+          checkedBy: updated.projectInfo.checkedBy || activeFeeder.checkedBy,
+          approvedBy: updated.projectInfo.approvedBy || activeFeeder.approvedBy,
+          linkedEstimateId: updated.id,
+          linkedEstimate: updated
+        };
+        onUpdateFeeder(updatedFeeder);
+      }
+    }
   };
 
   // Handler: Delete Estimate
@@ -227,7 +315,77 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      
+      {/* ========================================================
+          UNIFIED PROJECT LINKAGE BANNER: ANALYSIS <-> LINE ESTIMATION
+         ======================================================== */}
+      {activeFeeder && (
+        <div className="bg-gradient-to-r from-blue-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-4 sm:p-5 shadow-md border border-blue-800/80">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            
+            {/* Project & Feeder Hierarchy Details */}
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  <Link2 className="w-3 h-3" />
+                  Linked Unified Project
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                  WO: {activeFeeder.workOrderNo || '26147126042'}
+                </span>
+                <span className="text-xs text-slate-300 font-medium">
+                  {activeFeeder.category === 'HV' ? '11kV HT Primary Feeder' : '400V LT Secondary Feeder'}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-lg sm:text-xl font-black tracking-tight text-white truncate">
+                  {activeFeeder.name}
+                </h2>
+                <span className="text-xs text-blue-300 font-medium px-2 py-0.5 bg-blue-950/80 rounded border border-blue-800">
+                  {activeFeeder.substationName}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-300">
+                <span><strong>Circle:</strong> {activeFeeder.circle || 'Peshawar Circle-1'}</span>
+                <span>•</span>
+                <span><strong>Division:</strong> {activeFeeder.division || 'Cantt Division Peshawar'}</span>
+                <span>•</span>
+                <span><strong>Sub-Division:</strong> {activeFeeder.subDivision || 'Gulbhar Sub-Division'}</span>
+                <span>•</span>
+                <span><strong>Transformer:</strong> {activeFeeder.existingTransformerKva} kVA</span>
+              </div>
+            </div>
+
+            {/* Quick Linkage Actions */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleOpenLinkedEstimate}
+                className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-md active:scale-95 cursor-pointer"
+                title="Open and edit the estimate for this active ELR Feeder"
+              >
+                <Calculator className="w-4 h-4" />
+                <span>{linkedEstimate ? 'Open Estimate for this ELR' : 'Generate Linked Estimate'}</span>
+              </button>
+
+              {onSwitchToAnalysis && (
+                <button
+                  type="button"
+                  onClick={onSwitchToAnalysis}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all shadow-xs cursor-pointer"
+                  title="Switch back to Feeder Loss Analysis workbench"
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>View Loss Analysis</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Module Navigation Sub-Header Bar */}
       <div className="bg-white rounded-xl border border-slate-200 p-2.5 sm:px-5 shadow-xs flex flex-wrap items-center justify-between gap-3">
@@ -362,7 +520,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
 
       {activeTab === 'form' && (
         <EstimateFormView
-          initialEstimate={selectedEstimate}
+          initialEstimate={selectedEstimate || linkedEstimate}
           estimates={estimates}
           materials={materials}
           designFactors={designFactors}
@@ -388,7 +546,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
 
       {activeTab === 'design_factors' && (
         <DesignFactorsView
-          factors={factorsState || designFactors}
+          factors={designFactors}
           templates={templates}
           onSaveFactors={handleSaveFactors}
         />
@@ -416,6 +574,3 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     </div>
   );
 };
-
-// Variable fallback helper
-const factorsState: any = null;

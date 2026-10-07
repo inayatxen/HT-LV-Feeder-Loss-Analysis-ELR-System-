@@ -40,6 +40,9 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
       <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="inline-flex items-center gap-1 font-bold font-mono text-[11px] text-blue-900 bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
+              WO: {feeder.workOrderNo || '26147126042'}
+            </span>
             <span className={`font-bold font-mono text-[11px] ${
               isHtLine 
                 ? 'text-sky-700 bg-sky-50 px-2 py-0.5 rounded border border-sky-200' 

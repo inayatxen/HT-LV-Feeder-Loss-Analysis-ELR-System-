@@ -24,6 +24,7 @@ import {
   PRESET_JOB_TITLES 
 } from '../types/feeder';
 import { GULBHAR_COLONY_LT_FEEDER, WARSAK_11KV_HT_FEEDER } from '../data/presetFeeders';
+import { generate11DigitWorkOrder } from '../utils/costEngine';
 
 interface NewJobModalProps {
   isOpen: boolean;
@@ -136,6 +137,8 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
       ];
     }
 
+    const woNumber = generate11DigitWorkOrder({ categoryCode: '71' });
+
     const newFeeder: FeederData = {
       id: newId,
       name: finalName,
@@ -153,6 +156,18 @@ export const NewJobModal: React.FC<NewJobModalProps> = ({
       currencySymbol: 'PKR',
       existingTransformerKva: category === 'LV' ? transformerKva : Math.round(sourceCurrentAmps * Math.sqrt(3) * (baseVoltage / 1000) * 0.85),
       proposedTransformerKva: category === 'LV' ? (transformerKva >= 200 ? transformerKva + 100 : 200) : Math.round(sourceCurrentAmps * Math.sqrt(3) * (baseVoltage / 1000) * 0.85 * 1.3),
+      workOrderNo: woNumber,
+      schemeCategory: 'ELR',
+      elrCode: `ELR-71-26-${finalName.slice(0, 3).toUpperCase()}`,
+      accountHead: '4-71 ELR Capital Loss Reduction',
+      circle: 'Peshawar Circle-1',
+      division: 'Peshawar Cantt Division',
+      subDivision: 'Gulbhar Sub-Division',
+      district: 'Peshawar',
+      schemeProjectName: `${finalName} - Loss Reduction & Cost Estimation Project`,
+      purposeOfWork: `Comprehensive Energy Loss Reduction (ELR) and line cost estimation for ${finalName}.`,
+      preparedBy: officerTitle,
+      linkedEstimateId: `est-elr-${newId}`,
       nodes: initialNodes,
       segments: initialSegments
     };

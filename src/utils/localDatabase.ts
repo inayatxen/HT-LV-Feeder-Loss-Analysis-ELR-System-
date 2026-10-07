@@ -24,6 +24,7 @@ export interface SavedAnalysisSnapshot {
   isTransformerOverloaded: boolean;
   feederData: FeederData;
   summary: FeederAnalysisSummary;
+  linkedEstimate?: any;
 }
 
 const DB_NAME = 'FeederLossAnalysisDB';

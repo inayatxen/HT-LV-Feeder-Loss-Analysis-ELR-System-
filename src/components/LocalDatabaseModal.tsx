@@ -449,13 +449,18 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                       className="bg-white p-4 rounded-xl border border-slate-200 hover:border-amber-400 transition-all shadow-2xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
                     >
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h4 className="text-sm font-bold text-slate-900">{snap.name}</h4>
                           <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
                             snap.category === 'HV' ? 'bg-sky-100 text-sky-800' : 'bg-amber-100 text-amber-900'
                           }`}>
                             {snap.category === 'HV' ? '11kV HT' : '400V LT'}
                           </span>
+                          {snap.feederData?.workOrderNo && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-900 border border-blue-200">
+                              WO: {snap.feederData.workOrderNo}
+                            </span>
+                          )}
                         </div>
                         {snap.notes && (
                           <p className="text-xs text-slate-600 line-clamp-1">{snap.notes}</p>

@@ -377,6 +377,25 @@ export interface FeederData {
   
   existingTransformerKva: number;
   proposedTransformerKva: number;
+
+  // Unified Project & ELR Scheme Linking Fields (11-Digit Work Order & Administrative Hierarchy)
+  workOrderNo?: string;        // 11-digit WAPDA/PESCO Work Order Number (e.g. '26147126042' or '26-14-71-26-042')
+  schemeCategory?: string;     // 'ELR' | 'TRF' | 'DOP' | 'LINE_EXTENSION'
+  elrCode?: string;            // ELR Scheme reference code (e.g. 'ELR-71-26-042')
+  accountHead?: string;        // Head of Account (e.g. '4-71 ELR Capital Loss Reduction')
+  circle?: string;             // Circle (e.g. 'Peshawar Circle-1', 'Mardan Circle')
+  division?: string;           // Division (e.g. 'Peshawar Cantt Division', 'Peshawar City Division')
+  subDivision?: string;        // Sub-Division (e.g. 'Gulbhar Sub-Division', 'Hayatabad Sub-Division')
+  district?: string;           // District (e.g. 'Peshawar', 'Mardan')
+  villageLocality?: string;    // Village / Locality / Sector
+  applicantDepartment?: string;
+  schemeProjectName?: string;  // Official Unified Scheme & Estimate Project Name
+  purposeOfWork?: string;
+  preparedBy?: string;
+  checkedBy?: string;
+  approvedBy?: string;
+  linkedEstimateId?: string;   // ID of the paired Cost Estimate record
+  linkedEstimate?: any;        // Full snapshot of paired Cost Estimate record for single project file
   
   nodes: FeederNode[];
   segments: FeederSegment[];

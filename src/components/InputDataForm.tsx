@@ -32,7 +32,10 @@ import {
   Sparkles,
   Database,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Link2,
+  Building2,
+  FileCheck2
 } from 'lucide-react';
 import { CONDUCTOR_LIST, getConductor } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
@@ -40,6 +43,7 @@ import { GULBHAR_COLONY_LT_FEEDER } from '../data/presetFeeders';
 import { ExcelImportModal } from './ExcelImportModal';
 import { downloadExcelTemplate, exportFullFeederToExcel } from '../utils/excelImport';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
+import { generate11DigitWorkOrder, format11DigitWorkOrder } from '../utils/costEngine';
 
 interface InputDataFormProps {
   feeder: FeederData;
@@ -50,6 +54,7 @@ interface InputDataFormProps {
   onUpdateTransformerKva: (kva: number) => void;
   onOpenDatabase?: () => void;
   onSelectCategory?: (category: FeederCategory) => void;
+  onOpenLinkedCostEstimate?: () => void;
 }
 
 export const InputDataForm: React.FC<InputDataFormProps> = ({
@@ -60,7 +65,8 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   activeTransformerKva,
   onUpdateTransformerKva,
   onOpenDatabase,
-  onSelectCategory
+  onSelectCategory,
+  onOpenLinkedCostEstimate
 }) => {
   // Local editable state for feeder parameters
   const [feederName, setFeederName] = useState(feeder.name);
@@ -75,6 +81,17 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [sourceCurrentInput, setSourceCurrentInput] = useState<number>(summary.totalSourceCurrentAmps || 180);
   const [showFormulas, setShowFormulas] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+
+  // Unified Project Linking & Administrative Hierarchy State
+  const [workOrderNo, setWorkOrderNo] = useState(feeder.workOrderNo || '26147126042');
+  const [circle, setCircle] = useState(feeder.circle || 'Peshawar Circle-1');
+  const [division, setDivision] = useState(feeder.division || 'Peshawar Cantt Division');
+  const [subDivision, setSubDivision] = useState(feeder.subDivision || 'Gulbhar Sub-Division');
+  const [district, setDistrict] = useState(feeder.district || 'Peshawar');
+  const [villageLocality, setVillageLocality] = useState(feeder.villageLocality || '');
+  const [schemeProjectName, setSchemeProjectName] = useState(feeder.schemeProjectName || `${feeder.name} - Loss Reduction Project`);
+  const [purposeOfWork, setPurposeOfWork] = useState(feeder.purposeOfWork || 'Energy Loss Reduction (ELR) and network augmentation.');
+  const [showProjectInfo, setShowProjectInfo] = useState(true);
 
   // Analysis Mode: HT Line (11kV) vs LT Line (400V)
   const [analysisMode, setAnalysisMode] = useState<'HT' | 'LT'>(() => {
@@ -347,6 +364,14 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
       category: isHtLine ? 'HV' : 'LV',
       name: feederName,
       substationName,
+      workOrderNo,
+      circle,
+      division,
+      subDivision,
+      district,
+      villageLocality,
+      schemeProjectName,
+      purposeOfWork,
       nominalVoltage,
       gridVoltageKv: nominalVoltage >= 1000 ? Number((nominalVoltage / 1000).toFixed(2)) : feeder.gridVoltageKv,
       loadPerSinglePhaseCustomerKva: loadPerSinglePhase,
@@ -749,6 +774,171 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
         <span className="text-[11px] font-mono text-slate-400 font-semibold">
           {isHtLine ? 'Primary 11 kV Feeder Model · Node 0 Injected Voltage' : 'Secondary 400V Distribution Model'}
         </span>
+      </div>
+
+      {/* ========================================================
+          UNIFIED PROJECT & 11-DIGIT WORK ORDER HIERARCHY
+         ======================================================== */}
+      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-blue-50 text-blue-700 rounded-lg">
+              <Link2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>Unified Project & 11-Digit Work Order Scheme Link</span>
+                <span className="text-[10px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-black">
+                  WO: {workOrderNo || '26147126042'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500">
+                Keeps Loss Analysis and Line Cost Estimation linked under one unified project and naming hierarchy.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const newWo = generate11DigitWorkOrder({ categoryCode: '71' });
+                setWorkOrderNo(newWo);
+              }}
+              className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              title="Generate new 11-digit WAPDA/PESCO Work Order number"
+            >
+              ⚡ Generate 11-Digit WO
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowProjectInfo(!showProjectInfo)}
+              className="p-1 text-slate-500 hover:text-slate-800 rounded-lg cursor-pointer"
+            >
+              {showProjectInfo ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+
+        {showProjectInfo && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 text-xs">
+            {/* 11-Digit Work Order */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                11-Digit Work Order No:
+              </label>
+              <input
+                type="text"
+                value={workOrderNo}
+                maxLength={14}
+                onChange={(e) => setWorkOrderNo(e.target.value.replace(/[^0-9-]/g, ''))}
+                placeholder="26-14-71-26-042"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-mono font-bold text-blue-700 text-xs focus:ring-1 focus:ring-blue-500"
+              />
+              <span className="text-[10px] text-slate-400 block mt-1 font-mono">
+                Format: CC-DD-KK-YY-SSS (11 digits)
+              </span>
+            </div>
+
+            {/* Feeder / Project Name */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Feeder Name:
+              </label>
+              <input
+                type="text"
+                value={feederName}
+                onChange={(e) => setFeederName(e.target.value)}
+                placeholder="Gulbhar Colony Street LT Feeder"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-bold text-slate-900 text-xs focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Substation Name */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Grid / Substation Name:
+              </label>
+              <input
+                type="text"
+                value={substationName}
+                onChange={(e) => setSubstationName(e.target.value)}
+                placeholder="Gulbhar 132/11 kV Grid"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+
+            {/* Circle */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Circle:
+              </label>
+              <input
+                type="text"
+                value={circle}
+                onChange={(e) => setCircle(e.target.value)}
+                placeholder="Peshawar Circle-1"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs"
+              />
+            </div>
+
+            {/* Division */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Division:
+              </label>
+              <input
+                type="text"
+                value={division}
+                onChange={(e) => setDivision(e.target.value)}
+                placeholder="Cantt Division Peshawar"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs"
+              />
+            </div>
+
+            {/* Sub-Division */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Sub-Division:
+              </label>
+              <input
+                type="text"
+                value={subDivision}
+                onChange={(e) => setSubDivision(e.target.value)}
+                placeholder="Gulbhar Sub-Division"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs"
+              />
+            </div>
+
+            {/* District */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                District:
+              </label>
+              <input
+                type="text"
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                placeholder="Peshawar"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs"
+              />
+            </div>
+
+            {/* Unified Scheme Project Name */}
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <label className="font-bold text-slate-800 block mb-1">
+                Scheme Project Title:
+              </label>
+              <input
+                type="text"
+                value={schemeProjectName}
+                onChange={(e) => setSchemeProjectName(e.target.value)}
+                placeholder="ELR Loss Reduction & Reconductoring Project"
+                className="w-full bg-white border border-slate-300 rounded px-2 py-1 font-medium text-slate-900 text-xs"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ========================================================
