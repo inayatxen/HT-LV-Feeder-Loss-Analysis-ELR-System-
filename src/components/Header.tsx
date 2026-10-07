@@ -80,98 +80,109 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-md w-full">
       {/* ========================================================
-          ROW 1: 100% WIDTH BRAND, MODULE SWITCHER, JOB TITLE, & GLOBAL ACTIONS
+          TOP ROW: PROMINENT CENTERED BRAND IDENTITY & WAPDA TITLE
          ======================================================== */}
-      <div className="border-b border-slate-800/80 bg-slate-900 w-full">
-        <div className="w-full px-3 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
-          
-          {/* 1. Brand Identity */}
-          <div className="flex items-center gap-3 shrink-0">
+      <div className="border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 w-full py-3.5 sm:py-4.5 px-4 sm:px-8 shadow-inner">
+        <div className="w-full flex flex-col items-center justify-center text-center">
+          <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5">
             <div className="relative group shrink-0">
               <img
                 src="/pesco-logo.svg"
                 alt="PESCO WAPDA Logo"
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-amber-500/40 shadow-sm transition-transform group-hover:scale-105"
+                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 border-amber-500/60 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/20"
               />
-              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[8px] font-black shadow-xs">
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
             </div>
-            <div className="leading-tight">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-bold tracking-tight text-white whitespace-nowrap">
+            <div className="text-center sm:text-left leading-tight">
+              <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
+                <span className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
                   PESCO Distribution Suite
                 </span>
-                <span className="hidden md:inline-block text-[9px] font-mono font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                <span className="text-xs sm:text-sm font-mono font-black tracking-wider px-2.5 py-0.5 sm:py-1 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
                   WAPDA
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400 hidden lg:block leading-none mt-0.5">
+              <p className="text-xs sm:text-sm md:text-[15px] text-slate-300 font-semibold leading-snug mt-1 sm:mt-1.5 tracking-wide">
                 Peshawar Electric Supply Company · Engineering & Loss Reduction
               </p>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* 2. Primary System Module Switcher (ELR Analysis vs Line Cost Estimation) */}
-          <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
-            <button
-              onClick={() => onSelectSystemModule?.('elr_loss_analysis')}
-              title="Switch to Feeder Loss Analysis & Technical Loss Reduction Module (WAPDA Engine)"
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                activeSystemModule === 'elr_loss_analysis'
-                  ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold ring-1 ring-amber-300'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-              }`}
-            >
-              <Zap className={`w-3.5 h-3.5 ${activeSystemModule === 'elr_loss_analysis' ? 'text-slate-950' : 'text-amber-400'}`} />
-              <span>Feeder Loss Analysis (ELR)</span>
-            </button>
+      {/* ========================================================
+          CONTROL ROW: MODULE SWITCHER, VOLTAGE CATEGORY, JOB TITLE & ACTIONS
+         ======================================================== */}
+      <div className="border-b border-slate-800/80 bg-slate-900 w-full">
+        <div className="w-full px-3 sm:px-6 lg:px-8 h-12 sm:h-13 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
+          
+          {/* Left Controls: Module Switcher + Voltage Level */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* 1. Primary System Module Switcher (ELR Analysis vs Line Cost Estimation) */}
+            <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
+              <button
+                onClick={() => onSelectSystemModule?.('elr_loss_analysis')}
+                title="Switch to Feeder Loss Analysis & Technical Loss Reduction Module (WAPDA Engine)"
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  activeSystemModule === 'elr_loss_analysis'
+                    ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold ring-1 ring-amber-300'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                }`}
+              >
+                <Zap className={`w-3.5 h-3.5 ${activeSystemModule === 'elr_loss_analysis' ? 'text-slate-950' : 'text-amber-400'}`} />
+                <span className="hidden xs:inline">Feeder Loss (ELR)</span>
+                <span className="xs:hidden">ELR</span>
+              </button>
 
-            <button
-              onClick={() => onSelectSystemModule?.('line_cost_estimation')}
-              title="Switch to HT/LT Electrical Line Extension & Feeder Cost Estimation Module"
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                activeSystemModule === 'line_cost_estimation'
-                  ? 'bg-blue-600 text-white shadow-md font-extrabold ring-1 ring-blue-300'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
-              }`}
-            >
-              <Calculator className={`w-3.5 h-3.5 ${activeSystemModule === 'line_cost_estimation' ? 'text-white' : 'text-blue-400'}`} />
-              <span>Line Cost Estimation</span>
-            </button>
-          </div>
+              <button
+                onClick={() => onSelectSystemModule?.('line_cost_estimation')}
+                title="Switch to HT/LT Electrical Line Extension & Feeder Cost Estimation Module"
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  activeSystemModule === 'line_cost_estimation'
+                    ? 'bg-blue-600 text-white shadow-md font-extrabold ring-1 ring-blue-300'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                }`}
+              >
+                <Calculator className={`w-3.5 h-3.5 ${activeSystemModule === 'line_cost_estimation' ? 'text-white' : 'text-blue-400'}`} />
+                <span className="hidden xs:inline">Line Cost Estimation</span>
+                <span className="xs:hidden">Cost</span>
+              </button>
+            </div>
 
-          {/* 3. LV / HV Selector (400V LT vs 11kV HT Feeder Analysis Mode) */}
-          <div 
-            className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0"
-            role="group"
-            aria-label="Feeder Voltage Category"
-          >
-            <button
-              type="button"
-              onClick={() => onSelectCategory('LV')}
-              title="Switch to Low Voltage / Low Tension 400V Feeder Analysis (Secondary Distribution)"
-              className={`flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory === 'LV'
-                  ? 'bg-amber-500 text-slate-950 shadow-sm font-black ring-1 ring-amber-400 scale-[1.02]'
-                  : 'text-amber-400 font-bold hover:text-amber-300 hover:bg-slate-900/80'
-              }`}
+            {/* 2. LV / HV Selector (400V LT vs 11kV HT Feeder Analysis Mode) */}
+            <div 
+              className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0"
+              role="group"
+              aria-label="Feeder Voltage Category"
             >
-              <span>400V LT</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelectCategory('LV')}
+                title="Switch to Low Voltage / Low Tension 400V Feeder Analysis (Secondary Distribution)"
+                className={`flex items-center justify-center px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  activeCategory === 'LV'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-black ring-1 ring-amber-400 scale-[1.02]'
+                    : 'text-amber-400 font-bold hover:text-amber-300 hover:bg-slate-900/80'
+                }`}
+              >
+                <span>400V LT</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => onSelectCategory('HV')}
-              title="Switch to High Voltage / High Tension 11kV Feeder Analysis (Primary Feeder & Node 0 Voltage Injection)"
-              className={`flex items-center justify-center px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
-                activeCategory === 'HV'
-                  ? 'bg-sky-500 text-slate-950 shadow-sm font-black ring-1 ring-sky-400 scale-[1.02]'
-                  : 'text-sky-400 font-bold hover:text-sky-300 hover:bg-slate-900/80'
-              }`}
-            >
-              <span>11kV HT</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelectCategory('HV')}
+                title="Switch to High Voltage / High Tension 11kV Feeder Analysis (Primary Feeder & Node 0 Voltage Injection)"
+                className={`flex items-center justify-center px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  activeCategory === 'HV'
+                    ? 'bg-sky-500 text-slate-950 shadow-sm font-black ring-1 ring-sky-400 scale-[1.02]'
+                    : 'text-sky-400 font-bold hover:text-sky-300 hover:bg-slate-900/80'
+                }`}
+              >
+                <span>11kV HT</span>
+              </button>
+            </div>
           </div>
 
           {/* 3. Job Title Writing, Feeder Dropdown & Action Buttons */}
