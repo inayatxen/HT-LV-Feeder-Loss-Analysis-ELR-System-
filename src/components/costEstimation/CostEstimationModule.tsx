@@ -42,7 +42,8 @@ import {
   Link2,
   Zap,
   CheckCircle2,
-  FolderOpen
+  FolderOpen,
+  Save
 } from 'lucide-react';
 import { DEFAULT_DESIGN_FACTORS, INITIAL_MATERIALS, STANDARD_TEMPLATES } from '../../data/materialMaster';
 
@@ -50,22 +51,30 @@ interface CostEstimationModuleProps {
   currentJobTitle?: string;
   activeFeeder?: FeederData;
   activeSummary?: FeederAnalysisSummary;
+  existingSummary?: FeederAnalysisSummary;
+  proposedSummary?: FeederAnalysisSummary;
+  hasActiveInterventions?: boolean;
   bifurcationConfig?: BifurcationConfig;
   onUpdateFeeder?: (updatedFeeder: FeederData) => void;
   onSwitchToAnalysis?: () => void;
   onSelectFeeder?: (feederId: string) => void;
   availableFeeders?: FeederData[];
+  onSaveUnifiedProject?: () => void;
 }
 
 export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
   currentJobTitle = 'SDO',
   activeFeeder,
   activeSummary,
+  existingSummary,
+  proposedSummary,
+  hasActiveInterventions,
   bifurcationConfig,
   onUpdateFeeder,
   onSwitchToAnalysis,
   onSelectFeeder,
-  availableFeeders = []
+  availableFeeders = [],
+  onSaveUnifiedProject
 }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'materials' | 'design_factors' | 'cost_benefit' | 'justification_slip'>('dashboard');
   const [estimates, setEstimates] = useState<CostEstimateRecord[]>([]);
@@ -141,6 +150,32 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     );
   }, [activeFeeder, estimates]);
 
+  // Auto-sync & keep open the estimate of this particular analysis ELR
+  useEffect(() => {
+    if (!activeFeeder) return;
+
+    if (linkedEstimate) {
+      if (!selectedEstimate || selectedEstimate.id !== linkedEstimate.id) {
+        setSelectedEstimate(linkedEstimate);
+        setActiveTab('form');
+      }
+    } else if (materials.length > 0 && estimates.length > 0) {
+      // Synthesize on the fly for active feeder if none exists yet
+      const newLinked = buildLinkedEstimateForFeeder(activeFeeder, materials, designFactors);
+      setEstimates(prev => [newLinked, ...prev]);
+      saveEstimateToDb(newLinked).catch(console.error);
+      setSelectedEstimate(newLinked);
+      setActiveTab('form');
+      if (onUpdateFeeder) {
+        onUpdateFeeder({
+          ...activeFeeder,
+          linkedEstimateId: newLinked.id,
+          linkedEstimate: newLinked
+        });
+      }
+    }
+  }, [activeFeeder?.id, linkedEstimate?.id, materials.length, estimates.length]);
+
   // Open the estimate of this particular analysis ELR
   const handleOpenLinkedEstimate = () => {
     if (linkedEstimate) {
@@ -174,8 +209,8 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
       }
       return [updated, ...prev];
     });
-    setSelectedEstimate(null);
-    setActiveTab('dashboard');
+    // Keep open the estimate of this particular analysis ELR
+    setSelectedEstimate(updated);
     await saveEstimateToDb(updated);
 
     // Keep unified Feeder project state strictly in sync!
@@ -361,6 +396,18 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
 
             {/* Quick Linkage Actions */}
             <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {onSaveUnifiedProject && (
+                <button
+                  type="button"
+                  onClick={onSaveUnifiedProject}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition-all shadow-md active:scale-95 cursor-pointer ring-1 ring-emerald-300"
+                  title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                >
+                  <Save className="w-4 h-4 stroke-[2.5]" />
+                  <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleOpenLinkedEstimate}
@@ -368,7 +415,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
                 title="Open and edit the estimate for this active ELR Feeder"
               >
                 <Calculator className="w-4 h-4" />
-                <span>{linkedEstimate ? 'Open Estimate for this ELR' : 'Generate Linked Estimate'}</span>
+                <span>{linkedEstimate ? 'Open Estimate for this ELR Feeder' : 'Generate Linked Estimate'}</span>
               </button>
 
               {onSwitchToAnalysis && (
@@ -500,6 +547,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
       {activeTab === 'dashboard' && (
         <CostEstimationDashboard
           estimates={estimates}
+          activeFeederId={activeFeeder?.id}
           onNewEstimate={() => {
             setSelectedEstimate(null);
             setActiveTab('form');
@@ -515,6 +563,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           userRole={userRole}
           userName={userName}
           onSaveEstimate={handleSaveEstimate}
+          onSaveUnifiedProject={onSaveUnifiedProject}
         />
       )}
 
@@ -533,6 +582,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
             setActiveTab('dashboard');
           }}
           onPrintEstimate={handleOpenPrint}
+          onSaveUnifiedProject={onSaveUnifiedProject}
         />
       )}
 
@@ -555,12 +605,23 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
       {activeTab === 'cost_benefit' && (
         <CostBenefitAnalysisView
           estimates={estimates}
+          activeFeeder={activeFeeder}
+          existingSummary={existingSummary}
+          proposedSummary={proposedSummary}
+          hasActiveInterventions={hasActiveInterventions}
+          linkedEstimate={selectedEstimate || linkedEstimate}
+          onSaveUnifiedProject={onSaveUnifiedProject}
         />
       )}
 
       {activeTab === 'justification_slip' && (
         <JustificationSlipView
           estimates={estimates}
+          activeFeeder={activeFeeder}
+          existingSummary={existingSummary}
+          proposedSummary={proposedSummary}
+          linkedEstimate={selectedEstimate || linkedEstimate}
+          onSaveUnifiedProject={onSaveUnifiedProject}
         />
       )}
 

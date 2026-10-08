@@ -21,7 +21,9 @@ import {
   Edit3,
   Plus,
   FolderOpen,
-  Calculator
+  Calculator,
+  Save,
+  FolderDown
 } from 'lucide-react';
 import { 
   FeederType, 
@@ -54,6 +56,7 @@ interface HeaderProps {
   summary?: FeederAnalysisSummary;
   selectedJobTitle: JobTitle;
   onSelectJobTitle: (title: JobTitle) => void;
+  onSaveUnifiedProject?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -75,36 +78,37 @@ export const Header: React.FC<HeaderProps> = ({
   activeTransformerKva,
   summary,
   selectedJobTitle,
-  onSelectJobTitle
+  onSelectJobTitle,
+  onSaveUnifiedProject
 }) => {
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-md w-full">
+    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-md w-full select-none">
       {/* ========================================================
           TOP ROW: PROMINENT CENTERED BRAND IDENTITY & WAPDA TITLE
          ======================================================== */}
-      <div className="border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 w-full py-3.5 sm:py-4.5 px-4 sm:px-8 shadow-inner">
+      <div className="border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 w-full py-2.5 sm:py-3.5 px-4 sm:px-8 shadow-inner">
         <div className="w-full flex flex-col items-center justify-center text-center">
           <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5">
             <div className="relative group shrink-0">
               <img
                 src="/pesco-logo.svg"
                 alt="PESCO WAPDA Logo"
-                className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full border-2 border-amber-500/60 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/20"
+                className="w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 rounded-full border-2 border-amber-500/60 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/20"
               />
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-5.5 sm:h-5.5 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
             </div>
             <div className="text-center sm:text-left leading-tight">
               <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                <span className="text-lg sm:text-2xl md:text-3xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
+                <span className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
                   PESCO Distribution Suite
                 </span>
-                <span className="text-xs sm:text-sm font-mono font-black tracking-wider px-2.5 py-0.5 sm:py-1 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
+                <span className="text-xs sm:text-sm font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
                   WAPDA
                 </span>
               </div>
-              <p className="text-xs sm:text-sm md:text-[15px] text-slate-300 font-semibold leading-snug mt-1 sm:mt-1.5 tracking-wide">
+              <p className="text-xs sm:text-xs md:text-sm text-slate-300 font-semibold leading-snug mt-0.5 sm:mt-1 tracking-wide">
                 Peshawar Electric Supply Company · Engineering & Loss Reduction
               </p>
             </div>
@@ -116,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
           CONTROL ROW: MODULE SWITCHER, VOLTAGE CATEGORY, JOB TITLE & ACTIONS
          ======================================================== */}
       <div className="border-b border-slate-800/80 bg-slate-900 w-full">
-        <div className="w-full px-3 sm:px-6 lg:px-8 h-12 sm:h-13 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
+        <div className="w-full px-3 sm:px-6 lg:px-8 h-11 sm:h-12 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
           
           {/* Left Controls: Module Switcher + Voltage Level */}
           <div className="flex items-center gap-2 shrink-0">
@@ -278,6 +282,20 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Old Jobs / DB</span>
             </button>
 
+            {/* Prominent Save Unified Project Button (ELR Analysis + Cost Estimation as One Project) */}
+            {onSaveUnifiedProject && (
+              <button
+                onClick={onSaveUnifiedProject}
+                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-md transition-all whitespace-nowrap cursor-pointer ring-1 ring-emerald-300 active:scale-95 shrink-0"
+              >
+                <Save className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                <span className="hidden 2xl:inline">Save Project (1. ELR Analysis + 2. Cost Estimation)</span>
+                <span className="hidden sm:inline 2xl:hidden">Save Project (Analysis & Cost)</span>
+                <span className="sm:hidden">Save Project</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenReport}
               title="Open Official WAPDA ELR Form & Loss Analysis Report"
@@ -317,7 +335,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       ) : (
         <div className="bg-slate-950 px-3 sm:px-6 lg:px-8 w-full">
-          <div className="w-full h-11 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+          <div className="w-full h-10 sm:h-11 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
             
             {/* Navigation Buttons */}
             <nav className="flex items-center gap-1 shrink-0">

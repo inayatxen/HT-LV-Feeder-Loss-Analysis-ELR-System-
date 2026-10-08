@@ -29,11 +29,14 @@ import {
   TrendingUp, 
   FolderPlus,
   GitBranch,
-  Eye
+  Eye,
+  Save,
+  Link2
 } from 'lucide-react';
 
 interface CostEstimationDashboardProps {
   estimates: CostEstimateRecord[];
+  activeFeederId?: string;
   onNewEstimate: () => void;
   onEditEstimate: (estimate: CostEstimateRecord) => void;
   onDeleteEstimate: (id: string) => void;
@@ -43,10 +46,12 @@ interface CostEstimationDashboardProps {
   userRole: UserRole;
   userName: string;
   onSaveEstimate?: (estimate: CostEstimateRecord) => void;
+  onSaveUnifiedProject?: () => void;
 }
 
 export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = ({
   estimates,
+  activeFeederId,
   onNewEstimate,
   onEditEstimate,
   onDeleteEstimate,
@@ -55,7 +60,8 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
   onPrintEstimate,
   userRole,
   userName,
-  onSaveEstimate
+  onSaveEstimate,
+  onSaveUnifiedProject
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<EstimateStatus | 'ALL'>('ALL');
@@ -353,6 +359,18 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
 
           {/* Action Buttons Row */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {onSaveUnifiedProject && (
+              <button
+                type="button"
+                onClick={onSaveUnifiedProject}
+                className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg shadow-sm transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
+                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+              >
+                <Save className="w-4 h-4 stroke-[2.5]" />
+                <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+              </button>
+            )}
+
             {estimates.length > 1 && (
               <button
                 type="button"
@@ -455,14 +473,34 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
               ) : (
                 filteredEstimates.map(est => {
                   const km = (est.lineDetails.htLengthKm || 0) + (est.lineDetails.ltLengthKm || 0);
+                  const isLinkedToActive = activeFeederId && (
+                    est.id === activeFeederId || 
+                    est.id === `est-elr-${activeFeederId}` || 
+                    est.id.includes(activeFeederId)
+                  );
+
                   return (
-                    <tr key={est.id} className="hover:bg-slate-50/80 transition-colors">
-                      
+                    <tr 
+                      key={est.id} 
+                      className={`transition-colors ${
+                        isLinkedToActive 
+                          ? 'bg-emerald-50/60 hover:bg-emerald-100/60 ring-1 ring-inset ring-emerald-300' 
+                          : 'hover:bg-slate-50/80'
+                      }`}
+                    >
                       {/* Estimate No, 11-Digit Work Order & Revision */}
                       <td className="py-3 px-3">
-                        <span className="font-bold text-slate-900 block leading-tight">
-                          {est.projectInfo.estimateNo}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-slate-900 block leading-tight">
+                            {est.projectInfo.estimateNo}
+                          </span>
+                          {isLinkedToActive && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white font-mono">
+                              <Link2 className="w-3 h-3" />
+                              Active ELR
+                            </span>
+                          )}
+                        </div>
                         {est.projectInfo.workOrderNo ? (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-950 font-mono text-[10px] font-black border border-amber-300 mt-1">
                             <span className="text-amber-600 font-bold">W.O:</span>

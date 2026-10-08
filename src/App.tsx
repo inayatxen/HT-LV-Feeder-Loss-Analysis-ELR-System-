@@ -35,12 +35,21 @@ import { NodeInspectorModal } from './components/NodeInspectorModal';
 import { LocalDatabaseModal } from './components/LocalDatabaseModal';
 import { NewJobModal } from './components/NewJobModal';
 import { CostEstimationModule } from './components/costEstimation/CostEstimationModule';
+import { SaveUnifiedProjectModal } from './components/SaveUnifiedProjectModal';
 import { 
   initLocalDatabase, 
   saveFeederToLocalDb, 
+  saveAnalysisSnapshotToDb,
   SavedAnalysisSnapshot 
 } from './utils/localDatabase';
-import { Zap, GitBranch, Layers, TrendingUp, SlidersHorizontal, FileText, CheckCircle2, ShieldAlert, Database, Calculator } from 'lucide-react';
+import { 
+  getAllEstimatesFromDb, 
+  saveEstimateToDb, 
+  buildLinkedEstimateForFeeder 
+} from './utils/costDatabase';
+import { INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS } from './data/materialMaster';
+import { CostEstimateRecord } from './types/costEstimation';
+import { Zap, GitBranch, Layers, TrendingUp, SlidersHorizontal, FileText, CheckCircle2, ShieldAlert, Database, Calculator, Save } from 'lucide-react';
 
 export default function App() {
   const [activeSystemModule, setActiveSystemModule] = useState<'elr_loss_analysis' | 'line_cost_estimation'>('elr_loss_analysis');
@@ -189,6 +198,8 @@ export default function App() {
   const [isConductorsOpen, setIsConductorsOpen] = useState(false);
   const [isLocalDbOpen, setIsLocalDbOpen] = useState(false);
   const [isNewJobOpen, setIsNewJobOpen] = useState(false);
+  const [isSaveUnifiedOpen, setIsSaveUnifiedOpen] = useState(false);
+  const [currentLinkedEstimate, setCurrentLinkedEstimate] = useState<CostEstimateRecord | null>(null);
   const [dbToast, setDbToast] = useState('');
   const [inspectedNode, setInspectedNode] = useState<FeederNode | null>(null);
 
@@ -395,14 +406,146 @@ export default function App() {
     setActiveConductors({});
     setActiveCapacitors({});
     setActiveTab('table');
+    if (snapshot.linkedEstimate) {
+      setCurrentLinkedEstimate(snapshot.linkedEstimate);
+      saveEstimateToDb(snapshot.linkedEstimate).catch(console.error);
+    }
     setDbToast(`Loaded snapshot "${snapshot.name}" from Local Database`);
     setTimeout(() => setDbToast(''), 3500);
   };
 
+  // Open Unified Project Save Modal (Saves ELR Analysis + Cost Estimation as One Project)
+  const handleOpenSaveUnifiedProject = async () => {
+    try {
+      const allEstimates = await getAllEstimatesFromDb();
+      let matched = 
+        allEstimates.find(e => e.id === activeFeeder.linkedEstimateId) ||
+        allEstimates.find(e => e.id === `est-elr-${activeFeeder.id}`) ||
+        allEstimates.find(e => e.id.includes(activeFeeder.id)) ||
+        allEstimates.find(e => e.projectInfo.feederName?.trim().toLowerCase() === activeFeeder.name?.trim().toLowerCase()) ||
+        allEstimates.find(e => activeFeeder.workOrderNo && e.projectInfo.workOrderNo === activeFeeder.workOrderNo) ||
+        null;
+
+      if (!matched) {
+        matched = buildLinkedEstimateForFeeder(activeFeeder, INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS);
+      }
+      setCurrentLinkedEstimate(matched);
+    } catch {
+      const fallback = buildLinkedEstimateForFeeder(activeFeeder, INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS);
+      setCurrentLinkedEstimate(fallback);
+    }
+    setIsSaveUnifiedOpen(true);
+  };
+
+  // Save Both ELR Analysis & Cost Estimation as One Project
+  const handleConfirmSaveUnifiedProject = async (projectName: string, remarks: string) => {
+    const estimateToSave: CostEstimateRecord = currentLinkedEstimate || buildLinkedEstimateForFeeder(activeFeeder, INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS);
+
+    const updatedEstimate: CostEstimateRecord = {
+      ...estimateToSave,
+      projectInfo: {
+        ...estimateToSave.projectInfo,
+        schemeProjectName: projectName,
+        purposeOfWork: remarks,
+        feederName: activeFeeder.name,
+        workOrderNo: activeFeeder.workOrderNo || estimateToSave.projectInfo.workOrderNo || '26-14-71-26-042',
+        subDivision: activeFeeder.subDivision || estimateToSave.projectInfo.subDivision,
+        division: activeFeeder.division || estimateToSave.projectInfo.division,
+        circle: activeFeeder.circle || estimateToSave.projectInfo.circle,
+        district: activeFeeder.district || estimateToSave.projectInfo.district
+      },
+      updatedAt: new Date().toISOString()
+    };
+
+    const updatedFeeder: FeederData = {
+      ...activeFeeder,
+      schemeProjectName: projectName,
+      purposeOfWork: remarks,
+      linkedEstimateId: updatedEstimate.id,
+      linkedEstimate: updatedEstimate
+    };
+
+    // 1. Save Feeder Analysis Model
+    await saveFeederToLocalDb(updatedFeeder);
+    setCustomFeeders(prev => ({
+      ...prev,
+      [selectedFeederId]: updatedFeeder
+    }));
+
+    // 2. Save Cost Estimate Model
+    await saveEstimateToDb(updatedEstimate);
+    setCurrentLinkedEstimate(updatedEstimate);
+
+    // 3. Save Unified Analysis + Cost Estimate Snapshot in Local Database
+    const currentSummary = hasActiveInterventions ? proposedSummary : existingSummary;
+    const snapshot: SavedAnalysisSnapshot = {
+      id: `snap-unified-${Date.now()}`,
+      name: projectName,
+      notes: remarks,
+      timestamp: Date.now(),
+      feederId: updatedFeeder.id,
+      feederName: updatedFeeder.name,
+      category: updatedFeeder.category || (updatedFeeder.type === 'HT' ? 'HV' : 'LV'),
+      transformerKva: activeTransformerKva,
+      totalCircuitLengthKm: currentSummary.totalCircuitLengthKm,
+      totalSystemDemandKva: currentSummary.totalSystemDemandKva,
+      totalLineLossKw: currentSummary.totalLineLossKw,
+      worstVoltageDropPercent: currentSummary.worstVoltageDropPercent,
+      worstVoltageVolts: currentSummary.worstVoltageVolts,
+      annualEnergyLossKwh: currentSummary.annualEnergyLossKwh,
+      isTransformerOverloaded: currentSummary.isTransformerOverloaded,
+      feederData: JSON.parse(JSON.stringify(updatedFeeder)),
+      summary: JSON.parse(JSON.stringify(currentSummary)),
+      linkedEstimate: JSON.parse(JSON.stringify(updatedEstimate))
+    };
+    await saveAnalysisSnapshotToDb(snapshot);
+
+    setDbToast(`✅ Unified Project "${projectName}" Saved! (1. ELR Loss Analysis + 2. Cost Estimate under WO: ${updatedFeeder.workOrderNo || '26-14-71-26-042'})`);
+    setTimeout(() => setDbToast(''), 4500);
+  };
+
+  // Export Unified Project File (Downloadable JSON Bundle)
+  const handleExportUnifiedProjectFile = () => {
+    const currentSummary = hasActiveInterventions ? proposedSummary : existingSummary;
+    const estimateToExport = currentLinkedEstimate || buildLinkedEstimateForFeeder(activeFeeder, INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS);
+
+    const bundle = {
+      projectFormat: 'PESCO_UNIFIED_PROJECT_BUNDLE_V1',
+      exportedAt: new Date().toISOString(),
+      projectInfo: {
+        projectName: activeFeeder.schemeProjectName || activeFeeder.name,
+        feederName: activeFeeder.name,
+        workOrderNo: activeFeeder.workOrderNo || '26-14-71-26-042',
+        circle: activeFeeder.circle || 'Peshawar Circle-1',
+        division: activeFeeder.division || 'Cantt Division Peshawar',
+        subDivision: activeFeeder.subDivision || 'Gulbhar Sub-Division',
+        voltageCategory: activeCategory
+      },
+      part1_elrLossAnalysis: {
+        feederData: activeFeeder,
+        summary: currentSummary,
+        bifurcationConfig: bifurcationConfig
+      },
+      part2_lineCostEstimation: {
+        estimate: estimateToExport
+      }
+    };
+
+    const jsonStr = JSON.stringify(bundle, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const sanitizeName = (activeFeeder.name || 'project').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    link.download = `pesco_unified_project_${sanitizeName}_${activeFeeder.workOrderNo || '26147126042'}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
-      {/* 2-Row Header with Category Selector (Hidden when printing official reports) */}
-      <div className="print:hidden no-print">
+      {/* Header with Category & Navigation Controls (Sticky unscrollable at top, hidden when printing official reports) */}
+      <div className="sticky top-0 z-40 print:hidden no-print shadow-lg">
         <Header
           activeSystemModule={activeSystemModule}
           onSelectSystemModule={setActiveSystemModule}
@@ -427,12 +570,13 @@ export default function App() {
           summary={hasActiveInterventions ? proposedSummary : existingSummary}
           selectedJobTitle={selectedJobTitle}
           onSelectJobTitle={handleSelectJobTitle}
+          onSaveUnifiedProject={handleOpenSaveUnifiedProject}
         />
       </div>
 
       {/* Database Save Toast Notification */}
       {dbToast && (
-        <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200 print:hidden no-print">
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200 print:hidden no-print">
           <Database className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="font-medium">{dbToast}</span>
         </div>
@@ -445,12 +589,16 @@ export default function App() {
           <CostEstimationModule 
             currentJobTitle={selectedJobTitle}
             activeFeeder={activeFeeder}
+            existingSummary={existingSummary}
+            proposedSummary={proposedSummary}
+            hasActiveInterventions={hasActiveInterventions}
             activeSummary={hasActiveInterventions ? proposedSummary : existingSummary}
             bifurcationConfig={bifurcationConfig}
             onUpdateFeeder={handleSaveFeeder}
             onSwitchToAnalysis={() => setActiveSystemModule('elr_loss_analysis')}
             onSelectFeeder={handleSelectFeeder}
             availableFeeders={availableFeeders}
+            onSaveUnifiedProject={handleOpenSaveUnifiedProject}
           />
         ) : (
           <>
@@ -459,6 +607,8 @@ export default function App() {
               summary={hasActiveInterventions ? proposedSummary : existingSummary}
               feeder={activeFeeder}
               isProposedScenario={hasActiveInterventions}
+              onSaveUnifiedProject={handleOpenSaveUnifiedProject}
+              onOpenCostEstimation={() => setActiveSystemModule('line_cost_estimation')}
             />
 
             {/* What-If Active Banner */}
@@ -492,6 +642,8 @@ export default function App() {
                   onUpdateTransformerKva={(kva) => setActiveTransformerKva(kva)}
                   onOpenDatabase={() => setIsLocalDbOpen(true)}
                   onSelectCategory={handleSelectCategory}
+                  onOpenLinkedCostEstimate={() => setActiveSystemModule('line_cost_estimation')}
+                  onSaveUnifiedProject={handleOpenSaveUnifiedProject}
                 />
               </div>
             )}
@@ -692,6 +844,16 @@ export default function App() {
             ? (hasActiveInterventions ? proposedSummary : existingSummary).segmentResults.find(s => s.toNodeId === inspectedNode.id)
             : undefined
         }
+      />
+
+      <SaveUnifiedProjectModal
+        isOpen={isSaveUnifiedOpen}
+        onClose={() => setIsSaveUnifiedOpen(false)}
+        feeder={activeFeeder}
+        summary={hasActiveInterventions ? proposedSummary : existingSummary}
+        estimate={currentLinkedEstimate}
+        onConfirmSave={handleConfirmSaveUnifiedProject}
+        onExportProjectFile={handleExportUnifiedProjectFile}
       />
     </div>
   );

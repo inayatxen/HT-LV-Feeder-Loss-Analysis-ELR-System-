@@ -3,41 +3,119 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CostEstimateRecord } from '../../types/costEstimation';
-import { Calculator, Printer, FileText, CheckCircle2, AlertTriangle, Layers, Info, Zap, ShieldCheck } from 'lucide-react';
+import { FeederData, FeederAnalysisSummary } from '../../types/feeder';
+import { Calculator, Printer, FileText, CheckCircle2, AlertTriangle, Layers, Info, Zap, ShieldCheck, Link2, Save, RefreshCw } from 'lucide-react';
 import { JustificationSlipPrintModal } from './JustificationSlipPrintModal';
 import { format11DigitWorkOrder, parse11DigitWorkOrder, generate11DigitWorkOrder } from '../../utils/costEngine';
 
 interface JustificationSlipViewProps {
   estimates: CostEstimateRecord[];
+  activeFeeder?: FeederData;
+  existingSummary?: FeederAnalysisSummary;
+  proposedSummary?: FeederAnalysisSummary;
+  linkedEstimate?: CostEstimateRecord | null;
+  onSaveUnifiedProject?: () => void;
 }
 
-export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ estimates }) => {
+export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ 
+  estimates,
+  activeFeeder,
+  existingSummary,
+  proposedSummary,
+  linkedEstimate: incomingLinkedEstimate,
+  onSaveUnifiedProject
+}) => {
   const [showPrintModal, setShowPrintModal] = useState<boolean>(false);
-  // Selected Estimate linkage
-  const [selectedEstimateId, setSelectedEstimateId] = useState<string>('default');
-  const [useLinkedCost, setUseLinkedCost] = useState<boolean>(true);
-  const [manualProjectCost, setManualProjectCost] = useState<number>(1769032);
-  const [manualWorkOrderNo, setManualWorkOrderNo] = useState<string>('26147126042');
+  const [syncToast, setSyncToast] = useState<string>('');
+  
+  // Find tied estimate
+  const tiedEstimate = 
+    incomingLinkedEstimate ||
+    estimates.find(e => activeFeeder?.linkedEstimateId && e.id === activeFeeder.linkedEstimateId) ||
+    estimates.find(e => activeFeeder && e.id === `est-elr-${activeFeeder.id}`) ||
+    estimates.find(e => activeFeeder && e.id.includes(activeFeeder.id)) ||
+    estimates.find(e => activeFeeder && e.projectInfo.feederName?.trim().toLowerCase() === activeFeeder.name?.trim().toLowerCase()) ||
+    estimates[0] ||
+    null;
 
-  // Section 1: Line Losses (Proposal A)
-  const [existingLosses5Yrs, setExistingLosses5Yrs] = useState<number>(12308.9);
-  const [proposalALosses, setProposalALosses] = useState<number>(8745.1);
+  // Selected Estimate linkage
+  const [selectedEstimateId, setSelectedEstimateId] = useState<string>(tiedEstimate?.id || 'default');
+  const [useLinkedCost, setUseLinkedCost] = useState<boolean>(true);
+  const [manualProjectCost, setManualProjectCost] = useState<number>(tiedEstimate?.charges?.grandTotal || 1769032);
+  const [manualWorkOrderNo, setManualWorkOrderNo] = useState<string>(activeFeeder?.workOrderNo || '26147126042');
+
+  // Section 1: Line Losses (Proposal A) - 5-Year total kWh
+  const baseAnnualLoss = existingSummary?.annualEnergyLossKwh || 2461.78;
+  const propAnnualLoss = proposedSummary?.annualEnergyLossKwh || (baseAnnualLoss * 0.71);
+  const [existingLosses5Yrs, setExistingLosses5Yrs] = useState<number>(Number((baseAnnualLoss * 5).toFixed(1)));
+  const [proposalALosses, setProposalALosses] = useState<number>(Number((propAnnualLoss * 5).toFixed(1)));
   const [proposalBLosses, setProposalBLosses] = useState<number>(0);
   const [proposalCLosses, setProposalCLosses] = useState<number>(0);
   const [proposalDLosses, setProposalDLosses] = useState<number>(0);
-  const [energyRateA, setEnergyRateA] = useState<number>(24.83); // Rs. per kWh
+  const [energyRateA, setEnergyRateA] = useState<number>(activeFeeder?.tariffPerKwh || 24.83); // Rs. per kWh
 
   // Section 2: Transformer Loading & Peak Saving (Proposal B / Augmentation)
-  const [existingTrfRating, setExistingTrfRating] = useState<number>(100); // kVA
-  const [trfLoadingPresent, setTrfLoadingPresent] = useState<number>(119); // %
-  const [trfLoading5Yrs, setTrfLoading5Yrs] = useState<number>(152); // %
-  const [loadingAboveRated5Yrs, setLoadingAboveRated5Yrs] = useState<number>(52); // %
+  const [existingTrfRating, setExistingTrfRating] = useState<number>(activeFeeder?.existingTransformerKva || 100); // kVA
+  const [trfLoadingPresent, setTrfLoadingPresent] = useState<number>(existingSummary?.existingTransformerLoadingPercent || 119); // %
+  const [trfLoading5Yrs, setTrfLoading5Yrs] = useState<number>(existingSummary?.proposedTransformerLoadingPercent || 152); // %
+  const [loadingAboveRated5Yrs, setLoadingAboveRated5Yrs] = useState<number>(Math.max(0, (existingSummary?.existingTransformerLoadingPercent || 119) - 100)); // %
   const [peakKwSaving, setPeakKwSaving] = useState<number>(41.6); // kW
   const [transformerAnnualKwh, setTransformerAnnualKwh] = useState<number>(109324.8); // kWh
   const [benefitRateB, setBenefitRateB] = useState<number>(4.39); // Rs. per kWh
   const [studyPeriodYears, setStudyPeriodYears] = useState<number>(5); // years
+
+  // Synchronize when active feeder or tied models change
+  useEffect(() => {
+    if (tiedEstimate) {
+      setSelectedEstimateId(tiedEstimate.id);
+      setManualProjectCost(tiedEstimate.charges.grandTotal);
+    }
+    if (activeFeeder) {
+      setManualWorkOrderNo(activeFeeder.workOrderNo || '26147126042');
+      setExistingTrfRating(activeFeeder.existingTransformerKva || 100);
+      setEnergyRateA(activeFeeder.tariffPerKwh || 24.83);
+    }
+    if (existingSummary) {
+      const e5 = Number(((existingSummary.annualEnergyLossKwh || 2461.78) * 5).toFixed(1));
+      setExistingLosses5Yrs(e5);
+      setTrfLoadingPresent(existingSummary.existingTransformerLoadingPercent || 119);
+      setTrfLoading5Yrs(existingSummary.proposedTransformerLoadingPercent || 152);
+      setLoadingAboveRated5Yrs(Math.max(0, (existingSummary.existingTransformerLoadingPercent || 119) - 100));
+    }
+    if (proposedSummary) {
+      const p5 = Number(((proposedSummary.annualEnergyLossKwh || 1749.02) * 5).toFixed(1));
+      setProposalALosses(p5);
+    }
+    setUseLinkedCost(true);
+  }, [activeFeeder?.id, existingSummary?.annualEnergyLossKwh, proposedSummary?.annualEnergyLossKwh, tiedEstimate?.id]);
+
+  const handleSyncFromTiedModels = () => {
+    if (tiedEstimate) {
+      setSelectedEstimateId(tiedEstimate.id);
+      setManualProjectCost(tiedEstimate.charges.grandTotal);
+    }
+    if (activeFeeder) {
+      setManualWorkOrderNo(activeFeeder.workOrderNo || '26147126042');
+      setExistingTrfRating(activeFeeder.existingTransformerKva || 100);
+      setEnergyRateA(activeFeeder.tariffPerKwh || 24.83);
+    }
+    if (existingSummary) {
+      const e5 = Number(((existingSummary.annualEnergyLossKwh || 2461.78) * 5).toFixed(1));
+      setExistingLosses5Yrs(e5);
+      setTrfLoadingPresent(existingSummary.existingTransformerLoadingPercent || 119);
+      setTrfLoading5Yrs(existingSummary.proposedTransformerLoadingPercent || 152);
+      setLoadingAboveRated5Yrs(Math.max(0, (existingSummary.existingTransformerLoadingPercent || 119) - 100));
+    }
+    if (proposedSummary) {
+      const p5 = Number(((proposedSummary.annualEnergyLossKwh || 1749.02) * 5).toFixed(1));
+      setProposalALosses(p5);
+    }
+    setUseLinkedCost(true);
+    setSyncToast(`✅ Values updated directly from tied ELR Feeder "${activeFeeder?.name || 'Feeder'}" and Cost Estimate`);
+    setTimeout(() => setSyncToast(''), 4500);
+  };
 
   // Linked cost & Work Order
   const linkedEstimate = estimates.find(e => e.id === selectedEstimateId);
@@ -68,6 +146,14 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       
+      {/* Toast Notification */}
+      {syncToast && (
+        <div className="fixed top-24 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="font-medium">{syncToast}</span>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
@@ -83,7 +169,29 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({ es
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {onSaveUnifiedProject && (
+            <button
+              type="button"
+              onClick={onSaveUnifiedProject}
+              className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-md transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
+              title="Save both 1. ELR Loss Analysis and 2. Line Cost Estimation together as One Project"
+            >
+              <Save className="w-3.5 h-3.5 stroke-[2.5]" />
+              <span>Save Project (1. ELR + 2. Cost)</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleSyncFromTiedModels}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-slate-900 bg-amber-400 hover:bg-amber-300 rounded-xl shadow-xs transition-all cursor-pointer ring-1 ring-amber-300 active:scale-95"
+            title="Take values from tied Feeder Loss model and Cost Estimation"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-slate-950" />
+            <span>Take Tied Values</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setShowPrintModal(true)}

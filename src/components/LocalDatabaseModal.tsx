@@ -119,7 +119,8 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
         annualEnergyLossKwh: activeSummary.annualEnergyLossKwh,
         isTransformerOverloaded: activeSummary.isTransformerOverloaded,
         feederData: JSON.parse(JSON.stringify(activeFeeder)),
-        summary: JSON.parse(JSON.stringify(activeSummary))
+        summary: JSON.parse(JSON.stringify(activeSummary)),
+        linkedEstimate: activeFeeder.linkedEstimate ? JSON.parse(JSON.stringify(activeFeeder.linkedEstimate)) : undefined
       };
 
       await saveAnalysisSnapshotToDb(newSnapshot);
@@ -459,6 +460,11 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                           {snap.feederData?.workOrderNo && (
                             <span className="text-[10px] font-mono px-2 py-0.5 rounded font-bold bg-blue-100 text-blue-900 border border-blue-200">
                               WO: {snap.feederData.workOrderNo}
+                            </span>
+                          )}
+                          {snap.linkedEstimate && (
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+                              🔗 2-in-1: ELR + Cost Est. (Rs. {snap.linkedEstimate.charges?.grandTotal?.toLocaleString() || 0})
                             </span>
                           )}
                         </div>

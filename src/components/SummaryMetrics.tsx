@@ -12,7 +12,10 @@ import {
   DollarSign, 
   ShieldCheck, 
   CheckCircle2,
-  Clock
+  Clock,
+  Save,
+  Calculator,
+  Link2
 } from 'lucide-react';
 import { FeederAnalysisSummary, FeederData } from '../types/feeder';
 
@@ -20,12 +23,16 @@ interface SummaryMetricsProps {
   summary: FeederAnalysisSummary;
   feeder: FeederData;
   isProposedScenario?: boolean;
+  onSaveUnifiedProject?: () => void;
+  onOpenCostEstimation?: () => void;
 }
 
 export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
   summary,
   feeder,
-  isProposedScenario = false
+  isProposedScenario = false,
+  onSaveUnifiedProject,
+  onOpenCostEstimation
 }) => {
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || summary.baseVoltage >= 1000;
   const isOverloaded = isHtLine ? summary.worstVoltageDropPercent > 5.0 : summary.isTransformerOverloaded;
@@ -109,6 +116,35 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
               </div>
             </div>
           )}
+
+          {/* Quick Unified Project & Cost Estimation Actions */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {onSaveUnifiedProject && (
+              <button
+                type="button"
+                onClick={onSaveUnifiedProject}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg shadow-xs transition-all whitespace-nowrap cursor-pointer ring-1 ring-emerald-300 active:scale-95"
+                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+              >
+                <Save className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
+                <span className="hidden sm:inline">Save as One Project (Analysis & Cost)</span>
+                <span className="sm:hidden">Save Project</span>
+              </button>
+            )}
+
+            {onOpenCostEstimation && (
+              <button
+                type="button"
+                onClick={onOpenCostEstimation}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-blue-900 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg shadow-xs transition-all whitespace-nowrap cursor-pointer active:scale-95"
+                title="Open and view linked Line Extension Cost Estimate (CSR-2026)"
+              >
+                <Calculator className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Linked Cost Estimate</span>
+                <span className="sm:hidden">Cost Est.</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

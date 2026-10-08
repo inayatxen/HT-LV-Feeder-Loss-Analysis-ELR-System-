@@ -71,6 +71,7 @@ interface EstimateFormViewProps {
   onSaveEstimate: (estimate: CostEstimateRecord) => void;
   onCancel: () => void;
   onPrintEstimate: (estimate: CostEstimateRecord, mode?: 'preview' | 'print' | 'pdf') => void;
+  onSaveUnifiedProject?: () => void;
 }
 
 export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
@@ -82,7 +83,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   userName,
   onSaveEstimate,
   onCancel,
-  onPrintEstimate
+  onPrintEstimate,
+  onSaveUnifiedProject
 }) => {
   // 1. Project Information State
   const [projectInfo, setProjectInfo] = useState({
@@ -1086,6 +1088,21 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {onSaveUnifiedProject && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleSave(status);
+                  onSaveUnifiedProject();
+                }}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg shadow-sm transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
+                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+              >
+                <Save className="w-4 h-4 stroke-[2.5]" />
+                <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => handleSave(status)}
@@ -2941,6 +2958,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 {status}
               </span>
             </div>
+
+            {onSaveUnifiedProject && (
+              <div className="pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSave(status);
+                    onSaveUnifiedProject();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-xs shadow-md transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
+                  title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                >
+                  <Save className="w-4 h-4 stroke-[2.5]" />
+                  <span>Save as One Project (Analysis & Cost)</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
