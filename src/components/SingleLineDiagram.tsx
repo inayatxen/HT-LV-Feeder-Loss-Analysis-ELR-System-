@@ -383,6 +383,7 @@ export const SingleLineDiagram: React.FC<SingleLineDiagramProps> = ({
           feeder={feeder}
           summary={summary}
           existingSummary={existingSummary}
+          bifurcationConfig={bifurcationConfig}
           scheme={selectedScheme}
           theme="light"
           showMetrics={true}

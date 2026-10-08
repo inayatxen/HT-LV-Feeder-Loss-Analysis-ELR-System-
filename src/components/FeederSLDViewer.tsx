@@ -19,6 +19,7 @@ interface FeederSLDViewerProps {
   feeder: FeederData;
   summary: FeederAnalysisSummary;
   existingSummary?: FeederAnalysisSummary;
+  bifurcationConfig?: BifurcationConfig;
   scheme?: SLDSchemeType;
   title?: string;
   subtitle?: string;
@@ -33,6 +34,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
   feeder,
   summary,
   existingSummary,
+  bifurcationConfig,
   scheme = 'combined',
   title,
   subtitle,
@@ -150,6 +152,10 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
       if (isProp2) return s.fedByTransformer === 'T2';
       return true;
     });
+
+    const htExtensionSpans = bifurcationConfig && bifurcationConfig.htExtensionMeters 
+      ? (bifurcationConfig.htExtensionMeters / 50).toFixed(1) 
+      : null;
 
     const visibleLengthM = activeSchemeSegs.reduce((sum, s) => sum + s.lengthMeters, 0);
     const visibleLossKw = activeSchemeSegs.reduce((sum, s) => sum + s.lineLossKw, 0);
@@ -398,6 +404,46 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                 </g>
               );
             })}
+
+            {/* Render HT Line Extension */}
+            {isProp2 && htExtensionSpans && (
+              <g>
+                {/* HT Line - Spans */}
+                <line
+                  x1={layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0}
+                  y1={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                  x2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 50)}
+                  y2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                  stroke="#059669"
+                  strokeWidth="3"
+                  strokeDasharray="4 4"
+                />
+                
+                {/* Poles for each span */}
+                {Array.from({ length: Math.floor(Number(htExtensionSpans)) }).map((_, i) => (
+                  <circle
+                    key={i}
+                    cx={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (i + 1) * 50}
+                    cy={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                    r="4"
+                    fill="#ffffff"
+                    stroke="#059669"
+                    strokeWidth="1.5"
+                  />
+                ))}
+
+                <text
+                  x={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 25)}
+                  y={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 35}
+                  textAnchor="middle"
+                  fill="#059669"
+                  fontSize="8"
+                  fontWeight="bold"
+                >
+                  {htExtensionSpans} Spans HT Extension
+                </text>
+              </g>
+            )}
 
             {/* Render Nodes (Poles & Substations) */}
             {layout.nodes.map(node => {
