@@ -95,6 +95,24 @@ export const STANDARD_CONDUCTORS: Record<string, Conductor> = {
     ampacity: 270,
     type: 'ABC',
     description: 'High capacity Aerial Bundled Cable for modern urban loss reduction schemes.'
+  },
+  'BEAR': {
+    code: 'BEAR',
+    name: 'ACSR Bear (250 mm²)',
+    resistancePerKm: 0.110,
+    reactancePerKm: 0.290,
+    ampacity: 480,
+    type: 'ACSR',
+    description: 'Large capacity conductor for major 11kV distribution trunk feeders.'
+  },
+  'GOAT': {
+    code: 'GOAT',
+    name: 'ACSR Goat (300 mm²)',
+    resistancePerKm: 0.095,
+    reactancePerKm: 0.280,
+    ampacity: 550,
+    type: 'ACSR',
+    description: 'Very large capacity conductor for HT mains.'
   }
 };
 

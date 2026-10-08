@@ -104,9 +104,11 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
       customConductors: activeConductors,
       customCapacitors: activeCapacitors,
       t1TransformerOverrideKva: activeTransformerKva,
-      loadFactorOverride: activeLoadFactor
+      loadFactorOverride: activeLoadFactor,
+      htExtensionMeters: bifurcationConfig.htExtensionMeters,
+      htExtensionConductorCode: bifurcationConfig.htExtensionConductorCode
     });
-  }, [feeder, bifurcationConfig, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor]);
+  }, [feeder, bifurcationConfig, activeConductors, activeCapacitors, activeTransformerKva, activeLoadFactor, bifurcationConfig.htExtensionMeters, bifurcationConfig.htExtensionConductorCode]);
 
   const hasChanges = 
     (!isHtLine && activeTransformerKva !== feeder.existingTransformerKva) ||
@@ -124,7 +126,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   return (
     <div className="space-y-6">
       {/* Workbench Header & Quick Upgrade Presets */}
-      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="sticky top-0 z-10 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 mb-1">
             <SlidersHorizontal className="w-4 h-4" />

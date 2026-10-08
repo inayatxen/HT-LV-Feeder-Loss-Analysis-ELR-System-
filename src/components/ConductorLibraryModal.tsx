@@ -17,8 +17,13 @@ export const ConductorLibraryModal: React.FC<ConductorLibraryModalProps> = ({
   onClose
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
+  const [conductors, setConductors] = useState(CONDUCTOR_LIST);
 
   if (!isOpen) return null;
+
+  const handleAmpacityChange = (code: string, newAmpacity: number) => {
+    setConductors(conductors.map(c => c.code === code ? { ...c, ampacity: newAmpacity } : c));
+  };
 
   return (
     <div className={`fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 backdrop-blur-xs flex items-center justify-center ${isMaximized ? 'p-0' : 'p-3 sm:p-4'}`}>
@@ -67,7 +72,7 @@ export const ConductorLibraryModal: React.FC<ConductorLibraryModalProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
-                {CONDUCTOR_LIST.map(cond => (
+                {conductors.map(cond => (
                   <tr key={cond.code} className="hover:bg-slate-50">
                     <td className="py-2.5 px-3 font-bold text-slate-900 font-sans">
                       <span className="px-2 py-0.5 rounded bg-slate-100 font-mono text-xs border border-slate-200">
@@ -89,7 +94,12 @@ export const ConductorLibraryModal: React.FC<ConductorLibraryModalProps> = ({
                       {cond.reactancePerKm.toFixed(3)}
                     </td>
                     <td className="py-2.5 px-3 text-right font-bold text-amber-600">
-                      {cond.ampacity} A
+                      <input 
+                        type="number" 
+                        value={cond.ampacity} 
+                        onChange={(e) => handleAmpacityChange(cond.code, Number(e.target.value))}
+                        className="w-16 font-bold text-amber-600 border border-slate-300 rounded px-1 text-right"
+                      /> A
                     </td>
                     <td className="py-2.5 px-4 font-sans text-slate-600 text-[11px]">
                       {cond.description}
