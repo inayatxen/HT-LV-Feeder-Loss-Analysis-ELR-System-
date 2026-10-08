@@ -20,6 +20,7 @@ interface FeederSLDViewerProps {
   summary: FeederAnalysisSummary;
   existingSummary?: FeederAnalysisSummary;
   bifurcationConfig?: BifurcationConfig;
+  onUpdateBifurcation?: (config: BifurcationConfig) => void;
   scheme?: SLDSchemeType;
   title?: string;
   subtitle?: string;
@@ -35,6 +36,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
   summary,
   existingSummary,
   bifurcationConfig,
+  onUpdateBifurcation,
   scheme = 'combined',
   title,
   subtitle,
@@ -47,6 +49,29 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
   const layout = useMemo(() => {
     return calculateNonOverlappingSLDLayout(feeder);
   }, [feeder]);
+
+  const [isDragging, setIsDragging] = React.useState(false);
+  const svgRef = React.useRef<SVGSVGElement>(null);
+
+  const handleDrag = (e: React.MouseEvent) => {
+    if (!isDragging || !onUpdateBifurcation || !bifurcationConfig) return;
+    
+    const transformerNode = layout.nodes.find(n => n.id === proposedTransformerNodeId);
+    if (!transformerNode) return;
+
+    if (!svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    
+    // Scale transformation (SVG viewBox vs client rect)
+    const svgPoint = (mouseX - rect.left) * (layout.viewBox.split(' ')[2] / rect.width);
+    const newLength = Math.max(0, (transformerNode.x - svgPoint));
+
+    onUpdateBifurcation({
+        ...bifurcationConfig,
+        htExtensionMeters: Math.round(newLength / 50) * 50
+    });
+  };
 
   const isHt = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
 
@@ -425,10 +450,10 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                     key={i}
                     cx={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (i + 1) * 50}
                     cy={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
-                    r="4"
+                    r="5"
                     fill="#ffffff"
                     stroke="#059669"
-                    strokeWidth="1.5"
+                    strokeWidth="2"
                   />
                 ))}
 
