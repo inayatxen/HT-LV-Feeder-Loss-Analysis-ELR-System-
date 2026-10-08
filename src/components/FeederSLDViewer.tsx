@@ -406,52 +406,44 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             })}
 
             {/* Render HT Line Extension */}
-            {isProp2 && htExtensionSpans && (() => {
-              const transformerNode = layout.nodes.find(n => n.id === proposedTransformerNodeId);
-              const tX = transformerNode?.x || 0;
-              const tY = transformerNode?.y || 0;
-              const yOffset = tY < (layout.minY + 80) ? 35 : -35;
-              const extensionY = tY + yOffset;
-              
-              return (
-                <g>
-                  {/* HT Line - Spans */}
-                  <line
-                    x1={tX}
-                    y1={extensionY}
-                    x2={tX - (Number(htExtensionSpans) * 50)}
-                    y2={extensionY}
+            {isProp2 && htExtensionSpans && (
+              <g>
+                {/* HT Line - Spans */}
+                <line
+                  x1={layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0}
+                  y1={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                  x2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 50)}
+                  y2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                  stroke="#059669"
+                  strokeWidth="3"
+                  strokeDasharray="4 4"
+                />
+                
+                {/* Poles for each span */}
+                {Array.from({ length: Math.floor(Number(htExtensionSpans)) }).map((_, i) => (
+                  <circle
+                    key={i}
+                    cx={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (i + 1) * 50}
+                    cy={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
+                    r="4"
+                    fill="#ffffff"
                     stroke="#059669"
-                    strokeWidth="3"
-                    strokeDasharray="4 4"
+                    strokeWidth="1.5"
                   />
-                  
-                  {/* Poles for each span */}
-                  {Array.from({ length: Math.floor(Number(htExtensionSpans)) }).map((_, i) => (
-                    <circle
-                      key={i}
-                      cx={tX - (i + 1) * 50}
-                      cy={extensionY}
-                      r="4"
-                      fill="#ffffff"
-                      stroke="#059669"
-                      strokeWidth="1.5"
-                    />
-                  ))}
+                ))}
 
-                  <text
-                    x={tX - (Number(htExtensionSpans) * 25)}
-                    y={extensionY + (yOffset > 0 ? 20 : -10)}
-                    textAnchor="middle"
-                    fill="#059669"
-                    fontSize="8"
-                    fontWeight="bold"
-                  >
-                    {htExtensionSpans} Spans HT Extension
-                  </text>
-                </g>
-              );
-            })()}
+                <text
+                  x={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 25)}
+                  y={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 35}
+                  textAnchor="middle"
+                  fill="#059669"
+                  fontSize="8"
+                  fontWeight="bold"
+                >
+                  {htExtensionSpans} Spans HT Extension
+                </text>
+              </g>
+            )}
 
             {/* Render Nodes (Poles & Substations) */}
             {layout.nodes.map(node => {
@@ -473,9 +465,17 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   {/* Transformer Node / Node 0 Substation Bus (Active in Exist, Proposed-1, Combined) */}
                   {(node.isTransformerNode || node.id === '0.0') && !isProp2 ? (
                     <g>
+                      {/* HT Tap line (only for HT) */}
+                      {isHt && (
+                        <line 
+                          x1="0" y1="0" x2="0" y2="-24" 
+                          stroke={isHt ? "#3b82f6" : "#047857"}
+                          strokeWidth="2"
+                        />
+                      )}
                       <rect
                         x="-24"
-                        y="-24"
+                        y={isHt ? "-48" : "-24"} // Lift box up for HT to show tap
                         width="48"
                         height="48"
                         rx="6"
@@ -483,10 +483,10 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                         stroke={isHt ? "#3b82f6" : "#047857"}
                         strokeWidth="2"
                       />
-                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-14" />
+                      <Zap className="w-5 h-5 text-amber-300" x="-10" y={isHt ? "-38" : "-14"} />
                       <text
                         x="0"
-                        y="6"
+                        y={isHt ? "-18" : "6"}
                         textAnchor="middle"
                         fill="#ffffff"
                         fontSize="7"
@@ -497,7 +497,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                       </text>
                       <text
                         x="0"
-                        y="14"
+                        y={isHt ? "-10" : "14"}
                         textAnchor="middle"
                         fill={isHt ? "#bfdbfe" : "#a7f3d0"}
                         fontSize="6"
