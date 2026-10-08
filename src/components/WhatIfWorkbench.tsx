@@ -278,6 +278,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     gridSourceType: bifurcationConfig.gridSourceType || 'SAME_GRID',
                     extensionLengthKm: bifurcationConfig.extensionLengthKm || 2.0,
                     extensionConductorCode: bifurcationConfig.extensionConductorCode || 'DOG',
+                    htExtensionMeters: bifurcationConfig.htExtensionMeters || 0,
+                    htExtensionConductorCode: bifurcationConfig.htExtensionConductorCode || 'DOG',
                     line1InjectedVoltage: bifurcationConfig.line1InjectedVoltage || currentInjectedVoltage,
                     line2InjectedVoltage: bifurcationConfig.line2InjectedVoltage || 11000
                   })}
@@ -315,6 +317,43 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     ))}
                   </select>
                 </div>
+
+                {!isHtLine && (
+                  <div className="bg-amber-100/60 p-2 rounded-lg border border-amber-200 space-y-1.5 mt-2">
+                    <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block">
+                      Proposed HT Line Extension for T-2
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-600 block">Length (m):</label>
+                        <input
+                          type="number"
+                          value={bifurcationConfig.htExtensionMeters || 0}
+                          onChange={(e) => onSetBifurcation({
+                            ...bifurcationConfig,
+                            htExtensionMeters: parseFloat(e.target.value) || 0
+                          })}
+                          className="w-full bg-white border border-amber-300 rounded px-2 py-0.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-600 block">Conductor:</label>
+                        <select
+                          value={bifurcationConfig.htExtensionConductorCode || 'DOG'}
+                          onChange={(e) => onSetBifurcation({
+                            ...bifurcationConfig,
+                            htExtensionConductorCode: e.target.value
+                          })}
+                          className="w-full bg-white border border-amber-300 rounded px-2 py-0.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
+                        >
+                          {CONDUCTOR_LIST.map(c => (
+                            <option key={c.code} value={c.code}>{c.code}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {isHtLine ? (
                   <>

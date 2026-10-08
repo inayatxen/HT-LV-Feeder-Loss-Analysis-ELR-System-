@@ -424,6 +424,12 @@ export function calculateFeederAnalysis(
     const extLenKm = (isHt && options?.bifurcation?.extensionLengthKm) ? options.bifurcation.extensionLengthKm : 0;
     const extCondCode = (isHt && options?.bifurcation?.extensionConductorCode) ? options.bifurcation.extensionConductorCode : 'DOG';
     const extCond = getConductor(extCondCode);
+    
+    // Propose HT Line extension for T-2 (LT Bifurcation)
+    const ltHtExtMeters = (!isHt && options?.bifurcation?.htExtensionMeters) ? options.bifurcation.htExtensionMeters : 0;
+    const ltHtExtCondCode = (!isHt && options?.bifurcation?.htExtensionConductorCode) ? options.bifurcation.htExtensionConductorCode : 'DOG';
+    const ltHtExtCond = getConductor(ltHtExtCondCode);
+    
     const line2DemandKva = rootAggregateT2.totalKva;
     const line2CurrentAmps = (isHt && options?.bifurcation?.line2InjectedCurrentAmps && options.bifurcation.line2InjectedCurrentAmps > 0)
       ? options.bifurcation.line2InjectedCurrentAmps
@@ -441,6 +447,15 @@ export function calculateFeederAnalysis(
       const receivingAtBifurcation = line2Voltage - extensionDropVolts;
       nodeVoltages.set(bifurcationNodeId, receivingAtBifurcation);
       nodePercentDrops.set(bifurcationNodeId, extensionDropPct);
+    } else if (!isHt && ltHtExtMeters > 0) {
+      // LT Transformer HT extension loss (assume 11kV HT extension)
+      const L = ltHtExtMeters / 1000;
+      const Rext = ltHtExtCond.resistancePerKm * L;
+      // HT current at 11kV
+      const I_HT = (line2DemandKva * 1000) / (Math.sqrt(3) * 11000);
+      extensionLossKw = (3 * Math.pow(I_HT, 2) * Rext * 1.15) / 1000;
+      nodeVoltages.set(bifurcationNodeId, line2Voltage);
+      nodePercentDrops.set(bifurcationNodeId, 0.0);
     } else {
       nodeVoltages.set(bifurcationNodeId, line2Voltage);
       nodePercentDrops.set(bifurcationNodeId, 0.0);
@@ -528,7 +543,7 @@ export function calculateFeederAnalysis(
     .filter(s => s.fedByTransformer === 'T2')
     .reduce((acc, curr) => acc + curr.lineLossKw, 0);
 
-  const t2LineLossKw = isHt && isBifurcationActive ? (rawT2LineLossKw + extensionLossKw) : rawT2LineLossKw;
+  const t2LineLossKw = isBifurcationActive ? (rawT2LineLossKw + extensionLossKw) : rawT2LineLossKw;
   const totalLineLossKw = t1LineLossKw + t2LineLossKw;
 
   // Transformer Specifications & Loadings

@@ -148,6 +148,10 @@ export interface BifurcationConfig {
   extensionLengthKm?: number;                  // Length of new 11kV line from grid to point of line break (km)
   extensionConductorCode?: string;             // Conductor type for new line extension (e.g. 'DOG', 'PANTHER')
   
+  // Proposed HT Line extension for LT Transformer T-2:
+  htExtensionMeters?: number;                  // Proposed HT Line extension length in meters
+  htExtensionConductorCode?: string;           // Conductor type for this HT extension
+  
   // Independent Voltage & Current Injection per line from Grid side:
   line1InjectedVoltage?: number;               // Injected Line Voltage at Line 1 Grid Bay (e.g. 11000 V)
   line1InjectedCurrentAmps?: number;           // Injected / Measured Current for Line 1 (Amps)
