@@ -406,44 +406,52 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
             })}
 
             {/* Render HT Line Extension */}
-            {isProp2 && htExtensionSpans && (
-              <g>
-                {/* HT Line - Spans */}
-                <line
-                  x1={layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0}
-                  y1={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
-                  x2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 50)}
-                  y2={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
-                  stroke="#059669"
-                  strokeWidth="3"
-                  strokeDasharray="4 4"
-                />
-                
-                {/* Poles for each span */}
-                {Array.from({ length: Math.floor(Number(htExtensionSpans)) }).map((_, i) => (
-                  <circle
-                    key={i}
-                    cx={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (i + 1) * 50}
-                    cy={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 25}
-                    r="4"
-                    fill="#ffffff"
+            {isProp2 && htExtensionSpans && (() => {
+              const transformerNode = layout.nodes.find(n => n.id === proposedTransformerNodeId);
+              const tX = transformerNode?.x || 0;
+              const tY = transformerNode?.y || 0;
+              const yOffset = tY < (layout.minY + 80) ? 35 : -35;
+              const extensionY = tY + yOffset;
+              
+              return (
+                <g>
+                  {/* HT Line - Spans */}
+                  <line
+                    x1={tX}
+                    y1={extensionY}
+                    x2={tX - (Number(htExtensionSpans) * 50)}
+                    y2={extensionY}
                     stroke="#059669"
-                    strokeWidth="1.5"
+                    strokeWidth="3"
+                    strokeDasharray="4 4"
                   />
-                ))}
+                  
+                  {/* Poles for each span */}
+                  {Array.from({ length: Math.floor(Number(htExtensionSpans)) }).map((_, i) => (
+                    <circle
+                      key={i}
+                      cx={tX - (i + 1) * 50}
+                      cy={extensionY}
+                      r="4"
+                      fill="#ffffff"
+                      stroke="#059669"
+                      strokeWidth="1.5"
+                    />
+                  ))}
 
-                <text
-                  x={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.x || 0) - (Number(htExtensionSpans) * 25)}
-                  y={(layout.nodes.find(n => n.id === proposedTransformerNodeId)?.y || 0) - 35}
-                  textAnchor="middle"
-                  fill="#059669"
-                  fontSize="8"
-                  fontWeight="bold"
-                >
-                  {htExtensionSpans} Spans HT Extension
-                </text>
-              </g>
-            )}
+                  <text
+                    x={tX - (Number(htExtensionSpans) * 25)}
+                    y={extensionY + (yOffset > 0 ? 20 : -10)}
+                    textAnchor="middle"
+                    fill="#059669"
+                    fontSize="8"
+                    fontWeight="bold"
+                  >
+                    {htExtensionSpans} Spans HT Extension
+                  </text>
+                </g>
+              );
+            })()}
 
             {/* Render Nodes (Poles & Substations) */}
             {layout.nodes.map(node => {
