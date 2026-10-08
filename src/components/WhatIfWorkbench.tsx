@@ -377,21 +377,21 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                       
                       <div className="grid grid-cols-2 gap-1.5">
                         <div>
-                          <label className="text-[9px] font-bold text-slate-600 block">Length (km):</label>
+                          <label className="text-[9px] font-bold text-slate-600 block">Length (meters):</label>
                           <input
                             type="number"
-                            min="0.1"
-                            max="50"
-                            step="0.1"
-                            value={bifurcationConfig.extensionLengthKm !== undefined ? bifurcationConfig.extensionLengthKm : 2.0}
+                            min="100"
+                            max="50000"
+                            step="100"
+                            value={bifurcationConfig.extensionLengthKm !== undefined ? Math.round(bifurcationConfig.extensionLengthKm * 1000) : 2000}
                             onChange={(e) => onSetBifurcation({
                               ...bifurcationConfig,
-                              extensionLengthKm: parseFloat(e.target.value) || 0
+                              extensionLengthKm: (parseFloat(e.target.value) || 0) / 1000
                             })}
                             className="w-full bg-white border border-purple-300 rounded px-2 py-0.5 text-xs font-mono font-bold text-slate-900 focus:outline-none"
                           />
                           <span className="text-[9px] text-purple-800 font-mono">
-                            {Math.round((bifurcationConfig.extensionLengthKm || 2.0) * 1000)} meters
+                            {(bifurcationConfig.extensionLengthKm || 2.0).toFixed(2)} km
                           </span>
                         </div>
 
