@@ -465,17 +465,9 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                   {/* Transformer Node / Node 0 Substation Bus (Active in Exist, Proposed-1, Combined) */}
                   {(node.isTransformerNode || node.id === '0.0') && !isProp2 ? (
                     <g>
-                      {/* HT Tap line (only for HT) */}
-                      {isHt && (
-                        <line 
-                          x1="0" y1="0" x2="0" y2="-24" 
-                          stroke={isHt ? "#3b82f6" : "#047857"}
-                          strokeWidth="2"
-                        />
-                      )}
                       <rect
                         x="-24"
-                        y={isHt ? "-48" : "-24"} // Lift box up for HT to show tap
+                        y="-24"
                         width="48"
                         height="48"
                         rx="6"
@@ -483,10 +475,10 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                         stroke={isHt ? "#3b82f6" : "#047857"}
                         strokeWidth="2"
                       />
-                      <Zap className="w-5 h-5 text-amber-300" x="-10" y={isHt ? "-38" : "-14"} />
+                      <Zap className="w-5 h-5 text-amber-300" x="-10" y="-14" />
                       <text
                         x="0"
-                        y={isHt ? "-18" : "6"}
+                        y="6"
                         textAnchor="middle"
                         fill="#ffffff"
                         fontSize="7"
@@ -497,7 +489,7 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                       </text>
                       <text
                         x="0"
-                        y={isHt ? "-10" : "14"}
+                        y="14"
                         textAnchor="middle"
                         fill={isHt ? "#bfdbfe" : "#a7f3d0"}
                         fontSize="6"
