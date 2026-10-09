@@ -734,6 +734,7 @@ export default function App() {
                   onApplyPackage={handleApplyPackage}
                   onReset={handleResetInterventions}
                   onOpenPrintReport={() => setIsReportOpen(true)}
+                  onOpenCostEstimation={() => setActiveSystemModule('line_cost_estimation')}
                 />
               </div>
             )}

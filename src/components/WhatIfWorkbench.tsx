@@ -27,12 +27,17 @@ import {
   Split,
   Layers,
   Flame,
-  Printer
+  Printer,
+  Clock,
+  DollarSign,
+  Calculator
 } from 'lucide-react';
 import { CONDUCTOR_LIST } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
 import { calculateBifurcationFourStatements } from '../utils/elrEngine';
 import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
+import { SensitivityAnalysisSection } from './SensitivityAnalysisSection';
+import { EconomicAnalysisSection } from './EconomicAnalysisSection';
 
 interface WhatIfWorkbenchProps {
   feeder: FeederData;
@@ -53,6 +58,7 @@ interface WhatIfWorkbenchProps {
   onApplyPackage: (pkg: 'standard' | 'max' | 'capacitor_only' | 'bifurcation') => void;
   onReset: () => void;
   onOpenPrintReport?: () => void;
+  onOpenCostEstimation?: () => void;
 }
 
 export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
@@ -73,7 +79,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   onSetBifurcation,
   onApplyPackage,
   onReset,
-  onOpenPrintReport
+  onOpenPrintReport,
+  onOpenCostEstimation
 }) => {
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
@@ -81,6 +88,39 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   const kwSaved = Math.max(0, existingSummary.totalLineLossKw - proposedSummary.totalLineLossKw);
   const kwhSaved = Math.max(0, existingSummary.annualEnergyLossKwh - proposedSummary.annualEnergyLossKwh);
   const moneySaved = Math.round(kwhSaved * tariff);
+
+  // Quick dynamic CapEx and Payback period for the top KPI deck
+  const quickCapexEstimate = useMemo(() => {
+    let cost = 0;
+    if (bifurcationConfig.enabled) {
+      if (isHtLine) {
+        cost += (bifurcationConfig.extensionLengthKm || 2.0) * 1450000 + 850000;
+      } else {
+        const trCost = (bifurcationConfig.transformerCapacityKva || 100) >= 200 ? 1150000 : 680000;
+        const htCost = ((bifurcationConfig.htExtensionMeters || 0) / 1000) * 1250000;
+        cost += trCost + 245000 + htCost;
+      }
+    }
+    if (!isHtLine && activeTransformerKva !== (feeder.existingTransformerKva || 100)) {
+      cost += 510000;
+    }
+    const reconSpans = feeder.segments.filter(s => activeConductors[s.id] && activeConductors[s.id] !== s.conductorCode);
+    if (reconSpans.length > 0) {
+      const lenKm = reconSpans.reduce((acc, s) => acc + s.lengthKm, 0);
+      cost += lenKm * 480000;
+    }
+    const capKvar = Object.values(activeCapacitors).reduce((acc, v) => acc + (v || 0), 0);
+    if (capKvar > 0) {
+      cost += capKvar * 12500;
+    }
+    if (cost > 0) cost *= 1.08;
+    return Math.round(cost);
+  }, [bifurcationConfig, isHtLine, activeTransformerKva, feeder, activeConductors, activeCapacitors]);
+
+  const quickPaybackMonths = useMemo(() => {
+    if (moneySaved <= 0 || quickCapexEstimate <= 0) return null;
+    return (quickCapexEstimate / (moneySaved / 12));
+  }, [quickCapexEstimate, moneySaved]);
 
   const currentLf = activeLoadFactor !== undefined ? activeLoadFactor : (feeder.loadFactor || 0.60);
 
@@ -217,7 +257,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
       </div>
 
       {/* Savings Metric Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-xl">
           <span className="text-xs text-emerald-800 font-semibold uppercase tracking-wider block">
             Power Loss Reduction
@@ -253,6 +293,25 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
             At statutory tariff of Rs. {tariff}/kWh
           </span>
         </div>
+
+        <a 
+          href="#economic-analysis-section"
+          className="bg-gradient-to-br from-purple-50 via-indigo-50 to-slate-50 border border-purple-200 hover:border-purple-400 p-4 rounded-xl transition-all block cursor-pointer group shadow-xs"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-purple-900 font-bold uppercase tracking-wider block flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-purple-600" />
+              Simple Payback Period
+            </span>
+            <ArrowRight className="w-3.5 h-3.5 text-purple-600 group-hover:translate-x-0.5 transition-transform" />
+          </div>
+          <div className="text-2xl font-black text-purple-950 font-mono mt-1">
+            {quickPaybackMonths !== null ? `${quickPaybackMonths.toFixed(1)} Mos` : (hasChanges ? 'Calculating...' : 'Configure')}
+          </div>
+          <span className="text-[11px] text-purple-700 mt-0.5 block">
+            {quickCapexEstimate > 0 ? `CapEx: Rs. ${(quickCapexEstimate / 1000).toFixed(0)}k • View Analysis ↓` : 'View Economic Analysis ↓'}
+          </span>
+        </a>
       </div>
 
       {/* 5 Interactive Intervention Panels Grid */}
@@ -1076,31 +1135,31 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
             <div className="space-y-1 mb-2">
               <div className="flex items-center justify-between text-[10px] font-mono">
-                <span className="text-slate-500">LF: {(currentLf * 100).toFixed(0)}%</span>
+                <span className="text-slate-500">LF: {(currentLf * 100).toFixed(0)}% (0.50 – 1.00)</span>
                 <span className="text-amber-700 font-bold">LLF: {proposedSummary.lossLoadFactor}</span>
               </div>
               <input
                 type="range"
-                min="0.20"
-                max="0.90"
+                min="0.50"
+                max="1.00"
                 step="0.05"
-                value={currentLf}
+                value={Math.min(1.0, Math.max(0.5, currentLf))}
                 onChange={(e) => onSetLoadFactor(parseFloat(e.target.value))}
                 className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-1 text-[9px] font-semibold">
+            <div className="grid grid-cols-4 gap-1 text-[9px] font-semibold">
               <button
                 type="button"
-                onClick={() => onSetLoadFactor(0.35)}
+                onClick={() => onSetLoadFactor(0.50)}
                 className={`py-0.5 rounded border transition-colors cursor-pointer ${
-                  Math.abs(currentLf - 0.35) < 0.01 
+                  Math.abs(currentLf - 0.50) < 0.01 
                     ? 'bg-emerald-500 text-white border-emerald-600 font-bold' 
                     : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                 }`}
               >
-                35% Dom
+                50% Rural
               </button>
               <button
                 type="button"
@@ -1124,7 +1183,25 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               >
                 75% Ind
               </button>
+              <button
+                type="button"
+                onClick={() => onSetLoadFactor(1.00)}
+                className={`py-0.5 rounded border transition-colors cursor-pointer ${
+                  Math.abs(currentLf - 1.00) < 0.01 
+                    ? 'bg-emerald-500 text-white border-emerald-600 font-bold' 
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                100% Flat
+              </button>
             </div>
+            
+            <a
+              href="#sensitivity-analysis-section"
+              className="mt-2 block text-center text-[10px] font-bold text-indigo-700 hover:text-indigo-900 bg-indigo-50/80 hover:bg-indigo-100/80 py-1 rounded border border-indigo-200 transition-colors"
+            >
+              Open Sensitivity Simulator ↓
+            </a>
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px]">
@@ -1147,6 +1224,37 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           />
         </div>
       )}
+
+      {/* Sensitivity Analysis Feature: Load Factor (0.50 - 1.00) & Annual Growth Dynamic Chart */}
+      <div id="sensitivity-analysis-section">
+        <SensitivityAnalysisSection
+          feeder={feeder}
+          activeConductors={activeConductors}
+          activeCapacitors={activeCapacitors}
+          activeTransformerKva={activeTransformerKva}
+          activeInjectedVoltage={activeInjectedVoltage}
+          activeLoadFactor={activeLoadFactor}
+          onSetLoadFactor={onSetLoadFactor}
+          bifurcationConfig={bifurcationConfig}
+          existingSummary={existingSummary}
+          proposedSummary={proposedSummary}
+        />
+      </div>
+
+      {/* Economic Analysis Feature: Simple Payback Period (in months) comparing Annual Energy Loss savings vs Project Cost */}
+      <div id="economic-analysis-section">
+        <EconomicAnalysisSection
+          feeder={feeder}
+          existingSummary={existingSummary}
+          proposedSummary={proposedSummary}
+          activeTransformerKva={activeTransformerKva}
+          activeConductors={activeConductors}
+          activeCapacitors={activeCapacitors}
+          bifurcationConfig={bifurcationConfig}
+          activeLoadFactor={activeLoadFactor}
+          onOpenCostEstimation={onOpenCostEstimation}
+        />
+      </div>
 
       {/* Comparison Matrix (Matching Table 1 from Paper + Proposed Benefits) */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
@@ -1372,6 +1480,46 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                 </td>
                 <td className="py-2.5 px-4 font-sans">
                   <span className="text-slate-600 text-[11px]">{feeder.nominalVoltage}V Nominal Grid</span>
+                </td>
+              </tr>
+
+              {/* Estimated Intervention CapEx */}
+              <tr>
+                <td className="py-2.5 px-4 font-sans font-medium text-slate-900">Estimated Project CapEx (PKR)</td>
+                <td className="py-2.5 px-4 text-slate-600">Rs. 0 (Baseline)</td>
+                <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-emerald-950">
+                  Rs. {quickCapexEstimate.toLocaleString()}
+                </td>
+                <td className="py-2.5 px-4 text-purple-700 font-bold">
+                  {quickCapexEstimate > 0 ? `${Object.keys(activeConductors).length} spans, ${bifurcationConfig.enabled ? 'bifurcation' : 'network'}` : 'No CapEx required'}
+                </td>
+                <td className="py-2.5 px-4 font-sans font-semibold text-purple-700">
+                  <a href="#economic-analysis-section" className="hover:underline flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" /> View Breakdown
+                  </a>
+                </td>
+              </tr>
+
+              {/* Simple Payback Period */}
+              <tr>
+                <td className="py-2.5 px-4 font-sans font-medium text-slate-900">Simple Payback Period (Months)</td>
+                <td className="py-2.5 px-4 text-slate-600">N/A (Reference)</td>
+                <td className="py-2.5 px-4 bg-emerald-50/30 font-bold text-emerald-950">
+                  {quickPaybackMonths !== null ? `${quickPaybackMonths.toFixed(1)} Months (${(quickPaybackMonths / 12).toFixed(2)} Yrs)` : 'N/A'}
+                </td>
+                <td className="py-2.5 px-4 text-emerald-600 font-bold">
+                  {quickPaybackMonths !== null ? (quickPaybackMonths <= 36 ? 'High Priority (< 3 Yrs)' : 'Standard Utility Recovery') : 'Calculate Interventions'}
+                </td>
+                <td className="py-2.5 px-4 font-sans">
+                  {quickPaybackMonths !== null && quickPaybackMonths <= 36 ? (
+                    <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Highly Feasible (≤36 Mos)
+                    </span>
+                  ) : (
+                    <span className="text-indigo-700 font-semibold">
+                      Economic Analysis Active
+                    </span>
+                  )}
                 </td>
               </tr>
             </tbody>
