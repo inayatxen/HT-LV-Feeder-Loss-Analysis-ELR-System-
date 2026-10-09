@@ -101,8 +101,10 @@ export async function exportElementToPdf(
           backgroundColor: '#ffffff',
           windowWidth: unit.scrollWidth || 1100,
           onclone: (clonedDoc) => {
-            // Remove all interactive and no-print UI elements, and remove official footers
-            const noPrintItems = clonedDoc.querySelectorAll('.no-print, [class*="no-print"], .report-official-footer');
+            // Remove all interactive and no-print UI elements, and remove official footers and headers
+            const noPrintItems = clonedDoc.querySelectorAll(
+              '.no-print, [class*="no-print"], .report-official-footer, .report-official-header, [data-section-header="official"], .official-report-header'
+            );
             noPrintItems.forEach(el => {
               (el as HTMLElement).style.display = 'none';
             });

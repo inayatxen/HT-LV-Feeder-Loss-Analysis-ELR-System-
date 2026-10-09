@@ -128,7 +128,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('page_per_section');
   const [pageOrientation, setPageOrientation] = useState<PageOrientation>('portrait');
   const [printScale, setPrintScale] = useState<PrintScale>('standard');
-  const [includePageHeaders, setIncludePageHeaders] = useState(true);
+  const [includePageHeaders, setIncludePageHeaders] = useState(false); // Completely removed from printing & PDF export as requested
   const [includeSignatures, setIncludeSignatures] = useState(true);
   const [includeWatermark, setIncludeWatermark] = useState(false); // Excluded by default to avoid unnecessary graphics
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
@@ -159,13 +159,22 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     recommendations: true
   });
 
-  // Dedicated Print Handler with synchronous multi-page readiness & iframe fallback
-  const handlePrint = (forceFullDossier = false) => {
-    if (forceFullDossier && displayMode !== 'full_report') {
-      setDisplayMode('full_report');
+  // Dedicated Print Handler with 1 Report Per Page guarantee & iframe fallback
+  const handlePrint = (printTarget: 'all_pages' | 'current_view' = 'all_pages') => {
+    if (printTarget === 'all_pages') {
+      if (displayMode !== 'full_report') {
+        setDisplayMode('full_report');
+      }
     }
+    // Strictly enforce 1 Report Per Page
+    setPageBreakMode('page_per_section');
 
-    setPdfToast({ message: 'Opening system print preview (1 report per page)...', type: 'info' });
+    setPdfToast({ 
+      message: printTarget === 'current_view'
+        ? 'Opening system print preview (1 page for current report)...'
+        : 'Opening system print preview (1 report per page)...', 
+      type: 'info' 
+    });
 
     // Allow browser a tick to layout any updated state
     setTimeout(() => {
@@ -175,27 +184,35 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       } catch (err: any) {
         console.warn('System print dialog unavailable in iframe environment:', err);
         setPdfToast({
-          message: 'Direct print dialog unavailable in frame. Generating multi-page PDF automatically...',
+          message: 'Direct print dialog unavailable in frame. Generating PDF automatically (1 report per page)...',
           type: 'info'
         });
-        handleExportPdf();
+        handleExportPdf(printTarget);
       }
     }, 150);
   };
 
-  // Direct PDF Export Handler for Informative Data Report
-  const handleExportPdf = async () => {
+  // Direct PDF Export Handler for Informative Data Report (1 Report Per Page)
+  const handleExportPdf = async (exportTarget: 'all_pages' | 'current_view' = 'all_pages') => {
     if (!printContentRef.current) return;
+
+    if (exportTarget === 'all_pages' && displayMode !== 'full_report') {
+      setDisplayMode('full_report');
+      await new Promise(r => setTimeout(r, 100));
+    }
+
     setIsGeneratingPdf(true);
     setPdfToast({ 
-      message: `Generating engineering PDF dossier (${pageBreakMode === 'page_per_section' ? '1 report per page' : 'continuous multi-page flow'})...`, 
+      message: exportTarget === 'current_view'
+        ? 'Generating single-page PDF for current report...'
+        : 'Generating engineering PDF dossier (1 report per page)...', 
       type: 'info' 
     });
 
     try {
       const cleanName = (feeder.name || 'Feeder').replace(/[^a-zA-Z0-9_-]/g, '_');
       const todayStr = new Date().toISOString().slice(0, 10);
-      const filename = `PESCO_ELR_Report_${cleanName}_${todayStr}`;
+      const filename = `PESCO_ELR_${exportTarget === 'current_view' ? displayMode : 'Report'}_${cleanName}_${todayStr}`;
 
       const result = await exportElementToPdf(printContentRef.current, {
         filename,
@@ -205,12 +222,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         reportTitle: `PESCO ELR Engineering Report - ${feeder.name}`,
         docReference: `ELR-PESCO-${feeder.id.toUpperCase()}`,
         excludeGraphics: excludeUnnecessaryGraphics,
-        pageBreakMode: pageBreakMode
+        pageBreakMode: 'page_per_section' // Enforce 1 report per page
       });
 
       if (result.success) {
         setPdfToast({
-          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages, ${pageBreakMode === 'page_per_section' ? '1 per section' : 'continuous layout'})`,
+          message: `PDF exported successfully: ${result.filename} (${result.pageCount} pages, 1 report per page)`,
           type: 'success'
         });
         setTimeout(() => setPdfToast(null), 4000);
@@ -233,8 +250,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   // Quick Preset Handlers
-  const handleApplyPreset = (preset: 'informative_only' | 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix' | 'single_page') => {
-    if (preset === 'informative_only') {
+  const handleApplyPreset = (preset: 'informative_only' | 'all' | 'bifurcation_only' | 'sld_only' | 'tri_sld_only' | 'forms_only' | 'summary_matrix' | 'single_page' | 'one_report_per_page') => {
+    if (preset === 'one_report_per_page' || preset === 'informative_only') {
       setDisplayMode('full_report');
       setPagesToPrint({
         summarySpecs: true,
@@ -292,6 +309,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       });
       setExcludeUnnecessaryGraphics(false);
       setPageOrientation('landscape');
+      setPageBreakMode('page_per_section');
     } else if (preset === 'tri_sld_only') {
       setDisplayMode('single_line_diagram');
       setSldScheme('tri_scheme');
@@ -319,7 +337,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         recommendations: false
       });
       setExcludeUnnecessaryGraphics(true);
-      setPageBreakMode('compact_flow');
+      setPageBreakMode('page_per_section');
     } else if (preset === 'single_page') {
       setDisplayMode('full_report');
       setPagesToPrint({
@@ -346,7 +364,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         recommendations: true
       });
       setExcludeUnnecessaryGraphics(true);
-      setPageBreakMode('compact_flow');
+      setPageBreakMode('page_per_section');
     }
   };
 
@@ -393,69 +411,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     printScale === 'presentation' ? 'print:text-sm print:leading-relaxed' :
     'print:text-xs print:leading-normal';
 
-  // Official PESCO - WAPDA Header for all PDF / printed pages
-  const renderOfficialHeader = (sectionSubtitle?: string, pageNumberText?: string, isFirstPage: boolean = false) => {
-    if (!includePageHeaders && !isFirstPage) return null;
-    const isSoloView = displayMode !== 'full_report';
-    const showOnScreen = isFirstPage || isSoloView || pageBreakMode === 'page_per_section';
-
-    return (
-      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full ${showOnScreen ? 'block' : 'hidden print:block'}`}>
-        <div className="flex items-center justify-between gap-4">
-          <img
-            src="/pesco-logo.svg"
-            alt="PESCO Logo"
-            className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
-          />
-          
-          <div className="text-center flex-1">
-            {includePageHeaders && (
-              <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
-                PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-              </div>
-            )}
-            <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
-              ENERGY LOSS REDUCTION (ELR) ENGINEERING REPORT
-            </h1>
-            <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
-              {sectionSubtitle || 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'}
-            </div>
-          </div>
-
-          <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
-              <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">WAPDA</span>
-              <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">ELR</span>
-              <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">STD</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
-          <span>Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong></span>
-          <span aria-hidden="true" className="hidden sm:inline">·</span>
-          <span>Date: <strong>{today}</strong></span>
-          <span aria-hidden="true" className="hidden sm:inline">·</span>
-          <span>Category: <strong>{feeder.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
-          <span aria-hidden="true" className="hidden sm:inline">·</span>
-          <span>Nominal Voltage: <strong>{feeder.nominalVoltage} V</strong></span>
-          <span aria-hidden="true" className="hidden sm:inline">·</span>
-          <span>Division: <strong>Peshawar City</strong></span>
-          <span aria-hidden="true" className="hidden sm:inline">·</span>
-          <span className="text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-300">
-            Prepared by: <strong>{officerTitle}</strong>
-          </span>
-          {pageNumberText && (
-            <>
-              <span aria-hidden="true" className="hidden sm:inline">·</span>
-              <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 text-[11px]">
-                {pageNumberText}
-              </span>
-            </>
-          )}
-        </div>
-      </div>
-    );
+  // Official PESCO - WAPDA Header for all PDF / printed pages (Removed from printing & export to pdf as requested by user)
+  const renderOfficialHeader = (_sectionSubtitle?: string, _pageNumberText?: string, _isFirstPage: boolean = false) => {
+    return null;
   };
 
   // Computed list of active sections for accurate page numbering
@@ -733,11 +691,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             min-height: auto !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: space-between !important;
+            justify-content: flex-start !important;
             box-sizing: border-box !important;
             padding-top: 1mm !important;
             padding-bottom: 2mm !important;
-            margin-bottom: 10mm !important;
+            margin-bottom: 0 !important;
             background: #ffffff !important;
             position: relative !important;
           }
@@ -746,7 +704,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             break-after: auto !important;
             margin-bottom: 0 !important;
           }
-          .report-official-footer {
+          .report-official-footer,
+          .report-official-header,
+          [data-section-header="official"],
+          .official-report-header {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
@@ -913,24 +874,37 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             {/* Direct Export to PDF Button */}
             <button
               type="button"
-              onClick={handleExportPdf}
+              onClick={() => handleExportPdf('all_pages')}
               disabled={isGeneratingPdf}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900/60 text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
-              title="Export reports and single line diagrams directly to multi-page PDF (1 report per page)"
+              title="Export all selected reports and single line diagrams directly to multi-page PDF (1 report per page)"
             >
               {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              <span>{isGeneratingPdf ? 'Exporting PDF...' : 'Export to PDF'}</span>
+              <span>{isGeneratingPdf ? 'Exporting PDF...' : 'Export to PDF (1 Report Per Page)'}</span>
             </button>
 
             {/* Print Button */}
             <button
-              onClick={() => handlePrint(true)}
+              onClick={() => handlePrint('all_pages')}
               className="flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer"
-              title="Print reports and single line diagrams (1 report per page with official footers)"
+              title="Print reports and single line diagrams (1 report per page)"
             >
               <Printer className="w-4 h-4" />
-              <span>Print (1 Page / Report)</span>
+              <span>Print (1 Report Per Page)</span>
             </button>
+
+            {/* Current Report Quick Action */}
+            {displayMode !== 'full_report' && (
+              <button
+                type="button"
+                onClick={() => handlePrint('current_view')}
+                className="hidden xl:flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-bold rounded-lg border border-slate-700 transition-colors cursor-pointer"
+                title="Print only this single active report view on 1 page"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print View (1 Page)</span>
+              </button>
+            )}
 
             {/* Maximize / Restore Screen Button */}
             <button
@@ -1060,8 +1034,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               {/* Setting 1: Page Break Mode */}
               <div className="bg-slate-900/90 p-3.5 rounded-xl border border-slate-800 space-y-2">
                 <label className="text-slate-200 font-bold block flex items-center justify-between">
-                  <span>1. Page Break Behavior</span>
-                  <span className="text-[10px] font-mono text-amber-400 font-normal">break-before: page</span>
+                  <span>1. Report Printing & PDF Pagination</span>
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold">1 Report Per Page</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1069,12 +1043,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     onClick={() => setPageBreakMode('page_per_section')}
                     className={`p-2 rounded-lg border text-left cursor-pointer transition-all ${
                       pageBreakMode === 'page_per_section'
-                        ? 'bg-amber-500/20 border-amber-400 text-amber-300 font-bold ring-1 ring-amber-400/50'
+                        ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300 font-bold ring-1 ring-emerald-400/50'
                         : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
                     }`}
                   >
-                    <span className="block font-bold">1 Page Per Section</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Clean multi-page breaks</span>
+                    <span className="block font-bold">1 Report Per Page</span>
+                    <span className="text-[10px] text-emerald-400/80 font-normal">Strict 1 page per report</span>
                   </button>
 
                   <button
@@ -1087,7 +1061,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     }`}
                   >
                     <span className="block font-bold">Continuous Flow</span>
-                    <span className="text-[10px] text-slate-400 font-normal">Compact, saves paper</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Compact continuous flow</span>
                   </button>
                 </div>
               </div>
@@ -1168,15 +1142,10 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                     </select>
                   )}
 
-                  <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                    <input
-                      type="checkbox"
-                      checked={includePageHeaders}
-                      onChange={(e) => setIncludePageHeaders(e.target.checked)}
-                      className="rounded border-slate-700 text-amber-500 focus:ring-amber-400 cursor-pointer"
-                    />
-                    <span>Header Stamp</span>
-                  </label>
+                  <span className="text-[11px] font-mono text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800 flex items-center gap-1">
+                    <Check className="w-3 h-3 text-emerald-400" />
+                    <span>Top Header Banner: Excluded from Print & PDF</span>
+                  </span>
 
                   <label className="flex items-center gap-1.5 cursor-pointer text-slate-300">
                     <input
@@ -2336,19 +2305,19 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleExportPdf}
+              onClick={() => handleExportPdf('all_pages')}
               disabled={isGeneratingPdf}
               className="flex items-center gap-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-500 disabled:bg-rose-900/60 text-white font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
             >
               {isGeneratingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-              <span>{isGeneratingPdf ? 'Rendering PDF...' : 'Export to PDF'}</span>
+              <span>{isGeneratingPdf ? 'Rendering PDF...' : 'Export to PDF (1 Report Per Page)'}</span>
             </button>
             <button
-              onClick={() => handlePrint(true)}
+              onClick={() => handlePrint('all_pages')}
               className="flex items-center gap-1.5 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg transition-colors cursor-pointer shadow-xs"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print Dossier (1 Page / Report)</span>
+              <span>Print Dossier (1 Report Per Page)</span>
             </button>
             <button
               onClick={onClose}
