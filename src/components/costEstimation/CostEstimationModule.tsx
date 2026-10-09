@@ -333,6 +333,17 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     await saveMaterialToDb(mat);
   };
 
+  // Handler: Save All Materials (Bulk CSV / Excel update)
+  const handleSaveAllMaterials = async (updatedList: MaterialItem[]) => {
+    setMaterials(updatedList);
+    try {
+      localStorage.setItem('material_overrides', JSON.stringify(updatedList));
+    } catch {}
+    for (const mat of updatedList) {
+      await saveMaterialToDb(mat);
+    }
+  };
+
   // Handler: Save Design Factors
   const handleSaveFactors = async (factors: DesignFactorsConfig) => {
     setDesignFactors(factors);
@@ -591,6 +602,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           materials={materials}
           onSaveMaterial={handleSaveMaterial}
           onResetFactoryRates={handleResetFactory}
+          onSaveAllMaterials={handleSaveAllMaterials}
         />
       )}
 
