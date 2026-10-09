@@ -21,7 +21,8 @@ import {
   FolderOpen,
   Plus,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Settings
 } from 'lucide-react';
 import { FeederData, FeederAnalysisSummary } from '../types/feeder';
 import { 
@@ -35,6 +36,7 @@ import {
   importLocalDatabaseBackup,
   saveFeederToLocalDb
 } from '../utils/localDatabase';
+import { MaterialPriceUploader } from './admin/MaterialPriceUploader';
 
 interface LocalDatabaseModalProps {
   isOpen: boolean;
@@ -59,7 +61,7 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
   onLoadFeeder,
   onRefreshFeeders
 }) => {
-  const [activeTab, setActiveTab] = useState<'save_new' | 'snapshots' | 'feeders' | 'backup'>('save_new');
+  const [activeTab, setActiveTab] = useState<'save_new' | 'snapshots' | 'feeders' | 'backup' | 'materials'>('save_new');
   const [isMaximized, setIsMaximized] = useState(false);
   const [snapshots, setSnapshots] = useState<SavedAnalysisSnapshot[]>([]);
   const [loading, setLoading] = useState(false);
@@ -317,6 +319,18 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span>Backup & Restore</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('materials')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+                activeTab === 'materials'
+                  ? 'bg-amber-500 text-slate-950 font-bold shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900 bg-white border border-slate-200'
+              }`}
+            >
+              <Settings className="w-3.5 h-3.5" />
+              <span>Material Prices</span>
             </button>
           </div>
 
@@ -640,6 +654,13 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                   <span>Factory Reset</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* TAB 5: MATERIAL PRICES */}
+          {activeTab === 'materials' && (
+            <div className="space-y-4">
+              <MaterialPriceUploader />
             </div>
           )}
         </div>
