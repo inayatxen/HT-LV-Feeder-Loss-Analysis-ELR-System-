@@ -268,8 +268,14 @@
   }
   
   .no-print,
-  .print\:hidden {
+  .print\:hidden,
+  .report-official-footer {
     display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
   }
   
   /* When printing, hide background application elements outside active print report */

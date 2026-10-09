@@ -165,7 +165,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       setDisplayMode('full_report');
     }
 
-    setPdfToast({ message: 'Opening system print preview (1 report per page with official footers)...', type: 'info' });
+    setPdfToast({ message: 'Opening system print preview (1 report per page)...', type: 'info' });
 
     // Allow browser a tick to layout any updated state
     setTimeout(() => {
@@ -533,44 +533,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     };
   };
 
-  // Official PESCO - WAPDA Footer for each page
-  const renderOfficialFooter = (sectionTitle: string, sectionId: string, specialNote?: string) => {
-    const { pageNum, totalPages } = getPageInfo(sectionId);
-    return (
-      <div className="report-official-footer pt-3 mt-auto border-t-2 border-slate-900 text-[10px] font-mono text-slate-700 print:text-black w-full print-avoid-break">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* Left: Organization & Reference */}
-          <div className="flex flex-col text-left">
-            <div className="font-extrabold text-slate-950 uppercase tracking-wider text-[10px]">
-              PESCO / WAPDA · Energy Loss Reduction (ELR) Engineering Directorate
-            </div>
-            <div className="text-slate-600 text-[9px]">
-              Feeder: <strong className="text-slate-900">{feeder.name}</strong> · Substation: <strong>{feeder.substationName}</strong> · Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong>
-            </div>
-          </div>
-
-          {/* Center: Verification status & Officer */}
-          <div className="text-center hidden sm:flex flex-col">
-            <span className="font-bold text-slate-900">
-              {specialNote || sectionTitle}
-            </span>
-            <span className="text-slate-600 text-[9px]">
-              Verified by: <strong className="text-slate-900">{officerTitle}</strong> · Date: <strong>{today}</strong>
-            </span>
-          </div>
-
-          {/* Right: Page Number & Standard Form Ref */}
-          <div className="flex flex-col items-end text-right">
-            <div className="font-black text-slate-950 text-[11px] bg-slate-100 print:bg-transparent px-2 py-0.5 rounded border border-slate-300 print:border-none">
-              Page {pageNum} of {totalPages}
-            </div>
-            <div className="text-slate-500 text-[9px] uppercase tracking-wider">
-              Form WAPDA-ELR-STD · Verified Copy
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // Official PESCO - WAPDA Footer for each page (Removed from printing & PDF export as requested)
+  const renderOfficialFooter = (_sectionTitle?: string, _sectionId?: string, _specialNote?: string) => {
+    return null;
   };
 
   // Export current report / tables as CSV
@@ -782,15 +747,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             margin-bottom: 0 !important;
           }
           .report-official-footer {
-            margin-top: auto !important;
-            padding-top: 8px !important;
-            border-top: 2px solid #0f172a !important;
-            page-break-after: ${pageBreakMode === 'page_per_section' ? 'always' : 'auto'} !important;
-            break-after: ${pageBreakMode === 'page_per_section' ? 'page' : 'auto'} !important;
-          }
-          .print-page-unit:last-child .report-official-footer {
-            page-break-after: auto !important;
-            break-after: auto !important;
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
           }
           .print-watermark {
             position: fixed !important;
