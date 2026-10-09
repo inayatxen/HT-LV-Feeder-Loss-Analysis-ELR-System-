@@ -837,6 +837,8 @@ export function calculateBifurcationFourStatements(
     t1TransformerOverrideKva?: number;
     loadFactorOverride?: number;
     annualGrowthRatePercent?: number;
+    htExtensionMeters?: number;
+    htExtensionConductorCode?: string;
   }
 ): BifurcationFourStatementDossier {
   const tariff = feeder.tariffPerKwh || 38.5;

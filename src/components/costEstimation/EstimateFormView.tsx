@@ -19,6 +19,8 @@ import {
 } from '../../types/costEstimation';
 import { 
   calculateQuantitiesForLine, 
+  calculateHtExtensionMiniEstimate,
+  HtExtensionMiniEstimate,
   computeEstimateCharges, 
   generateEstimateNumber, 
   exportEstimateToExcelWorkbook,
@@ -56,6 +58,7 @@ import {
   Check,
   Eye,
   FileText,
+  RefreshCw,
   X,
   Filter
 } from 'lucide-react';
@@ -173,20 +176,32 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             };
           }
           return item;
-        }).filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+        }).filter(i => {
+          if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
+          return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
+        });
       }
       if (initialEstimate.lineDetails.is25KvaLumpSumPackage || initialEstimate.lineDetails.transformerCapacityKva === 25) {
-        return initialEstimate.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+        return initialEstimate.items.filter(i => {
+          if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
+          return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
+        });
       }
       return initialEstimate.items;
     }
     // Auto calculate initial default BOQ
     const calc = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
     if (lineDetails.is50KvaLumpSumPackage || lineDetails.transformerCapacityKva === 50) {
-      return calc.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+      return calc.items.filter(i => {
+        if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
+        return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
+      });
     }
     if (lineDetails.is25KvaLumpSumPackage || lineDetails.transformerCapacityKva === 25) {
-      return calc.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'));
+      return calc.items.filter(i => {
+        if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
+        return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
+      });
     }
     return calc.items;
   });
@@ -239,6 +254,48 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const [saveToast, setSaveToast] = useState('');
   const [activePresetKey, setActivePresetKey] = useState<string | null>(null);
   const [lastAppliedPresetName, setLastAppliedPresetName] = useState<string | null>(null);
+
+  // 11kV HT Extension Mini Estimate (WAPDA / DISCO 11kV Feeder Design Standard)
+  const [showMiniEstModal, setShowMiniEstModal] = useState(false);
+  const [showMiniEstBoqTable, setShowMiniEstBoqTable] = useState(true);
+
+  const miniEstimate: HtExtensionMiniEstimate | null = useMemo(() => {
+    if (!lineDetails.htExtensionMeters || lineDetails.htExtensionMeters <= 0) return null;
+    return calculateHtExtensionMiniEstimate(lineDetails, designFactors, materials);
+  }, [lineDetails, designFactors, materials]);
+
+  const transformerBaseTotal = useMemo(() => {
+    const nonExtItems = items.filter(i => 
+      !i.id.endsWith('-ext') && 
+      i.id !== 'pole-ext' && 
+      i.id !== 'ca-ext' && 
+      i.id !== 'pin-ext' && 
+      i.id !== 'gipin-ext' && 
+      i.id !== 'disc-ext' && 
+      i.id !== 'stay-ext' && 
+      i.id !== 'danger-ext'
+    );
+    return nonExtItems.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+  }, [items]);
+
+  const handleApplyMiniEstimateToMainBoq = () => {
+    if (!miniEstimate) return;
+    // Remove old -ext items and replace with current miniEstimate items
+    const nonExtItems = items.filter(i => 
+      !i.id.endsWith('-ext') && 
+      i.id !== 'pole-ext' && 
+      i.id !== 'ca-ext' && 
+      i.id !== 'pin-ext' && 
+      i.id !== 'gipin-ext' && 
+      i.id !== 'disc-ext' && 
+      i.id !== 'stay-ext' && 
+      i.id !== 'danger-ext'
+    );
+    const newItems = [...nonExtItems, ...miniEstimate.items];
+    setItems(newItems);
+    setSaveToast(`✅ 11kV HT Line Extension (${miniEstimate.meters}m, Rs. ${miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}) merged into Project BOQ`);
+    setTimeout(() => setSaveToast(''), 4500);
+  };
 
   // Search filtered materials for the search bar popover
   const searchFilteredMaterials = useMemo(() => {
@@ -807,7 +864,10 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
 
     const res = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
     const cleanedItems = is25Kva 
-      ? res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD'))
+      ? res.items.filter(i => {
+          if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
+          return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
+        })
       : res.items;
 
     setItems(cleanedItems);
@@ -1856,23 +1916,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Stay Sets (Guy Wire)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={lineDetails.staySets}
-                  onChange={(e) => setLineDetails({ 
-                    ...lineDetails, 
-                    staySets: Number(e.target.value),
-                    autoCalculatedFlags: { ...lineDetails.autoCalculatedFlags, staySets: false }
-                  })}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
-                />
-              </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">Road Crossings</label>
@@ -1895,6 +1938,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
                 />
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">Stay Sets (Guy Wire)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={lineDetails.staySets}
+                  onChange={(e) => setLineDetails({ 
+                    ...lineDetails, 
+                    staySets: Number(e.target.value),
+                    autoCalculatedFlags: { ...lineDetails.autoCalculatedFlags, staySets: false }
+                  })}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
+                />
+              </div>
 
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">No. of Circuits</label>
@@ -1907,6 +1967,492 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono text-slate-900"
                 />
               </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-emerald-800 mb-1">HT Extension (Meters)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={lineDetails.htExtensionMeters || 0}
+                  onChange={(e) => setLineDetails({ ...lineDetails, htExtensionMeters: Number(e.target.value) })}
+                  className="w-full px-3 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-mono font-bold text-emerald-900"
+                  placeholder="0 (m)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-emerald-800 mb-1">HT Conductor</label>
+                <select
+                  value={lineDetails.htExtensionConductorType || 'DOG'}
+                  onChange={(e) => setLineDetails({ ...lineDetails, htExtensionConductorType: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-emerald-50 border border-emerald-300 rounded-lg text-xs font-bold text-emerald-900"
+                >
+                  <option value="DOG">ACSR Dog (100mm²)</option>
+                  <option value="RABBIT">ACSR Rabbit (50mm²)</option>
+                  <option value="PANTHER">ACSR Panther (200mm²)</option>
+                  <option value="OSPREY">ACSR Osprey (200mm²)</option>
+                  <option value="WASP">AAC Wasp (80mm²)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* 11kV HT Line Extension Mini-Estimate Card (Feeder Design Standard Assemblies & BOQ) */}
+            <div className="bg-gradient-to-br from-emerald-50/80 via-teal-50/50 to-slate-50 border border-emerald-300 rounded-xl p-4 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-emerald-600 text-white rounded-lg shadow-2xs">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-emerald-950">
+                        11kV HT Line Extension Mini-Estimate & Feeder Assemblies
+                      </h4>
+                      <span className="text-[10px] font-semibold uppercase bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded font-mono">
+                        WAPDA DDS-23 / DDS-10 Standard
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800">
+                      Mini estimate to join main 11kV feeder line with proposed transformer sub-station, complete with standard BOQ & rates.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1 ${
+                    (lineDetails.htExtensionMeters || 0) > 0 
+                      ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' 
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}>
+                    {(lineDetails.htExtensionMeters || 0) > 0 ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Active: {lineDetails.htExtensionMeters}m ({miniEstimate?.calculatedSpans || 0} Spans)</span>
+                      </>
+                    ) : (
+                      <span>Inactive (0m)</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Length Selector Presets */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-emerald-900">
+                  Quick Length Presets for Proposed Transformer Spur Line:
+                </label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { m: 50, label: '50m (1 Span)' },
+                    { m: 100, label: '100m (1 Span)' },
+                    { m: 150, label: '150m (2 Spans)' },
+                    { m: 200, label: '200m (2 Spans)' },
+                    { m: 300, label: '300m (3 Spans)' },
+                    { m: 500, label: '500m (5 Spans)' }
+                  ].map((p) => {
+                    const isSelected = lineDetails.htExtensionMeters === p.m;
+                    return (
+                      <button
+                        key={p.m}
+                        type="button"
+                        onClick={() => setLineDetails({ 
+                          ...lineDetails, 
+                          htExtensionMeters: p.m,
+                          htExtensionMergeWithTransformer: true 
+                        })}
+                        className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-emerald-700 text-white border-emerald-800 shadow-2xs scale-102'
+                            : 'bg-white hover:bg-emerald-100 text-emerald-900 border-emerald-300'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : ''}{p.label}
+                      </button>
+                    );
+                  })}
+                  {(lineDetails.htExtensionMeters || 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setLineDetails({ ...lineDetails, htExtensionMeters: 0 })}
+                      className="px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg cursor-pointer transition-colors"
+                      title="Clear HT extension"
+                    >
+                      ✕ Reset (0m)
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Assembly Engineering Specifications Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-white/90 p-3 rounded-lg border border-emerald-200">
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
+                    Extension Length (Meters):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10"
+                    value={lineDetails.htExtensionMeters || 0}
+                    onChange={(e) => setLineDetails({ 
+                      ...lineDetails, 
+                      htExtensionMeters: Math.max(0, Number(e.target.value))
+                    })}
+                    className="w-full px-3 py-1.5 bg-emerald-50/60 border border-emerald-300 rounded-lg text-xs font-mono font-bold text-emerald-950 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] text-emerald-700 mt-0.5 block font-mono">
+                    = {((lineDetails.htExtensionMeters || 0) / 1000).toFixed(3)} KM
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
+                    Standard Span Spacing:
+                  </label>
+                  <select
+                    value={lineDetails.htExtensionSpanMeters || 100}
+                    onChange={(e) => setLineDetails({ 
+                      ...lineDetails, 
+                      htExtensionSpanMeters: Number(e.target.value) 
+                    })}
+                    className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="100">100 Meters (Standard 11kV Feeder Span)</option>
+                    <option value="80">80 Meters (Medium Suburban Span)</option>
+                    <option value="50">50 Meters (Short Span / Dense Area)</option>
+                  </select>
+                  <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                    Calculated: <strong>{miniEstimate?.calculatedSpans || 0} Spans</strong>
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
+                    11kV Conductor Type:
+                  </label>
+                  <select
+                    value={lineDetails.htExtensionConductorType || 'DOG'}
+                    onChange={(e) => setLineDetails({ 
+                      ...lineDetails, 
+                      htExtensionConductorType: e.target.value 
+                    })}
+                    className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="DOG">ACSR Dog (100mm² / Code 02110) - Standard</option>
+                    <option value="RABBIT">ACSR Rabbit (50mm² / Code 02120) - Light Spur</option>
+                    <option value="PANTHER">ACSR Panther (200mm² / Code 02150) - Heavy</option>
+                    <option value="OSPREY">ACSR Osprey (200mm² / Code 02160) - Trunk</option>
+                    <option value="WASP">AAC Wasp (80mm² / Code 02330)</option>
+                  </select>
+                  <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                    Qty: <strong>{miniEstimate?.conductorQtyKm || 0} KM</strong> (3-Ph × 1.15 sag)
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-emerald-900 mb-1">
+                    Pole / Structure Assembly:
+                  </label>
+                  <select
+                    value={lineDetails.htExtensionPoleType || 'PC_SPUN_36FT'}
+                    onChange={(e) => setLineDetails({ 
+                      ...lineDetails, 
+                      htExtensionPoleType: e.target.value as any 
+                    })}
+                    className="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="PC_SPUN_36FT">36ft PC Spun Pole HC (DDS-23:89 / Code 01110)</option>
+                    <option value="STEEL_LATTICE_34_8FT">34.8ft Steel Lattice H-Type (Code 01210)</option>
+                  </select>
+                  <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                    Total: <strong>{miniEstimate?.totalPoles || 0} Poles</strong> ({miniEstimate?.intermediatePoles || 0} Int + 1 Term)
+                  </span>
+                </div>
+              </div>
+
+              {/* Standard 11kV Feeder Assemblies Checklist (WAPDA / DISCO Standards) */}
+              <div className="bg-white/80 p-3 rounded-lg border border-emerald-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wide">
+                    Included 11kV Line Standard Assemblies & Protection Hardware:
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-mono">
+                    Official DISCO BOQ Schedule Specs
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      disabled
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>11kV V-Cross Arm (06260)</strong> & B-11 Braces ({miniEstimate?.totalPoles || 0} Sets)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      disabled
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Pin Insulators & GI Pins (05210/05410)</strong> ({((miniEstimate?.intermediatePoles || 0) * 3)} Nos)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100">
+                    <input
+                      type="checkbox"
+                      checked={true}
+                      disabled
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Tension Disc Strings 45kN (05230)</strong> (3 Sets Terminal)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludePgClamps !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludePgClamps: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>PG Tapping Connectors (04130)</strong> (3 Nos at Tap-Off)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludeCutouts !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludeCutouts: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>11kV Drop Out Fuses (13311)</strong> & 10K Links (3 Nos)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludeLightningArresters !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludeLightningArresters: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Lightning Arresters 9kV/10kA (07110)</strong> (3 Nos)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludeStaySets !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludeStaySets: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Stay Sets Complete (15310)</strong> & 7/8 Wire (2 Sets)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludeEarthing !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludeEarthing: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Earthing Set & 8 SWG Wire (03110)</strong> (1 Set)
+                    </span>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-1.5 bg-emerald-50/50 rounded border border-emerald-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={lineDetails.htExtensionIncludeDangerPlates !== false}
+                      onChange={(e) => setLineDetails({ ...lineDetails, htExtensionIncludeDangerPlates: e.target.checked })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
+                    />
+                    <span className="text-slate-800">
+                      <strong>Danger Notice Plates (07310)</strong> ({miniEstimate?.totalPoles || 0} Nos)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Mini Estimate BOQ Table & Rates */}
+              {miniEstimate && miniEstimate.items.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="button"
+                      onClick={() => setShowMiniEstBoqTable(!showMiniEstBoqTable)}
+                      className="flex items-center gap-1.5 text-xs font-bold text-emerald-900 hover:text-emerald-700 cursor-pointer"
+                    >
+                      {showMiniEstBoqTable ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      <span>Mini-Estimate Itemized BOQ & Schedule Rates ({miniEstimate.items.length} Assemblies)</span>
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowMiniEstModal(true)}
+                        className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-lg flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-700" />
+                        <span>View / Print Slip</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleApplyMiniEstimateToMainBoq}
+                        className="px-3 py-1 text-xs font-bold bg-emerald-700 hover:bg-emerald-600 text-white rounded-lg flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+                        title="Directly sync mini estimate items into main BOQ table"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Sync with Project BOQ</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {showMiniEstBoqTable && (
+                    <div className="overflow-x-auto rounded-lg border border-emerald-200 bg-white">
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="bg-emerald-100/70 text-emerald-950 font-bold border-b border-emerald-200 text-[11px]">
+                            <th className="py-2 px-2.5 text-center w-8">#</th>
+                            <th className="py-2 px-2.5 w-20">Code</th>
+                            <th className="py-2 px-3">11kV Assembly Description & Specification</th>
+                            <th className="py-2 px-2 text-center w-14">Unit</th>
+                            <th className="py-2 px-2 text-right w-16">Qty</th>
+                            <th className="py-2 px-3 text-right">Material Rate</th>
+                            <th className="py-2 px-3 text-right">Material Amt</th>
+                            <th className="py-2 px-3 text-right">Labour Rate</th>
+                            <th className="py-2 px-3 text-right">Labour Amt</th>
+                            <th className="py-2 px-3 text-right">Total (PKR)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                          {miniEstimate.items.map((item, idx) => (
+                            <tr key={item.id} className="hover:bg-emerald-50/40">
+                              <td className="py-1.5 px-2.5 text-center text-slate-500">{idx + 1}</td>
+                              <td className="py-1.5 px-2.5 font-bold text-emerald-900">{item.materialCode}</td>
+                              <td className="py-1.5 px-3 font-sans">
+                                <div className="font-bold text-slate-900">{item.description}</div>
+                                <div className="text-[10px] text-slate-500">{item.specification}</div>
+                              </td>
+                              <td className="py-1.5 px-2 text-center font-sans text-slate-600">{item.unit}</td>
+                              <td className="py-1.5 px-2 text-right font-bold text-slate-900">{item.quantity}</td>
+                              <td className="py-1.5 px-3 text-right text-slate-700">
+                                Rs. {item.unitRate.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                              </td>
+                              <td className="py-1.5 px-3 text-right font-bold text-slate-900">
+                                Rs. {item.materialAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                              </td>
+                              <td className="py-1.5 px-3 text-right text-slate-700">
+                                Rs. {item.labourRate.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                              </td>
+                              <td className="py-1.5 px-3 text-right font-bold text-slate-900">
+                                Rs. {item.labourAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                              </td>
+                              <td className="py-1.5 px-3 text-right font-bold text-emerald-900 bg-emerald-50/50">
+                                Rs. {item.totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="bg-emerald-100/90 font-bold text-emerald-950 border-t-2 border-emerald-300 text-xs">
+                            <td colSpan={6} className="py-2.5 px-3 font-sans text-right">
+                              Subtotal 11kV HT Extension Mini-Estimate ({miniEstimate.meters}m):
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-950">
+                              Rs. {miniEstimate.materialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                            </td>
+                            <td></td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-950">
+                              Rs. {miniEstimate.labourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-mono text-emerald-950 bg-emerald-200/80">
+                              Rs. {miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Merged Lump Sum Package Integration Bar */}
+                  <div className="bg-emerald-950 text-white rounded-xl p-3.5 space-y-2.5 shadow-xs">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-800 pb-2">
+                      <label className="flex items-center gap-2 cursor-pointer font-bold text-xs text-emerald-100">
+                        <input
+                          type="checkbox"
+                          checked={lineDetails.htExtensionMergeWithTransformer !== false}
+                          onChange={(e) => {
+                            const willMerge = e.target.checked;
+                            setLineDetails({ ...lineDetails, htExtensionMergeWithTransformer: willMerge });
+                            if (willMerge) {
+                              handleApplyMiniEstimateToMainBoq();
+                            }
+                          }}
+                          className="rounded text-emerald-500 focus:ring-emerald-400 w-4 h-4 cursor-pointer"
+                        />
+                        <span>Merge HT Extension Mini-Estimate with Proposed Transformer Package</span>
+                      </label>
+
+                      <span className="text-[10px] font-mono bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded font-bold self-start sm:self-auto">
+                        Unified Turnkey Project Estimate
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                      <div className="bg-emerald-900/80 p-2.5 rounded-lg border border-emerald-800">
+                        <div className="text-[10px] text-emerald-300 uppercase font-semibold">1. Transformer Sub-Station</div>
+                        <div className="text-base font-bold font-mono text-white mt-0.5">
+                          Rs. {transformerBaseTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </div>
+                        <div className="text-[10px] text-emerald-400">
+                          {lineDetails.transformerCapacityKva || 100} kVA Package / Hardware
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-900/80 p-2.5 rounded-lg border border-emerald-800">
+                        <div className="text-[10px] text-emerald-300 uppercase font-semibold">2. 11kV HT Extension Mini Estimate</div>
+                        <div className="text-base font-bold font-mono text-emerald-300 mt-0.5">
+                          + Rs. {miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </div>
+                        <div className="text-[10px] text-emerald-400">
+                          {miniEstimate.meters}m ({miniEstimate.calculatedSpans} Spans, {miniEstimate.totalPoles} Poles)
+                        </div>
+                      </div>
+
+                      <div className="bg-emerald-800 p-2.5 rounded-lg border border-emerald-700 shadow-inner">
+                        <div className="text-[10px] text-emerald-200 uppercase font-bold">Combined Full Estimate (Merged)</div>
+                        <div className="text-lg font-extrabold font-mono text-emerald-100 mt-0.5">
+                          Rs. {(transformerBaseTotal + miniEstimate.grandTotal).toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </div>
+                        <div className="text-[10px] text-emerald-300 font-semibold">
+                          Turnkey Material & Labour Full BOQ
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Bifurcation & Cut-Off Point Configuration (For Separating Existing vs Remaining Lines) */}
@@ -3155,6 +3701,171 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 className="px-4 py-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors cursor-pointer"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 11kV HT Extension Mini Estimate BOQ Slip Modal */}
+      {showMiniEstModal && miniEstimate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl overflow-hidden my-6 animate-in fade-in zoom-in-95 duration-150">
+            {/* Modal Header */}
+            <div className="p-4 bg-emerald-800 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-emerald-900/60 rounded-lg">
+                  <FileText className="w-5 h-5 text-emerald-200" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    11kV HT Line Extension Mini-Estimate BOQ Slip
+                  </h3>
+                  <p className="text-xs text-emerald-200">
+                    WAPDA / DISCO 11kV Electrical Feeder Standard Assemblies (DDS-23:89 / DDS-10:84)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="px-3 py-1.5 text-xs font-bold bg-white/10 hover:bg-white/20 text-white rounded-lg flex items-center gap-1.5 border border-white/20 cursor-pointer transition-colors"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Slip</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowMiniEstModal(false)}
+                  className="p-1.5 text-emerald-200 hover:text-white rounded-lg hover:bg-emerald-700 cursor-pointer transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Technical Information Banner */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 text-xs">
+                <div>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Extension Length:</span>
+                  <span className="font-bold text-slate-900 text-sm font-mono">{miniEstimate.meters} Meters</span>
+                  <span className="text-[10px] text-slate-500 block font-mono">({miniEstimate.km} KM)</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Spans & Spacing:</span>
+                  <span className="font-bold text-slate-900 text-sm font-mono">{miniEstimate.calculatedSpans} Spans</span>
+                  <span className="text-[10px] text-slate-500 block">@ {miniEstimate.spanMeters}m / Span</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Conductor Type:</span>
+                  <span className="font-bold text-slate-900 text-sm">{miniEstimate.conductorName}</span>
+                  <span className="text-[10px] text-slate-500 block font-mono">3-Ph Qty: {miniEstimate.conductorQtyKm} KM</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-emerald-700 font-bold uppercase block">Poles & Structure:</span>
+                  <span className="font-bold text-slate-900 text-sm">{miniEstimate.totalPoles} Poles</span>
+                  <span className="text-[10px] text-slate-500 block">{miniEstimate.poleType}</span>
+                </div>
+              </div>
+
+              {/* BOQ Table */}
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-200 text-[11px]">
+                      <th className="py-2.5 px-3 text-center w-8">#</th>
+                      <th className="py-2.5 px-2.5 w-20">Code</th>
+                      <th className="py-2.5 px-3">Description & WAPDA Specification</th>
+                      <th className="py-2.5 px-2 text-center w-14">Unit</th>
+                      <th className="py-2.5 px-2 text-right w-16">Qty</th>
+                      <th className="py-2.5 px-3 text-right">Material Rate</th>
+                      <th className="py-2.5 px-3 text-right">Material Amt</th>
+                      <th className="py-2.5 px-3 text-right">Labour Rate</th>
+                      <th className="py-2.5 px-3 text-right">Labour Amt</th>
+                      <th className="py-2.5 px-3 text-right">Total (PKR)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                    {miniEstimate.items.map((item, idx) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="py-2 px-3 text-center text-slate-400 font-sans">{idx + 1}</td>
+                        <td className="py-2 px-2.5 font-bold text-emerald-900">{item.materialCode}</td>
+                        <td className="py-2 px-3 font-sans">
+                          <div className="font-bold text-slate-900">{item.description}</div>
+                          <div className="text-[10px] text-slate-500">{item.specification}</div>
+                        </td>
+                        <td className="py-2 px-2 text-center font-sans text-slate-600">{item.unit}</td>
+                        <td className="py-2 px-2 text-right font-bold text-slate-900">{item.quantity}</td>
+                        <td className="py-2 px-3 text-right text-slate-700">
+                          Rs. {item.unitRate.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-slate-900">
+                          Rs. {item.materialAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="py-2 px-3 text-right text-slate-700">
+                          Rs. {item.labourRate.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-slate-900">
+                          Rs. {item.labourAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-900 bg-emerald-50/40">
+                          Rs. {item.totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-emerald-50/90 font-bold text-emerald-950 border-t-2 border-emerald-300 text-xs">
+                      <td colSpan={6} className="py-3 px-3 font-sans text-right">
+                        Total 11kV Line Extension ({miniEstimate.meters}m):
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-emerald-900">
+                        Rs. {miniEstimate.materialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                      </td>
+                      <td></td>
+                      <td className="py-3 px-3 text-right font-mono text-emerald-900">
+                        Rs. {miniEstimate.labourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-emerald-950 bg-emerald-100">
+                        Rs. {miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              {/* Sanction & Signatures Block */}
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200 text-center text-xs text-slate-600">
+                <div className="border-t border-slate-400 pt-2 mt-8">
+                  <div className="font-bold text-slate-800">Sub-Divisional Officer (SDO)</div>
+                  <div className="text-[10px]">Prepared & Verified</div>
+                </div>
+                <div className="border-t border-slate-400 pt-2 mt-8">
+                  <div className="font-bold text-slate-800">Executive Engineer (XEN)</div>
+                  <div className="text-[10px]">Checked & Recommended</div>
+                </div>
+                <div className="border-t border-slate-400 pt-2 mt-8">
+                  <div className="font-bold text-slate-800">Superintending Engineer (SE)</div>
+                  <div className="text-[10px]">Technical Sanction Authority</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3 bg-slate-100 border-t border-slate-200 flex items-center justify-between text-xs">
+              <span className="text-slate-600">
+                HT Extension BOQ Total: <strong>Rs. {miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowMiniEstModal(false)}
+                className="px-4 py-1.5 text-xs font-bold text-white bg-slate-800 hover:bg-slate-700 rounded-lg cursor-pointer transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

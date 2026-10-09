@@ -86,6 +86,18 @@ export interface EstimateLineDetails {
   existingPortionKm?: number;
   remainingPortionKm?: number;
   bifurcationType?: 'tee_off' | 'section_split' | 'tap_off' | 'spur_line';
+  // HT Extension for proposed transformer & 11kV Feeder Line Assemblies
+  htExtensionMeters?: number;
+  htExtensionConductorType?: string;
+  htExtensionSpanMeters?: number;
+  htExtensionPoleType?: 'PC_SPUN_36FT' | 'STEEL_LATTICE_34_8FT';
+  htExtensionIncludeCutouts?: boolean;
+  htExtensionIncludeLightningArresters?: boolean;
+  htExtensionIncludeStaySets?: boolean;
+  htExtensionIncludeEarthing?: boolean;
+  htExtensionIncludePgClamps?: boolean;
+  htExtensionIncludeDangerPlates?: boolean;
+  htExtensionMergeWithTransformer?: boolean;
   // 25 kVA, 50 kVA, 100 kVA & 200 kVA Transformer Lump Sum Package Flags & 1KM HT Line Package Flags
   is25KvaLumpSumPackage?: boolean;
   is50KvaLumpSumPackage?: boolean;

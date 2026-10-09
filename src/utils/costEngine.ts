@@ -23,9 +23,591 @@ import {
   LUMP_SUM_200KVA_TRANSFORMER_ITEMS,
   LUMP_SUM_200KVA_TOTALS,
   LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS,
-  LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS
+  LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS,
+  DEFAULT_DESIGN_FACTORS,
+  INITIAL_MATERIALS
 } from '../data/materialMaster';
 import * as XLSX from 'xlsx';
+
+export interface HtExtensionMiniEstimate {
+  meters: number;
+  km: number;
+  calculatedSpans: number;
+  spanMeters: number;
+  intermediatePoles: number;
+  terminalPoles: number;
+  totalPoles: number;
+  conductorCode: string;
+  conductorName: string;
+  conductorQtyKm: number;
+  poleType: string;
+  items: EstimateItem[];
+  materialTotal: number;
+  labourTotal: number;
+  grandTotal: number;
+}
+
+/**
+ * Calculates a complete 11kV HT Electrical Feeder Line Extension mini-estimate
+ * using standard 11kV assemblies (Poles, V-Cross Arms, Pin & Disc Insulators,
+ * Conductor, Tapping PG Clamps, D-Fuse Cutouts, Lightning Arresters, Stay Sets, Earthing).
+ */
+export function calculateHtExtensionMiniEstimate(
+  details: EstimateLineDetails,
+  factors?: DesignFactorsConfig,
+  materialsList?: MaterialItem[]
+): HtExtensionMiniEstimate | null {
+  const meters = Number(details.htExtensionMeters || 0);
+  if (meters <= 0) return null;
+
+  const activeFactors = factors || DEFAULT_DESIGN_FACTORS;
+  const mats = materialsList && materialsList.length > 0 ? materialsList : INITIAL_MATERIALS;
+
+  const findMat = (code: string) => {
+    const query = code.trim().toUpperCase();
+    const cleanQuery = query.replace(/^0+/, '');
+    return mats.find(m => {
+      const mCode = m.code.trim().toUpperCase();
+      const cleanMCode = mCode.replace(/^0+/, '');
+      return mCode === query || cleanMCode === cleanQuery;
+    });
+  };
+
+  const spanLength = details.htExtensionSpanMeters || activeFactors.htPoleSpacingMeters || 100;
+  const km = meters / 1000;
+  const calculatedSpans = Math.max(1, Math.ceil(meters / spanLength));
+  // 1 terminal pole at proposed transformer end + intermediate poles for remaining spans
+  const intermediatePoles = Math.max(0, calculatedSpans - 1);
+  const terminalPoles = 1;
+  const totalPoles = calculatedSpans; // 1 span = 1 new pole (tapping from existing pole); 2 spans = 2 new poles, etc.
+
+  const items: EstimateItem[] = [];
+
+  // 1. Conductor Selection & BOQ
+  const condType = (details.htExtensionConductorType || 'DOG').toUpperCase();
+  let conductorCode = '02110'; // Default DOG
+  if (condType.includes('RABBIT') || condType === '02120') conductorCode = '02120';
+  else if (condType.includes('WASP') || condType === '02330') conductorCode = '02330';
+  else if (condType.includes('PANTHER') || condType === '02150') conductorCode = '02150';
+  else if (condType.includes('OSPREY') || condType === '02160') conductorCode = '02160';
+
+  const condMat = findMat(conductorCode) || {
+    id: `mat-${conductorCode}`,
+    code: conductorCode,
+    name: `ACSR ${condType} Conductor`,
+    specification: `ACSR ${condType} Conductor 11kV Overhead Line`,
+    unit: 'KM',
+    materialRate: condType === 'RABBIT' ? 66800 : condType === 'WASP' ? 106400 : condType === 'PANTHER' ? 264200 : condType === 'OSPREY' ? 236000 : 137260,
+    labourRate: 15000
+  };
+
+  const conductorQtyKm = parseFloat((km * 3 * 1.15).toFixed(3));
+  const condMatAmt = Math.round(conductorQtyKm * condMat.materialRate);
+  const condLabAmt = Math.round(conductorQtyKm * condMat.labourRate);
+
+  items.push({
+    id: `item-${condMat.code}-ext`,
+    materialId: condMat.id,
+    materialCode: condMat.code,
+    description: `${condMat.name} (HT Line Extension)`,
+    specification: `11kV HT Extension Conductor, 3 Phases × 1.15 sag/wastage/jumpers (${meters}m = ${conductorQtyKm} KM)`,
+    unit: condMat.unit,
+    quantity: conductorQtyKm,
+    unitRate: condMat.materialRate,
+    materialAmount: condMatAmt,
+    labourRate: condMat.labourRate,
+    labourAmount: condLabAmt,
+    totalAmount: condMatAmt + condLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `${meters}m (${km} km) × 3 phases × 1.15 allowance = ${conductorQtyKm} km`
+  });
+
+  // 2. Poles / Structures (36ft PC Spun Pole or 34.8ft Steel Lattice H-Type)
+  const isSteelLattice = details.htExtensionPoleType === 'STEEL_LATTICE_34_8FT';
+  const poleCode = isSteelLattice ? '01210' : '01110';
+  const poleMat = findMat(poleCode) || findMat(isSteelLattice ? '1210' : '1113') || {
+    id: `mat-${poleCode}`,
+    code: poleCode,
+    name: isSteelLattice ? 'HT Structure 34.8 Feet (Lattice H Type)' : 'POLE PC HC TYPE (36ft HT Spun)',
+    specification: isSteelLattice ? 'Galvanized Steel HT Lattice Structure 34.8ft (Code 01210)' : 'Pre-Stressed Concrete HT Spun Pole 36ft DDS-23:89 (Code 01110)',
+    unit: 'EA',
+    materialRate: isSteelLattice ? 33402 : 13000,
+    labourRate: isSteelLattice ? 4500 : 2500
+  };
+
+  const poleQty = totalPoles;
+  const poleMatAmt = poleQty * poleMat.materialRate;
+  const poleLabAmt = poleQty * poleMat.labourRate;
+  items.push({
+    id: `item-${poleMat.code}-ext`,
+    materialId: poleMat.id,
+    materialCode: poleMat.code,
+    description: `${poleMat.name} (HT Extension)`,
+    specification: poleMat.specification,
+    unit: poleMat.unit,
+    quantity: poleQty,
+    unitRate: poleMat.materialRate,
+    materialAmount: poleMatAmt,
+    labourRate: poleMat.labourRate,
+    labourAmount: poleLabAmt,
+    totalAmount: poleMatAmt + poleLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `${calculatedSpans} spans (${meters}m @ ${spanLength}m/span) = ${poleQty} HT Poles`
+  });
+
+  // 3. 11kV V-Cross Arms (Code 06260, DDS-6260 Angle Steel)
+  const caMat = findMat('06260') || findMat('6260') || {
+    id: 'mat-06260',
+    code: '06260',
+    name: 'ANGLE STEEL V-CROSS ARM 11KV',
+    specification: 'Hot-Dip Galvanized Angle Steel V-Cross Arm 11kV (WAPDA Code 06260)',
+    unit: 'EA',
+    materialRate: 462.12,
+    labourRate: 150
+  };
+  const caQty = totalPoles;
+  const caMatAmt = Math.round(caQty * caMat.materialRate);
+  const caLabAmt = Math.round(caQty * caMat.labourRate);
+  items.push({
+    id: 'item-ca-ext',
+    materialId: caMat.id,
+    materialCode: caMat.code,
+    description: `${caMat.name} (HT Extension)`,
+    specification: caMat.specification,
+    unit: caMat.unit,
+    quantity: caQty,
+    unitRate: caMat.materialRate,
+    materialAmount: caMatAmt,
+    labourRate: caMat.labourRate,
+    labourAmount: caLabAmt,
+    totalAmount: caMatAmt + caLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `1 11kV V-Cross Arm per extension pole = ${caQty} Nos`
+  });
+
+  // 4. Cross Arm Braces B-11 (Code 07210)
+  const braceMat = findMat('07210') || {
+    id: 'mat-07210',
+    code: '07210',
+    name: 'BRACE (B-11) FOR 11KV CROSS ARM',
+    specification: 'Galvanized Cross Arm Brace B-11 (Code 07210)',
+    unit: 'EA',
+    materialRate: 30.64,
+    labourRate: 15
+  };
+  const braceQty = totalPoles;
+  const braceMatAmt = Math.round(braceQty * braceMat.materialRate);
+  const braceLabAmt = Math.round(braceQty * braceMat.labourRate);
+  items.push({
+    id: 'item-brace-ext',
+    materialId: braceMat.id,
+    materialCode: braceMat.code,
+    description: `${braceMat.name} (HT Extension)`,
+    specification: braceMat.specification,
+    unit: braceMat.unit,
+    quantity: braceQty,
+    unitRate: braceMat.materialRate,
+    materialAmount: braceMatAmt,
+    labourRate: braceMat.labourRate,
+    labourAmount: braceLabAmt,
+    totalAmount: braceMatAmt + braceLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `1 Cross Arm Brace per pole = ${braceQty} Nos`
+  });
+
+  // 5. Pin Insulators (Code 05210) & GI Pins (Code 05410) (for Intermediate structures)
+  if (intermediatePoles > 0) {
+    const pinCount = intermediatePoles * 3;
+    const pinMat = findMat('05210') || findMat('5210') || {
+      id: 'mat-05210',
+      code: '05210',
+      name: 'PIN INSULATOR 11KV',
+      specification: 'Glazed Porcelain Pin Insulator 11kV Class Normal, DDS-11 (Code 05210)',
+      unit: 'EA',
+      materialRate: 391.00,
+      labourRate: 50
+    };
+    const giPinMat = findMat('05410') || findMat('5410') || {
+      id: 'mat-05410',
+      code: '05410',
+      name: 'STEEL INSULATOR PIN 11KV',
+      specification: 'Galvanized Steel Insulator Pin for 11kV Normal (Code 05410)',
+      unit: 'EA',
+      materialRate: 410.00,
+      labourRate: 40
+    };
+
+    const pinMatAmt = Math.round(pinCount * pinMat.materialRate);
+    const pinLabAmt = Math.round(pinCount * pinMat.labourRate);
+    items.push({
+      id: 'item-pin-ext',
+      materialId: pinMat.id,
+      materialCode: pinMat.code,
+      description: `${pinMat.name} (HT Extension)`,
+      specification: pinMat.specification,
+      unit: pinMat.unit,
+      quantity: pinCount,
+      unitRate: pinMat.materialRate,
+      materialAmount: pinMatAmt,
+      labourRate: pinMat.labourRate,
+      labourAmount: pinLabAmt,
+      totalAmount: pinMatAmt + pinLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `${intermediatePoles} intermediate poles × 3 phases = ${pinCount} Pin Insulators`
+    });
+
+    const giMatAmt = Math.round(pinCount * giPinMat.materialRate);
+    const giLabAmt = Math.round(pinCount * giPinMat.labourRate);
+    items.push({
+      id: 'item-gipin-ext',
+      materialId: giPinMat.id,
+      materialCode: giPinMat.code,
+      description: `${giPinMat.name} (HT Extension)`,
+      specification: giPinMat.specification,
+      unit: giPinMat.unit,
+      quantity: pinCount,
+      unitRate: giPinMat.materialRate,
+      materialAmount: giMatAmt,
+      labourRate: giPinMat.labourRate,
+      labourAmount: giLabAmt,
+      totalAmount: giMatAmt + giLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `${intermediatePoles} intermediate poles × 3 phases = ${pinCount} GI Pins`
+    });
+
+    // Binding Wire for Pin Insulators (Code 03320)
+    const bindMat = findMat('03320') || {
+      id: 'mat-03320',
+      code: '03320',
+      name: 'WIRE SOFT ANNEALED ALUMINIUM',
+      specification: 'Soft Annealed Aluminium Binding Wire (Code 03320)',
+      unit: 'KG',
+      materialRate: 60.00,
+      labourRate: 15
+    };
+    const bindQty = Math.max(0.5, parseFloat((intermediatePoles * 0.5).toFixed(1)));
+    const bindMatAmt = Math.round(bindQty * bindMat.materialRate);
+    const bindLabAmt = Math.round(bindQty * bindMat.labourRate);
+    items.push({
+      id: 'item-bindwire-ext',
+      materialId: bindMat.id,
+      materialCode: bindMat.code,
+      description: `${bindMat.name} (HT Extension Binding)`,
+      specification: bindMat.specification,
+      unit: bindMat.unit,
+      quantity: bindQty,
+      unitRate: bindMat.materialRate,
+      materialAmount: bindMatAmt,
+      labourRate: bindMat.labourRate,
+      labourAmount: bindLabAmt,
+      totalAmount: bindMatAmt + bindLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `0.5 KG per intermediate pole for pin insulator binding`
+    });
+  }
+
+  // 6. Tension Disc Insulator Strings (Code 05230, DDS-12 45kN) for Terminal Structure
+  const discMat = findMat('05230') || findMat('5230') || {
+    id: 'mat-05230',
+    code: '05230',
+    name: 'TENSION DISC INSULATOR 11KV',
+    specification: 'Tension Disc Insulator 11kV Class 45kN WAPDA DDS-12 (Code 05230)',
+    unit: 'EA',
+    materialRate: 1535.00,
+    labourRate: 150
+  };
+  const discCount = 3; // 3 phases dead-end string at transformer take-off
+  const discMatAmt = Math.round(discCount * discMat.materialRate);
+  const discLabAmt = Math.round(discCount * discMat.labourRate);
+  items.push({
+    id: 'item-disc-ext',
+    materialId: discMat.id,
+    materialCode: discMat.code,
+    description: `${discMat.name} (HT Terminal Dead-End)`,
+    specification: discMat.specification,
+    unit: discMat.unit,
+    quantity: discCount,
+    unitRate: discMat.materialRate,
+    materialAmount: discMatAmt,
+    labourRate: discMat.labourRate,
+    labourAmount: discLabAmt,
+    totalAmount: discMatAmt + discLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `1 terminal dead-end structure × 3 phases = 3 Disc Insulator Strings`
+  });
+
+  // 7. PG Tapping Clamps (Code 06510 / 04130) for HT Line Tee-Off / Take-Off
+  if (details.htExtensionIncludePgClamps !== false) {
+    const pgMat = findMat('04130') || findMat('06510') || {
+      id: 'mat-pg-ext',
+      code: '04130',
+      name: 'PARALLEL GROOVE (PG) CONNECTOR 11KV',
+      specification: 'PG Clamps / Bi-Metallic Connectors for 11kV Conductor Tap-Off',
+      unit: 'EA',
+      materialRate: 280.00,
+      labourRate: 40
+    };
+    const pgCount = 3; // 3 phases tapping into existing 11kV feeder
+    const pgMatAmt = Math.round(pgCount * pgMat.materialRate);
+    const pgLabAmt = Math.round(pgCount * pgMat.labourRate);
+    items.push({
+      id: 'item-pg-ext',
+      materialId: pgMat.id,
+      materialCode: pgMat.code,
+      description: `${pgMat.name} (Tapping Connectors)`,
+      specification: pgMat.specification,
+      unit: pgMat.unit,
+      quantity: pgCount,
+      unitRate: pgMat.materialRate,
+      materialAmount: pgMatAmt,
+      labourRate: pgMat.labourRate,
+      labourAmount: pgLabAmt,
+      totalAmount: pgMatAmt + pgLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `3 PG connectors for 3-phase tapping into existing 11kV feeder line`
+    });
+  }
+
+  // 8. 11kV Drop Out Fuse Cutouts (Code 13311) & Fuse Links (Code 13323)
+  if (details.htExtensionIncludeCutouts !== false) {
+    const fuseCutoutMat = findMat('13311') || {
+      id: 'mat-13311',
+      code: '13311',
+      name: 'DROP OUT CUT OUT 11KV',
+      specification: '11kV Porcelain Drop-Out Cut Out Assembly (WAPDA Code 13311)',
+      unit: 'EA',
+      materialRate: 6630.00,
+      labourRate: 800
+    };
+    const fuseLinkMat = findMat('13323') || {
+      id: 'mat-13323',
+      code: '13323',
+      name: 'FUSE LINK 10K',
+      specification: 'High Voltage Fuse Link 10K (Code 13323)',
+      unit: 'EA',
+      materialRate: 50.62,
+      labourRate: 30
+    };
+    const cutoutCount = 3;
+    const cutoutMatAmt = Math.round(cutoutCount * fuseCutoutMat.materialRate);
+    const cutoutLabAmt = Math.round(cutoutCount * fuseCutoutMat.labourRate);
+    items.push({
+      id: 'item-cutout-ext',
+      materialId: fuseCutoutMat.id,
+      materialCode: fuseCutoutMat.code,
+      description: `${fuseCutoutMat.name} (HT Line Protection)`,
+      specification: fuseCutoutMat.specification,
+      unit: fuseCutoutMat.unit,
+      quantity: cutoutCount,
+      unitRate: fuseCutoutMat.materialRate,
+      materialAmount: cutoutMatAmt,
+      labourRate: fuseCutoutMat.labourRate,
+      labourAmount: cutoutLabAmt,
+      totalAmount: cutoutMatAmt + cutoutLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `3 Drop Out Fuses for 11kV feeder line extension branch protection`
+    });
+
+    const linkMatAmt = Math.round(cutoutCount * fuseLinkMat.materialRate);
+    const linkLabAmt = Math.round(cutoutCount * fuseLinkMat.labourRate);
+    items.push({
+      id: 'item-fuselink-ext',
+      materialId: fuseLinkMat.id,
+      materialCode: fuseLinkMat.code,
+      description: `${fuseLinkMat.name} (HT Cutout Links)`,
+      specification: fuseLinkMat.specification,
+      unit: fuseLinkMat.unit,
+      quantity: cutoutCount,
+      unitRate: fuseLinkMat.materialRate,
+      materialAmount: linkMatAmt,
+      labourRate: fuseLinkMat.labourRate,
+      labourAmount: linkLabAmt,
+      totalAmount: linkMatAmt + linkLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `3 Fuse links (10K) for 11kV D-Fuses`
+    });
+  }
+
+  // 9. 11kV Lightning Arresters (Code 07110, 9kV/10kA)
+  if (details.htExtensionIncludeLightningArresters !== false) {
+    const laMat = findMat('07110') || findMat('7110') || {
+      id: 'mat-07110',
+      code: '07110',
+      name: 'LIGHTENING ARRESTOR (11-KV)',
+      specification: '11kV Distribution Lightning Arrester (Code 07110 / 7110, 9kV/10kA)',
+      unit: 'EA',
+      materialRate: 986.57,
+      labourRate: 250
+    };
+    const laCount = 3;
+    const laMatAmt = Math.round(laCount * laMat.materialRate);
+    const laLabAmt = Math.round(laCount * laMat.labourRate);
+    items.push({
+      id: 'item-la-ext',
+      materialId: laMat.id,
+      materialCode: laMat.code,
+      description: `${laMat.name} (Surge Protection)`,
+      specification: laMat.specification,
+      unit: laMat.unit,
+      quantity: laCount,
+      unitRate: laMat.materialRate,
+      materialAmount: laMatAmt,
+      labourRate: laMat.labourRate,
+      labourAmount: laLabAmt,
+      totalAmount: laMatAmt + laLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `3 Surge arresters for 11kV line extension terminal protection`
+    });
+  }
+
+  // 10. Stay Sets (Code 15310 + 03120 stay wire)
+  if (details.htExtensionIncludeStaySets !== false) {
+    const stayMat = findMat('15310') || {
+      id: 'mat-15310',
+      code: '15310',
+      name: 'STAY ROD WITH ELBOW AND THIMBLE ASSEMBLY',
+      specification: 'Stay Rod with Elbow and Thimble Complete Assembly (Code 15310)',
+      unit: 'EA',
+      materialRate: 1595.00,
+      labourRate: 350
+    };
+    const stayWireMat = findMat('03120') || {
+      id: 'mat-03120',
+      code: '03120',
+      name: 'GALVANIZED STEEL STAY WIRE 6MM',
+      specification: 'Galvanized Steel Wire 6mm Stranded (Code 03120)',
+      unit: 'KG',
+      materialRate: 47.09,
+      labourRate: 15
+    };
+
+    const stayCount = 2; // 2 stay sets for terminal structure dead-end pull
+    const stayMatAmt = Math.round(stayCount * stayMat.materialRate);
+    const stayLabAmt = Math.round(stayCount * stayMat.labourRate);
+    items.push({
+      id: 'item-stay-ext',
+      materialId: stayMat.id,
+      materialCode: stayMat.code,
+      description: `${stayMat.name} (HT Terminal Guy)`,
+      specification: stayMat.specification,
+      unit: stayMat.unit,
+      quantity: stayCount,
+      unitRate: stayMat.materialRate,
+      materialAmount: stayMatAmt,
+      labourRate: stayMat.labourRate,
+      labourAmount: stayLabAmt,
+      totalAmount: stayMatAmt + stayLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `2 Stay sets complete for terminal dead-end pole counteracting line tension`
+    });
+
+    const wireQty = 20; // 10kg per stay set
+    const wireMatAmt = Math.round(wireQty * stayWireMat.materialRate);
+    const wireLabAmt = Math.round(wireQty * stayWireMat.labourRate);
+    items.push({
+      id: 'item-staywire-ext',
+      materialId: stayWireMat.id,
+      materialCode: stayWireMat.code,
+      description: `${stayWireMat.name} (Guy Wire)`,
+      specification: stayWireMat.specification,
+      unit: stayWireMat.unit,
+      quantity: wireQty,
+      unitRate: stayWireMat.materialRate,
+      materialAmount: wireMatAmt,
+      labourRate: stayWireMat.labourRate,
+      labourAmount: wireLabAmt,
+      totalAmount: wireMatAmt + wireLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `20 KG 7/8 SWG stay wire (10 KG per stay set)`
+    });
+  }
+
+  // 11. Earthing Assembly (Code 03110)
+  if (details.htExtensionIncludeEarthing !== false) {
+    const earthMat = findMat('03110') || {
+      id: 'mat-03110',
+      code: '03110',
+      name: 'EARTHING SET & 8 SWG GROUND WIRE',
+      specification: 'Solid Galvanized Steel Ground Wire 4mm 8 SWG & Ground Rod (Code 03110)',
+      unit: 'SET',
+      materialRate: 1450.00,
+      labourRate: 250
+    };
+    const earthCount = 1;
+    const earthMatAmt = Math.round(earthCount * earthMat.materialRate);
+    const earthLabAmt = Math.round(earthCount * earthMat.labourRate);
+    items.push({
+      id: 'item-earth-ext',
+      materialId: earthMat.id,
+      materialCode: earthMat.code,
+      description: `${earthMat.name} (HT Terminal Earthing)`,
+      specification: earthMat.specification,
+      unit: earthMat.unit,
+      quantity: earthCount,
+      unitRate: earthMat.materialRate,
+      materialAmount: earthMatAmt,
+      labourRate: earthMat.labourRate,
+      labourAmount: earthLabAmt,
+      totalAmount: earthMatAmt + earthLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `Complete earthing set for HT extension terminal and surge arresters`
+    });
+  }
+
+  // 12. Danger Notice Plates (Code 07310)
+  if (details.htExtensionIncludeDangerPlates !== false) {
+    const dangerMat = findMat('07310') || findMat('7310') || {
+      id: 'mat-07310',
+      code: '07310',
+      name: 'DANGER PLATE WITH FITTINGS 11KV',
+      specification: 'Enamelled Steel Danger Notice Plate 11kV with Clamps (Code 07310)',
+      unit: 'EA',
+      materialRate: 52.03,
+      labourRate: 20
+    };
+    const dangerQty = totalPoles;
+    const dangerMatAmt = Math.round(dangerQty * dangerMat.materialRate);
+    const dangerLabAmt = Math.round(dangerQty * dangerMat.labourRate);
+    items.push({
+      id: 'item-danger-ext',
+      materialId: dangerMat.id,
+      materialCode: dangerMat.code,
+      description: `${dangerMat.name} (HT Line Warning)`,
+      specification: dangerMat.specification,
+      unit: dangerMat.unit,
+      quantity: dangerQty,
+      unitRate: dangerMat.materialRate,
+      materialAmount: dangerMatAmt,
+      labourRate: dangerMat.labourRate,
+      labourAmount: dangerLabAmt,
+      totalAmount: dangerMatAmt + dangerLabAmt,
+      isAutoCalculated: true,
+      calculationNotes: `1 Danger notice plate per extension pole = ${dangerQty} Nos`
+    });
+  }
+
+  const materialTotal = Number(items.reduce((s, i) => s + (i.materialAmount || 0), 0).toFixed(2));
+  const labourTotal = Number(items.reduce((s, i) => s + (i.labourAmount || 0), 0).toFixed(2));
+  const grandTotal = Number((materialTotal + labourTotal).toFixed(2));
+
+  return {
+    meters,
+    km,
+    calculatedSpans,
+    spanMeters: spanLength,
+    intermediatePoles,
+    terminalPoles,
+    totalPoles,
+    conductorCode,
+    conductorName: condMat.name,
+    conductorQtyKm,
+    poleType: isSteelLattice ? '34.8ft Steel Lattice H-Type' : '36ft PC Spun Pole (PC HC)',
+    items,
+    materialTotal,
+    labourTotal,
+    grandTotal
+  };
+}
 
 /**
  * Automatically calculates required line materials, pole counts, insulator counts,
@@ -639,6 +1221,26 @@ export function calculateQuantitiesForLine(
     }
   }
 
+  // HT Extension Calculation & Standard 11kV Feeder Line Assemblies
+  if (details.htExtensionMeters && details.htExtensionMeters > 0 && details.htExtensionMergeWithTransformer !== false) {
+    const miniEst = calculateHtExtensionMiniEstimate(details, factors, materials);
+    if (miniEst) {
+      for (const item of miniEst.items) {
+        itemMap.set(item.id, item);
+      }
+
+      steps.push({
+        component: '11kV HT Line Extension Mini-Estimate Assembly',
+        parameter: `${miniEst.meters} Meters (${miniEst.calculatedSpans} Spans, ${miniEst.totalPoles} Poles)`,
+        formula: '11kV Electrical Feeder Standard Assemblies (WAPDA DDS-23/DDS-10/DDS-11/DDS-12)',
+        calculation: `${miniEst.totalPoles} Poles, ${miniEst.conductorQtyKm} km ${miniEst.conductorName}, V-Cross Arms, Pin & Disc Insulators, D-Fuses, Lightning Arresters, Stay Sets: Material=Rs. ${miniEst.materialTotal.toLocaleString()}, Labour=Rs. ${miniEst.labourTotal.toLocaleString()}, Total=Rs. ${miniEst.grandTotal.toLocaleString()}`,
+        resultQuantity: miniEst.meters,
+        unit: 'Meters',
+        notes: 'Complete 11kV HT feeder line extension mini-estimate merged into transformer project estimate.'
+      });
+    }
+  }
+
   // 14. Transformer & Sub-station Hardware (if DT included)
   const trfCount = Number(details.transformerCount || 0);
   const trfKva = Number(details.transformerCapacityKva || 0);
@@ -1007,7 +1609,11 @@ export function calculateQuantitiesForLine(
 
   let finalItems = Array.from(itemMap.values());
   if (is25Kva || is50Kva || is100Kva || details.is25KvaLumpSumPackage || details.is50KvaLumpSumPackage || details.is100KvaLumpSumPackage || ((Number(details.transformerCapacityKva) === 25 || Number(details.transformerCapacityKva) === 50 || Number(details.transformerCapacityKva) === 100) && htKm === 0 && ltKm === 0)) {
-    finalItems = finalItems.filter(item => item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD'));
+    finalItems = finalItems.filter(item => {
+      // Retain stay sets and guy accessories specifically configured for the HT extension mini-estimate
+      if (item.id === 'item-stay-ext' || item.id?.endsWith('-ext')) return true;
+      return item.materialCode !== '15310' && !item.description.toUpperCase().includes('STAY ROD');
+    });
   }
 
   return {

@@ -64,7 +64,8 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
     const mouseX = e.clientX - rect.left;
     
     // Scale transformation (SVG viewBox vs client rect)
-    const svgPoint = (mouseX - rect.left) * (layout.viewBox.split(' ')[2] / rect.width);
+    const viewBoxWidth = parseFloat(layout.viewBox.split(' ')[2]) || rect.width;
+    const svgPoint = (mouseX - rect.left) * (viewBoxWidth / rect.width);
     const newLength = Math.max(0, (transformerNode.x - svgPoint));
 
     onUpdateBifurcation({
