@@ -400,7 +400,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     const showOnScreen = isFirstPage || isSoloView || pageBreakMode === 'page_per_section';
 
     return (
-      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full ${showOnScreen ? 'block' : 'hidden print:block'}`}>
+      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full no-print ${showOnScreen ? 'block' : 'hidden print:block'}`}>
         <div className="flex items-center justify-between gap-4">
           <img
             src="/pesco-logo.svg"

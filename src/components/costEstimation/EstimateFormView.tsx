@@ -89,6 +89,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   onPrintEstimate,
   onSaveUnifiedProject
 }) => {
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
   // 1. Project Information State
   const [projectInfo, setProjectInfo] = useState({
     estimateNo: initialEstimate?.projectInfo.estimateNo || generateEstimateNumber('PESH'),
@@ -856,6 +857,14 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     return computeEstimateCharges(items, totalKm, transportSettings, percentages);
   }, [items, totalKm, transportSettings, percentages]);
 
+  // Updated Grand Total calculation as requested
+  const finalTotal = useMemo(() => {
+    const foundationCost = calculateFoundationCharges(lineDetails);
+    const netDismantleCost = dismantleItems.reduce((sum, item) => sum + item.materialAmount, 0) * 1.1;
+    const charge051 = ((computedCharges.grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
+    return computedCharges.grandTotal - netDismantleCost + charge051;
+  }, [computedCharges, lineDetails, dismantleItems]);
+
   // Handler: Run Automatic Material Calculation Engine
   const handleCalculateRequiredMaterials = () => {
     const is25Kva = lineDetails.is25KvaLumpSumPackage || 
@@ -1036,6 +1045,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const handleDeleteItem = (itemId: string) => {
     if (!confirm('Are you sure you want to remove this item from the BOQ?')) return;
     setItems(prev => prev.filter(i => i.id !== itemId));
+    setSelectedItemIds(prev => {
+      const next = new Set(prev);
+      next.delete(itemId);
+      return next;
+    });
+  };
+
+  // Handler: Delete Selected Items
+  const handleDeleteSelectedItems = () => {
+    if (!confirm(`Are you sure you want to remove the selected ${selectedItemIds.size} items from the BOQ?`)) return;
+    console.log("Deleting selected items:", selectedItemIds);
+    setItems(prev => {
+        const next = prev.filter(i => !selectedItemIds.has(i.id));
+        console.log("Items before:", prev.length, "Items after:", next.length);
+        return next;
+    });
+    setSelectedItemIds(new Set());
   };
 
   // Handler: Duplicate BOQ Item
@@ -3017,11 +3043,34 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             </div>
 
             {/* Table */}
+            {selectedItemIds.size > 0 && (
+              <button
+                type="button"
+                onClick={handleDeleteSelectedItems}
+                className="mb-2 px-3 py-1.5 bg-rose-600 text-white text-xs font-semibold rounded shadow-sm hover:bg-rose-700 transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete {selectedItemIds.size} Selected
+              </button>
+            )}
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
-                    <th className="py-2.5 px-2 text-center w-10">Sr.</th>
+                    <th className="py-2.5 px-2 text-center w-10">
+                      <input 
+                        type="checkbox"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        checked={selectedItemIds.size > 0 && selectedItemIds.size === filteredBoqItems.length}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedItemIds(new Set(filteredBoqItems.map(i => i.id)));
+                          } else {
+                            setSelectedItemIds(new Set());
+                          }
+                        }}
+                      />
+                    </th>
                     <th className="py-2.5 px-3">Material Code</th>
                     <th className="py-2.5 px-3">Description</th>
                     <th className="py-2.5 px-2 text-center">Unit</th>
@@ -3045,7 +3094,19 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   ) : (
                     filteredBoqItems.map((item, idx) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">{idx + 1}</td>
+                        <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">
+                          <input 
+                            type="checkbox"
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            checked={selectedItemIds.has(item.id)}
+                            onChange={(e) => {
+                              const newSet = new Set(selectedItemIds);
+                              if (e.target.checked) newSet.add(item.id);
+                              else newSet.delete(item.id);
+                              setSelectedItemIds(newSet);
+                            }}
+                          />
+                        </td>
                         <td className="py-2 px-3 font-bold text-slate-900 text-[11px]">
                           <span className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">
                             {item.materialCode}
@@ -3448,7 +3509,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 {computedCharges.overheadBasis === 'MATERIAL' ? 'NET ESTIMATED COST (GRAND TOTAL):' : 'ESTIMATED GRAND TOTAL:'}
               </span>
               <div className="text-2xl font-black text-amber-400 font-mono tracking-tight">
-                Rs. {computedCharges.grandTotal.toLocaleString()}
+                Rs. {finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
               </div>
 
               <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
