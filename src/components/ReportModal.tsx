@@ -128,7 +128,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [pageBreakMode, setPageBreakMode] = useState<PageBreakMode>('page_per_section');
   const [pageOrientation, setPageOrientation] = useState<PageOrientation>('portrait');
   const [printScale, setPrintScale] = useState<PrintScale>('standard');
-  const [includePageHeaders, setIncludePageHeaders] = useState(false); // Completely removed from printing & PDF export as requested
+  const [includePageHeaders, setIncludePageHeaders] = useState(true);
   const [includeSignatures, setIncludeSignatures] = useState(true);
   const [includeWatermark, setIncludeWatermark] = useState(false); // Excluded by default to avoid unnecessary graphics
   const [watermarkOpacity, setWatermarkOpacity] = useState<number>(0.07);
@@ -411,9 +411,69 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     printScale === 'presentation' ? 'print:text-sm print:leading-relaxed' :
     'print:text-xs print:leading-normal';
 
-  // Official PESCO - WAPDA Header for all PDF / printed pages (Removed from printing & export to pdf as requested by user)
-  const renderOfficialHeader = (_sectionSubtitle?: string, _pageNumberText?: string, _isFirstPage: boolean = false) => {
-    return null;
+  // Official PESCO - WAPDA Header for all PDF / printed pages
+  const renderOfficialHeader = (sectionSubtitle?: string, pageNumberText?: string, isFirstPage: boolean = false) => {
+    if (!includePageHeaders && !isFirstPage) return null;
+    const isSoloView = displayMode !== 'full_report';
+    const showOnScreen = isFirstPage || isSoloView || pageBreakMode === 'page_per_section';
+
+    return (
+      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full ${showOnScreen ? 'block' : 'hidden print:block'}`}>
+        <div className="flex items-center justify-between gap-4">
+          <img
+            src="/pesco-logo.svg"
+            alt="PESCO Logo"
+            className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
+          />
+          
+          <div className="text-center flex-1">
+            {includePageHeaders && (
+              <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
+                PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+              </div>
+            )}
+            <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
+              ENERGY LOSS REDUCTION (ELR) ENGINEERING REPORT
+            </h1>
+            <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
+              {sectionSubtitle || 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'}
+            </div>
+          </div>
+
+          <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
+              <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">WAPDA</span>
+              <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">ELR</span>
+              <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">STD</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
+          <span>Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Date: <strong>{today}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Category: <strong>{feeder.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Nominal Voltage: <strong>{feeder.nominalVoltage} V</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span>Division: <strong>Peshawar City</strong></span>
+          <span aria-hidden="true" className="hidden sm:inline">·</span>
+          <span className="text-amber-900 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-300">
+            Prepared by: <strong>{officerTitle}</strong>
+          </span>
+          {pageNumberText && (
+            <>
+              <span aria-hidden="true" className="hidden sm:inline">·</span>
+              <span className="font-bold text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300 text-[11px]">
+                {pageNumberText}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    );
   };
 
   // Computed list of active sections for accurate page numbering
@@ -691,11 +751,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             min-height: auto !important;
             display: flex !important;
             flex-direction: column !important;
-            justify-content: flex-start !important;
+            justify-content: space-between !important;
             box-sizing: border-box !important;
             padding-top: 1mm !important;
             padding-bottom: 2mm !important;
-            margin-bottom: 0 !important;
+            margin-bottom: 10mm !important;
             background: #ffffff !important;
             position: relative !important;
           }
@@ -704,10 +764,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             break-after: auto !important;
             margin-bottom: 0 !important;
           }
-          .report-official-footer,
-          .report-official-header,
-          [data-section-header="official"],
-          .official-report-header {
+          .report-official-footer {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
