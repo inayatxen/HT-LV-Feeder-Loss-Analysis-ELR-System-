@@ -165,81 +165,81 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Workbench Header & Quick Upgrade Presets */}
-      <div className="sticky top-0 z-10 bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Workbench Header & Quick Upgrade Presets (3D Tactile Card) */}
+      <div className="sticky top-0 z-10 card-3d p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold text-amber-600 mb-1">
-            <SlidersHorizontal className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-600 mb-1">
+            <SlidersHorizontal className="w-4 h-4 stroke-[2.2]" />
             <span>ELR INTERVENTION WORKBENCH</span>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
             System Upgradation & Loss Reduction Simulator
           </h2>
-          <p className="text-xs text-slate-500 mt-1 max-w-3xl">
+          <p className="text-xs text-slate-500 mt-1 max-w-3xl leading-relaxed">
             Simulate technical interventions: line bifurcation with additional transformer (T-2), transformer augmentation, segment re-conductoring, shunt capacitors, and load factor duty cycle variation.
           </p>
         </div>
 
-        {/* Quick Packages */}
+        {/* Quick Packages (3D Tactile Buttons) */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {isHtLine ? (
             <>
               <button
                 onClick={() => onApplyPackage('bifurcation')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   bifurcationConfig.enabled
-                    ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
-                    : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-300'
+                    ? 'btn-3d-blue text-white shadow-md'
+                    : 'btn-3d-slate text-purple-200'
                 }`}
               >
-                <Split className="w-3.5 h-3.5" />
-                <span>HT Feeder Bifurcation (Grid Extension @ Break Point)</span>
+                <Split className="w-3.5 h-3.5 stroke-[2.2]" />
+                <span>HT Feeder Bifurcation</span>
               </button>
 
               <button
                 onClick={() => onApplyPackage('standard')}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-amber px-3 py-1.5 text-xs font-bold text-slate-950 flex items-center gap-1.5 whitespace-nowrap"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>HT Re-conductoring Plan (Panther / Dog ACSR)</span>
+                <Sparkles className="w-3.5 h-3.5 text-slate-950 stroke-[2.2]" />
+                <span>Re-conductoring Plan</span>
               </button>
 
               <button
                 onClick={() => onApplyPackage('max')}
-                className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-emerald px-3 py-1.5 text-xs font-bold text-white flex items-center gap-1.5 whitespace-nowrap"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Grid Voltage Regulation (11.4 kV)</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+                <span>Voltage Regulation (11.4 kV)</span>
               </button>
             </>
           ) : (
             <>
               <button
                 onClick={() => onApplyPackage('bifurcation')}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   bifurcationConfig.enabled
-                    ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40'
-                    : 'bg-purple-50 text-purple-900 hover:bg-purple-100 border border-purple-300'
+                    ? 'btn-3d-blue text-white shadow-md'
+                    : 'btn-3d-slate text-purple-200'
                 }`}
               >
-                <Split className="w-3.5 h-3.5" />
-                <span>Line Bifurcation + T-2 (100 kVA @ Node 3.0)</span>
+                <Split className="w-3.5 h-3.5 stroke-[2.2]" />
+                <span>Bifurcation + T-2 (100 kVA)</span>
               </button>
 
               <button
                 onClick={() => onApplyPackage('standard')}
-                className="px-3 py-1.5 text-xs font-semibold text-slate-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-amber px-3 py-1.5 text-xs font-bold text-slate-950 flex items-center gap-1.5 whitespace-nowrap"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>WAPDA Augmentation (200 kVA + Cap)</span>
+                <Sparkles className="w-3.5 h-3.5 text-slate-950 stroke-[2.2]" />
+                <span>Augmentation (200 kVA)</span>
               </button>
 
               <button
                 onClick={() => onApplyPackage('max')}
-                className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="btn-3d-emerald px-3 py-1.5 text-xs font-bold text-white flex items-center gap-1.5 whitespace-nowrap"
               >
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Maximum Efficiency Plan</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-white stroke-[2.2]" />
+                <span>Max Efficiency Plan</span>
               </button>
             </>
           )}
@@ -247,81 +247,81 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           {hasChanges && (
             <button
               onClick={onReset}
-              className="px-3 py-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="btn-3d-slate px-3 py-1.5 text-xs font-bold text-rose-300 hover:text-white flex items-center gap-1.5 whitespace-nowrap"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset All</span>
+              <span>Reset</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Savings Metric Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-xl">
-          <span className="text-xs text-emerald-800 font-semibold uppercase tracking-wider block">
+      {/* Savings Metric Highlights (3D Elevated Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="card-3d bg-gradient-to-br from-emerald-50 via-teal-50/70 to-emerald-100/50 border-emerald-200 p-4 rounded-xl">
+          <span className="text-xs text-emerald-800 font-bold uppercase tracking-wider block">
             Power Loss Reduction
           </span>
-          <div className="text-2xl font-black text-emerald-950 font-mono mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-emerald-950 font-mono mt-1 tracking-tight">
             {kwSaved.toFixed(2)} kW
           </div>
-          <span className="text-[11px] text-emerald-700 mt-0.5 block">
+          <span className="text-[11px] text-emerald-700 mt-1 block font-medium">
             {existingSummary.totalLineLossKw > 0 ? ((kwSaved / existingSummary.totalLineLossKw) * 100).toFixed(1) : 0}% reduction in peak losses
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-4 rounded-xl">
-          <span className="text-xs text-blue-800 font-semibold uppercase tracking-wider block">
+        <div className="card-3d bg-gradient-to-br from-blue-50 via-indigo-50/70 to-blue-100/50 border-blue-200 p-4 rounded-xl">
+          <span className="text-xs text-blue-800 font-bold uppercase tracking-wider block">
             Annual Energy Saved
           </span>
-          <div className="text-2xl font-black text-blue-950 font-mono mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-blue-950 font-mono mt-1 tracking-tight">
             {kwhSaved.toLocaleString()} kWh
           </div>
-          <span className="text-[11px] text-blue-700 mt-0.5 block font-mono">
+          <span className="text-[11px] text-blue-700 mt-1 block font-mono font-medium">
             LLF: {proposedSummary.lossLoadFactor} (LF: {(currentLf * 100).toFixed(0)}%)
           </span>
         </div>
 
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 p-4 rounded-xl">
-          <span className="text-xs text-amber-800 font-semibold uppercase tracking-wider block">
+        <div className="card-3d bg-gradient-to-br from-amber-50 via-orange-50/70 to-amber-100/50 border-amber-200 p-4 rounded-xl">
+          <span className="text-xs text-amber-800 font-bold uppercase tracking-wider block">
             Annual Financial Benefit
           </span>
-          <div className="text-2xl font-black text-amber-950 font-mono mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-amber-950 font-mono mt-1 tracking-tight">
             Rs. {moneySaved.toLocaleString()}
           </div>
-          <span className="text-[11px] text-amber-700 mt-0.5 block">
+          <span className="text-[11px] text-amber-700 mt-1 block font-medium">
             At statutory tariff of Rs. {tariff}/kWh
           </span>
         </div>
 
         <a 
           href="#economic-analysis-section"
-          className="bg-gradient-to-br from-purple-50 via-indigo-50 to-slate-50 border border-purple-200 hover:border-purple-400 p-4 rounded-xl transition-all block cursor-pointer group shadow-xs"
+          className="card-3d bg-gradient-to-br from-purple-50 via-indigo-50/70 to-purple-100/50 border-purple-200 hover:border-purple-400 p-4 rounded-xl transition-all block cursor-pointer group shadow-sm"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-purple-900 font-bold uppercase tracking-wider block flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-purple-600" />
               Simple Payback Period
             </span>
-            <ArrowRight className="w-3.5 h-3.5 text-purple-600 group-hover:translate-x-0.5 transition-transform" />
+            <ArrowRight className="w-3.5 h-3.5 text-purple-600 group-hover:translate-x-1 transition-transform" />
           </div>
-          <div className="text-2xl font-black text-purple-950 font-mono mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-purple-950 font-mono mt-1 tracking-tight">
             {quickPaybackMonths !== null ? `${quickPaybackMonths.toFixed(1)} Mos` : (hasChanges ? 'Calculating...' : 'Configure')}
           </div>
-          <span className="text-[11px] text-purple-700 mt-0.5 block">
+          <span className="text-[11px] text-purple-700 mt-1 block font-medium">
             {quickCapexEstimate > 0 ? `CapEx: Rs. ${(quickCapexEstimate / 1000).toFixed(0)}k • View Analysis ↓` : 'View Economic Analysis ↓'}
           </span>
         </a>
       </div>
 
-      {/* 5 Interactive Intervention Panels Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+      {/* 5 Interactive Intervention Panels Grid (3D Hardware Chassis Look) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">
         
         {/* Panel 1: Line Bifurcation & Additional Transformer (LT) OR HT Feeder Bifurcation & Grid Line Extension (HT) */}
-        <div className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
+        <div className={`card-3d p-4 transition-all flex flex-col justify-between ${
           bifurcationConfig.enabled 
-            ? 'bg-purple-50/70 border-purple-300 ring-2 ring-purple-400/30 shadow-sm' 
-            : 'bg-white border-slate-200 shadow-sm'
+            ? 'bg-gradient-to-b from-purple-50/80 to-purple-100/40 border-purple-300 ring-2 ring-purple-400/40 shadow-md' 
+            : ''
         }`}>
           <div>
             <div className="flex items-center justify-between text-xs mb-2">
@@ -853,7 +853,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
         {/* Panel 2: Injected Voltage (HT Line) or Transformer Capacity (LT Line) */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="card-3d p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -996,7 +996,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
         {/* Panel 3: Re-conductoring Priority Spans */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="card-3d p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1062,7 +1062,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
         {/* Panel 4: Shunt Capacitor Placement */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="card-3d p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1118,7 +1118,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
         {/* Panel 5: Load Factor & LLF Simulator */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col justify-between">
+        <div className="card-3d p-4 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
               <span className="font-bold text-slate-800 flex items-center gap-1.5">
@@ -1257,12 +1257,12 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
       </div>
 
       {/* Comparison Matrix (Matching Table 1 from Paper + Proposed Benefits) */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div className="card-3d-static overflow-hidden">
+        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
               <span>Table 1 Comparison & Upgradation Benefits Matrix</span>
-              <span className="text-[10px] font-mono uppercase bg-slate-200 px-2 py-0.5 rounded text-slate-700">
+              <span className="text-[10px] font-mono uppercase bg-slate-200/80 px-2 py-0.5 rounded-md text-slate-800 font-bold shadow-2xs border border-slate-300">
                 WAPDA Standards
               </span>
             </h3>
@@ -1273,8 +1273,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-100/70 border-b border-slate-200 text-slate-700 font-semibold uppercase tracking-wider">
+          <table className="w-full text-left text-xs min-w-[640px]">
+            <thead className="bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider">
               <tr>
                 <th className="py-3 px-4">Parameter / Metric</th>
                 <th className="py-3 px-4">Existing Baseline</th>

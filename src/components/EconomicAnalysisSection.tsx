@@ -509,18 +509,18 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
   }, [annualEnergySavedKwh, annualDemandCostSavings, effectiveProjectCost, tariffPerKwh]);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm space-y-0">
+    <div className="card-3d-static overflow-hidden space-y-0">
       
       {/* 1. Header Banner */}
-      <div className="p-4 sm:p-5 border-b border-slate-200 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-4 sm:p-5 border-b border-slate-800 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400">
-              <Calculator className="w-5 h-5" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center text-emerald-400 shadow-inner">
+              <Calculator className="w-5 h-5 stroke-[2.2]" />
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-base sm:text-lg font-black tracking-tight text-white">
+                <h3 className="text-base sm:text-lg font-black tracking-tight text-white drop-shadow-2xs">
                   Economic Analysis & Simple Payback Period
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold uppercase tracking-wider">
@@ -540,7 +540,7 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
         </div>
 
         {/* Quick tariff & source indicator */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 text-xs">
+        <div className="flex items-center gap-2 self-start md:self-auto bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs shadow-inner">
           <span className="text-slate-300 text-[11px]">Active Tariff:</span>
           <span className="font-mono font-bold text-emerald-400">
             Rs. {tariffPerKwh.toFixed(2)} / kWh
@@ -548,26 +548,26 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
         </div>
       </div>
 
-      {/* 2. Executive KPI Cards (Hero Metric Deck) */}
-      <div className="p-4 sm:p-5 bg-slate-50 border-b border-slate-200">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Executive KPI Cards (3D Tactile Deck) */}
+      <div className="p-4 sm:p-5 bg-slate-50/80 border-b border-slate-200">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           
           {/* Card 1: Simple Payback Period (In Months) - The Core Metric */}
-          <div className="bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white p-4 rounded-xl shadow-sm border border-indigo-700/50 relative overflow-hidden flex flex-col justify-between">
-            <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
+          <div className="card-3d-dark text-white p-4 sm:p-5 relative overflow-hidden flex flex-col justify-between">
+            <div className="absolute -right-4 -bottom-4 w-28 h-28 bg-indigo-500/15 rounded-full blur-xl pointer-events-none" />
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-indigo-300" />
                   Simple Payback Period
                 </span>
-                <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 uppercase font-semibold">
+                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 uppercase font-bold">
                   In Months
                 </span>
               </div>
               
               <div className="mt-2.5 flex items-baseline gap-2">
-                <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white">
+                <div className="text-3xl sm:text-4xl font-black font-mono tracking-tight text-white drop-shadow-xs">
                   {paybackResults.formattedMonths}
                 </div>
               </div>
@@ -583,7 +583,7 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
                 <span>3-Yr Utility Benchmark</span>
                 <span className="font-mono">{paybackResults.months <= 36 ? 'Compliant' : 'Extended'}</span>
               </div>
-              <div className="w-full bg-indigo-950 rounded-full h-2 overflow-hidden border border-indigo-700/40">
+              <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-indigo-700/50 shadow-inner">
                 <div 
                   className={`h-full transition-all duration-500 ${paybackResults.badgeBg}`}
                   style={{ 
@@ -595,14 +595,14 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
           </div>
 
           {/* Card 2: Annual Energy Loss Saved */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div className="card-3d p-4 sm:p-5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <TrendingDown className="w-3.5 h-3.5 text-emerald-600" />
                 Annual Energy Loss Saved
               </span>
-              <div className="text-2xl font-black text-slate-900 font-mono mt-2">
-                {annualEnergySavedKwh.toLocaleString()} <span className="text-sm font-sans font-bold text-slate-500">kWh/yr</span>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono mt-2 tracking-tight">
+                {annualEnergySavedKwh.toLocaleString()} <span className="text-xs font-sans font-bold text-slate-500">kWh/yr</span>
               </div>
               <div className="text-xs text-emerald-700 font-semibold mt-1 flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
@@ -610,20 +610,20 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
               </div>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] font-mono text-slate-500 flex items-center justify-between">
-              <span>Baseline: {baselineAnnualLossKwh.toLocaleString()}</span>
+            <div className="panel-sunken-3d p-2 mt-3 text-[11px] font-mono text-slate-600 flex items-center justify-between">
+              <span>Base: {baselineAnnualLossKwh.toLocaleString()}</span>
               <span>→ Prop: {proposedAnnualLossKwh.toLocaleString()}</span>
             </div>
           </div>
 
           {/* Card 3: Annual Financial Loss Reduction */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div className="card-3d p-4 sm:p-5 flex flex-col justify-between">
             <div>
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                 <DollarSign className="w-3.5 h-3.5 text-blue-600" />
                 Annual Financial Savings
               </span>
-              <div className="text-2xl font-black text-slate-900 font-mono mt-2">
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 font-mono mt-2 tracking-tight">
                 {currency} {Math.round(totalAnnualSavings).toLocaleString()}
               </div>
               <div className="text-xs text-blue-700 font-semibold mt-1 font-mono">
@@ -631,14 +631,14 @@ export const EconomicAnalysisSection: React.FC<EconomicAnalysisSectionProps> = (
               </div>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between">
+            <div className="panel-sunken-3d p-2 mt-3 text-[11px] text-slate-600 flex items-center justify-between">
               <span>Energy Tariff:</span>
-              <span className="font-mono font-bold text-slate-700">Rs. {tariffPerKwh.toFixed(2)}/kWh</span>
+              <span className="font-mono font-bold text-slate-800">Rs. {tariffPerKwh.toFixed(2)}/kWh</span>
             </div>
           </div>
 
           {/* Card 4: Estimated Project Cost (CapEx) */}
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
+          <div className="card-3d p-4 sm:p-5 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">

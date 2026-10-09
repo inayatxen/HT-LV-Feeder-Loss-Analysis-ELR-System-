@@ -543,9 +543,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
+    <div className="min-h-screen bg-blueprint-grid flex flex-col font-sans text-slate-900 selection:bg-amber-500 selection:text-slate-950">
       {/* Header with Category & Navigation Controls (Sticky unscrollable at top, hidden when printing official reports) */}
-      <div className="sticky top-0 z-40 print:hidden no-print shadow-lg">
+      <div className="sticky top-0 z-40 print:hidden no-print shadow-xl">
         <Header
           activeSystemModule={activeSystemModule}
           onSelectSystemModule={setActiveSystemModule}
@@ -574,16 +574,16 @@ export default function App() {
         />
       </div>
 
-      {/* Database Save Toast Notification */}
+      {/* Database Save Toast Notification (3D Dark Glass Badge) */}
       {dbToast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200 print:hidden no-print">
+        <div className="fixed bottom-6 right-6 z-50 card-3d-dark text-white px-4 py-2.5 rounded-xl shadow-2xl border border-slate-700/80 text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 duration-200 print:hidden no-print">
           <Database className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span className="font-medium">{dbToast}</span>
+          <span className="font-semibold">{dbToast}</span>
         </div>
       )}
 
-      {/* Main Workspace Viewport (Hidden when printing reports) */}
-      <main className="flex-1 w-full px-3 sm:px-6 lg:px-8 py-5 space-y-6 print:hidden">
+      {/* Main Workspace Viewport (Adapts to all screens 360px to 4K ultra-wide) */}
+      <main className="flex-1 w-full max-w-[1920px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-5 space-y-4 sm:space-y-6 print:hidden">
         
         {activeSystemModule === 'line_cost_estimation' ? (
           <CostEstimationModule 
@@ -611,18 +611,18 @@ export default function App() {
               onOpenCostEstimation={() => setActiveSystemModule('line_cost_estimation')}
             />
 
-            {/* What-If Active Banner */}
+            {/* What-If Active Banner (3D Tactile Card) */}
             {hasActiveInterventions && (
-              <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 px-4 py-2.5 rounded-xl text-xs flex items-center justify-between no-print shadow-xs">
+              <div className="card-3d bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-100/60 border-emerald-300 text-emerald-950 px-4 py-3 rounded-xl text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 no-print shadow-sm">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>
-                    <strong>What-If Scenario Active:</strong> Viewing upgraded system ({activeTransformerKva} kVA transformer, {Object.keys(activeConductors).length} re-conductored spans, {proposedSummary.totalCapacitorKvar} kVAR capacitors).
+                  <span className="leading-snug">
+                    <strong className="font-bold text-emerald-900">What-If Scenario Active:</strong> Viewing upgraded system ({activeTransformerKva} kVA transformer, {Object.keys(activeConductors).length} re-conductored spans, {proposedSummary.totalCapacitorKvar} kVAR capacitors).
                   </span>
                 </div>
                 <button
                   onClick={handleResetInterventions}
-                  className="text-emerald-700 hover:text-emerald-900 font-bold underline ml-4 whitespace-nowrap"
+                  className="btn-3d-slate px-3 py-1 text-xs text-rose-300 hover:text-white font-bold whitespace-nowrap self-end sm:self-auto cursor-pointer"
                 >
                   Reset to Baseline
                 </button>

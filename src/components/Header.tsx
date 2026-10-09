@@ -82,33 +82,33 @@ export const Header: React.FC<HeaderProps> = ({
   onSaveUnifiedProject
 }) => {
   return (
-    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-md w-full select-none">
+    <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-xl w-full select-none">
       {/* ========================================================
-          TOP ROW: PROMINENT CENTERED BRAND IDENTITY & WAPDA TITLE
+          TOP ROW: PROMINENT CENTERED BRAND IDENTITY & WAPDA TITLE (3D CHASSIS)
          ======================================================== */}
-      <div className="border-b border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 w-full py-2.5 sm:py-3.5 px-4 sm:px-8 shadow-inner">
-        <div className="w-full flex flex-col items-center justify-center text-center">
-          <div className="flex items-center justify-center gap-3 sm:gap-4 md:gap-5">
+      <div className="border-b border-slate-800/90 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 w-full py-2.5 sm:py-3.5 px-3 sm:px-6 md:px-8 shadow-inner">
+        <div className="w-full max-w-[1920px] mx-auto flex flex-col items-center justify-center text-center">
+          <div className="flex items-center justify-center gap-2.5 sm:gap-4 md:gap-5">
             <div className="relative group shrink-0">
               <img
                 src="/pesco-logo.svg"
                 alt="PESCO WAPDA Logo"
-                className="w-11 h-11 sm:w-13 sm:h-13 md:w-14 md:h-14 rounded-full border-2 border-amber-500/60 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/20"
+                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-amber-500/70 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/30"
               />
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-5.5 sm:h-5.5 bg-amber-400 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-5.5 sm:h-5.5 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
             </div>
             <div className="text-center sm:text-left leading-tight">
-              <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                <span className="text-base sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
+              <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-3 flex-wrap">
+                <span className="text-sm sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
                   PESCO Distribution Suite
                 </span>
-                <span className="text-xs sm:text-sm font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
+                <span className="text-[10px] sm:text-xs md:text-sm font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
                   WAPDA
                 </span>
               </div>
-              <p className="text-xs sm:text-xs md:text-sm text-slate-300 font-semibold leading-snug mt-0.5 sm:mt-1 tracking-wide">
+              <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 font-semibold leading-snug mt-0.5 tracking-wide">
                 Peshawar Electric Supply Company · Engineering & Loss Reduction
               </p>
             </div>
@@ -117,25 +117,25 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* ========================================================
-          CONTROL ROW: MODULE SWITCHER, VOLTAGE CATEGORY, JOB TITLE & ACTIONS
+          CONTROL ROW: MODULE SWITCHER, VOLTAGE CATEGORY, JOB TITLE & ACTIONS (3D CONTROLS)
          ======================================================== */}
-      <div className="border-b border-slate-800/80 bg-slate-900 w-full">
-        <div className="w-full px-3 sm:px-6 lg:px-8 h-11 sm:h-12 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none">
+      <div className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-xs w-full py-1.5 sm:py-2">
+        <div className="w-full max-w-[1920px] mx-auto px-2 sm:px-4 md:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2 overflow-x-auto scrollbar-none">
           
           {/* Left Controls: Module Switcher + Voltage Level */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* 1. Primary System Module Switcher (ELR Analysis vs Line Cost Estimation) */}
-            <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
+            <div className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
               <button
                 onClick={() => onSelectSystemModule?.('elr_loss_analysis')}
                 title="Switch to Feeder Loss Analysis & Technical Loss Reduction Module (WAPDA Engine)"
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeSystemModule === 'elr_loss_analysis'
-                    ? 'bg-amber-500 text-slate-950 shadow-md font-extrabold ring-1 ring-amber-300'
+                    ? 'btn-3d-amber text-slate-950 font-extrabold shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
-                <Zap className={`w-3.5 h-3.5 ${activeSystemModule === 'elr_loss_analysis' ? 'text-slate-950' : 'text-amber-400'}`} />
+                <Zap className={`w-3.5 h-3.5 ${activeSystemModule === 'elr_loss_analysis' ? 'text-slate-950 stroke-[2.5]' : 'text-amber-400'}`} />
                 <span className="hidden xs:inline">Feeder Loss (ELR)</span>
                 <span className="xs:hidden">ELR</span>
               </button>
@@ -143,13 +143,13 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => onSelectSystemModule?.('line_cost_estimation')}
                 title="Switch to HT/LT Electrical Line Extension & Feeder Cost Estimation Module"
-                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeSystemModule === 'line_cost_estimation'
-                    ? 'bg-blue-600 text-white shadow-md font-extrabold ring-1 ring-blue-300'
+                    ? 'btn-3d-blue text-white font-extrabold shadow-md'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
-                <Calculator className={`w-3.5 h-3.5 ${activeSystemModule === 'line_cost_estimation' ? 'text-white' : 'text-blue-400'}`} />
+                <Calculator className={`w-3.5 h-3.5 ${activeSystemModule === 'line_cost_estimation' ? 'text-white stroke-[2.5]' : 'text-blue-400'}`} />
                 <span className="hidden xs:inline">Line Cost Estimation</span>
                 <span className="xs:hidden">Cost</span>
               </button>
@@ -157,7 +157,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* 2. LV / HV Selector (400V LT vs 11kV HT Feeder Analysis Mode) */}
             <div 
-              className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-700/80 shadow-inner shrink-0"
+              className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-700/80 shadow-inner shrink-0"
               role="group"
               aria-label="Feeder Voltage Category"
             >
@@ -165,10 +165,10 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => onSelectCategory('LV')}
                 title="Switch to Low Voltage / Low Tension 400V Feeder Analysis (Secondary Distribution)"
-                className={`flex items-center justify-center px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center justify-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeCategory === 'LV'
-                    ? 'bg-amber-500 text-slate-950 shadow-sm font-black ring-1 ring-amber-400 scale-[1.02]'
-                    : 'text-amber-400 font-bold hover:text-amber-300 hover:bg-slate-900/80'
+                    ? 'btn-3d-amber text-slate-950 font-black shadow-sm'
+                    : 'text-amber-400 font-bold hover:text-amber-300 hover:bg-slate-800/60'
                 }`}
               >
                 <span>400V LT</span>
@@ -178,10 +178,10 @@ export const Header: React.FC<HeaderProps> = ({
                 type="button"
                 onClick={() => onSelectCategory('HV')}
                 title="Switch to High Voltage / High Tension 11kV Feeder Analysis (Primary Feeder & Node 0 Voltage Injection)"
-                className={`flex items-center justify-center px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center justify-center px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeCategory === 'HV'
-                    ? 'bg-sky-500 text-slate-950 shadow-sm font-black ring-1 ring-sky-400 scale-[1.02]'
-                    : 'text-sky-400 font-bold hover:text-sky-300 hover:bg-slate-900/80'
+                    ? 'btn-3d-blue text-white font-black shadow-sm'
+                    : 'text-sky-400 font-bold hover:text-sky-300 hover:bg-slate-800/60'
                 }`}
               >
                 <span>11kV HT</span>
@@ -189,12 +189,12 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* 3. Job Title Writing, Feeder Dropdown & Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right Controls: Job Title, Feeder Dropdown & 3D Tactile Action Buttons */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
             
-            {/* Writable Job Title Input with Datalist Suggestions */}
+            {/* Writable Job Title Input with 3D Sunken Chassis */}
             <div 
-              className="flex items-center gap-1.5 bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-700 hover:border-amber-500/70 focus-within:border-amber-400 focus-within:ring-1 focus-within:ring-amber-400/50 shadow-inner transition-all group"
+              className="flex items-center gap-1.5 bg-slate-900 px-2 sm:px-2.5 py-1.5 rounded-lg border border-slate-700 hover:border-amber-500/70 focus-within:border-amber-400 focus-within:ring-2 focus-within:ring-amber-400/30 shadow-inner transition-all group"
               title="Write or edit your custom Job Title / Designation"
             >
               <UserCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
@@ -204,8 +204,8 @@ export const Header: React.FC<HeaderProps> = ({
                 list="header-job-title-presets"
                 value={selectedJobTitle}
                 onChange={(e) => onSelectJobTitle(e.target.value)}
-                placeholder="Write your job title..."
-                className="bg-transparent text-amber-300 text-xs font-bold focus:outline-none w-[120px] sm:w-[150px] lg:w-[180px] placeholder:text-slate-500 truncate"
+                placeholder="Job title..."
+                className="bg-transparent text-amber-300 text-xs font-bold focus:outline-none w-[90px] sm:w-[130px] lg:w-[160px] placeholder:text-slate-500 truncate"
               />
               <Edit3 className="w-3 h-3 text-slate-500 group-hover:text-amber-400 shrink-0 transition-colors pointer-events-none" />
               <datalist id="header-job-title-presets">
@@ -215,9 +215,8 @@ export const Header: React.FC<HeaderProps> = ({
               </datalist>
             </div>
 
-            {/* Job / Feeder Dropdown with Options to Start New or Open Old */}
+            {/* Feeder Dropdown with 3D Sunken Chassis */}
             <div className="flex items-center gap-1">
-              <span className="text-[11px] text-slate-400 hidden 2xl:inline font-medium">Job:</span>
               <select
                 value={selectedFeederId}
                 onChange={(e) => {
@@ -229,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
                     onSelectFeeder(e.target.value);
                   }
                 }}
-                className="bg-slate-800 text-slate-100 text-xs font-semibold border border-slate-700 hover:border-amber-500/70 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 max-w-[130px] sm:max-w-[185px] truncate cursor-pointer shadow-inner"
+                className="bg-slate-900 text-slate-100 text-xs font-semibold border border-slate-700 hover:border-amber-500/70 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 max-w-[120px] sm:max-w-[170px] truncate cursor-pointer shadow-inner"
               >
                 <optgroup label="📋 Active / Available Jobs">
                   {availableFeeders.map(f => (
@@ -244,11 +243,11 @@ export const Header: React.FC<HeaderProps> = ({
                 </optgroup>
               </select>
 
-              {/* Direct "+ New Job" Quick Button */}
+              {/* Direct "+ New Job" Tactile 3D Button */}
               <button
                 onClick={onOpenNewJob}
                 title="Start a new Feeder Loss Analysis Job"
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/40 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-95 shadow-sm"
+                className="btn-3d-slate flex items-center gap-1 px-2.5 py-1.5 text-xs whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
                 <span className="hidden sm:inline">New Job</span>
@@ -266,42 +265,34 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             <button
-              onClick={onOpenConductors}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-              <span>Conductor DB</span>
-            </button>
-
-            <button
               onClick={onOpenDatabase}
               title="Open Old Saved Jobs & Database Manager (IndexedDB)"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-200 bg-slate-800 hover:bg-slate-700 hover:text-white rounded-lg border border-slate-700 transition-colors whitespace-nowrap cursor-pointer"
+              className="btn-3d-slate hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs whitespace-nowrap"
             >
               <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
-              <span>Old Jobs / DB</span>
+              <span>Old Jobs</span>
             </button>
 
-            {/* Prominent Save Unified Project Button (ELR Analysis + Cost Estimation as One Project) */}
+            {/* Prominent Save Unified Project Button (3D Emerald Finish) */}
             {onSaveUnifiedProject && (
               <button
                 onClick={onSaveUnifiedProject}
                 title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shadow-md transition-all whitespace-nowrap cursor-pointer ring-1 ring-emerald-300 active:scale-95 shrink-0"
+                className="btn-3d-emerald flex items-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap shrink-0"
               >
-                <Save className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-                <span className="hidden 2xl:inline">Save Project (1. ELR Analysis + 2. Cost Estimation)</span>
-                <span className="hidden sm:inline 2xl:hidden">Save Project (Analysis & Cost)</span>
-                <span className="sm:hidden">Save Project</span>
+                <Save className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+                <span className="hidden xl:inline">Save Project (Analysis & Cost)</span>
+                <span className="xl:hidden">Save</span>
               </button>
             )}
 
+            {/* Official Report Button (3D Amber Finish) */}
             <button
               onClick={onOpenReport}
               title="Open Official WAPDA ELR Form & Loss Analysis Report"
-              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-xl shadow-sm transition-all whitespace-nowrap cursor-pointer ring-1 ring-amber-300/80 active:scale-95"
+              className="btn-3d-amber flex items-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
             >
-              <FileText className="w-4 h-4 text-slate-950 stroke-[2.2]" />
+              <FileText className="w-3.5 h-3.5 text-slate-950 stroke-[2.4]" />
               <span>Report</span>
             </button>
           </div>
@@ -310,14 +301,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* ========================================================
-          ROW 2: 100% WIDTH PRIMARY FEATURE MODULE NAVIGATION BUTTONS
+          ROW 2: 100% WIDTH PRIMARY FEATURE MODULE NAVIGATION TABS (3D TACTILE TABS)
          ======================================================== */}
       {activeSystemModule === 'line_cost_estimation' ? (
-        <div className="bg-slate-950 px-3 sm:px-6 lg:px-8 w-full border-t border-slate-800/60">
-          <div className="w-full h-11 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+        <div className="bg-slate-950 px-2 sm:px-4 md:px-6 lg:px-8 w-full border-t border-slate-800/80 shadow-md">
+          <div className="w-full max-w-[1920px] mx-auto h-11 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
             <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
               <span className="text-blue-400 font-bold flex items-center gap-1.5">
-                <Calculator className="w-4 h-4 text-blue-400" />
+                <Calculator className="w-4 h-4 text-blue-400 stroke-[2.2]" />
                 Electrical Line Extension & Feeder Cost Estimation Module
               </span>
               <span className="text-slate-600 hidden sm:inline">|</span>
@@ -326,97 +317,97 @@ export const Header: React.FC<HeaderProps> = ({
 
             <button
               onClick={() => onSelectSystemModule?.('elr_loss_analysis')}
-              className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-amber-300 hover:text-white bg-amber-950/60 hover:bg-amber-900/60 border border-amber-700/50 rounded-lg transition-all cursor-pointer whitespace-nowrap"
+              className="btn-3d-amber flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-950 whitespace-nowrap"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <Zap className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
               <span>Switch to Feeder Loss Analysis (ELR) →</span>
             </button>
           </div>
         </div>
       ) : (
-        <div className="bg-slate-950 px-3 sm:px-6 lg:px-8 w-full">
-          <div className="w-full h-10 sm:h-11 flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
+        <div className="bg-slate-950 px-2 sm:px-4 md:px-6 lg:px-8 w-full border-t border-slate-800/80 shadow-md">
+          <div className="w-full max-w-[1920px] mx-auto h-11 sm:h-12 flex items-center justify-between gap-2 sm:gap-3 overflow-x-auto scrollbar-none py-1">
             
             {/* Navigation Buttons */}
-            <nav className="flex items-center gap-1 shrink-0">
-              {/* 1. Input Data Form (image1.png) */}
+            <nav className="flex items-center gap-1.5 shrink-0">
+              {/* 1. Input Data Form */}
               <button
                 onClick={() => setActiveTab('input_form')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'input_form'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'input_form' ? 'text-slate-950' : 'text-blue-400'}`} />
+                <FileSpreadsheet className={`w-3.5 h-3.5 ${activeTab === 'input_form' ? 'text-slate-950 stroke-[2.5]' : 'text-blue-400'}`} />
                 <span>Input Data Form</span>
               </button>
 
               {/* 2. Single Line Diagram */}
               <button
                 onClick={() => setActiveTab('sld')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'sld'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <GitBranch className="w-3.5 h-3.5" />
+                <GitBranch className={`w-3.5 h-3.5 ${activeTab === 'sld' ? 'text-slate-950 stroke-[2.5]' : 'text-amber-400'}`} />
                 <span>Single Line Diagram</span>
               </button>
 
-              {/* 3. Segment Schedule (image2.png) */}
+              {/* 3. Segment Schedule */}
               <button
                 onClick={() => setActiveTab('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'table'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <Layers className="w-3.5 h-3.5" />
+                <Layers className={`w-3.5 h-3.5 ${activeTab === 'table' ? 'text-slate-950 stroke-[2.5]' : 'text-purple-400'}`} />
                 <span>Calculated Schedule</span>
               </button>
 
               {/* 4. Loss & Voltage Analytics */}
               <button
                 onClick={() => setActiveTab('charts')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'charts'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <TrendingUp className="w-3.5 h-3.5" />
+                <TrendingUp className={`w-3.5 h-3.5 ${activeTab === 'charts' ? 'text-slate-950 stroke-[2.5]' : 'text-emerald-400'}`} />
                 <span>Loss Analytics</span>
               </button>
 
               {/* 5. What-If Simulator */}
               <button
                 onClick={() => setActiveTab('whatif')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'whatif'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <SlidersHorizontal className={`w-3.5 h-3.5 ${activeTab === 'whatif' ? 'text-slate-950 stroke-[2.5]' : 'text-indigo-400'}`} />
                 <span>What-If Simulator</span>
                 {hasActiveInterventions && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse ml-0.5" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5 shadow-sm" />
                 )}
               </button>
 
               {/* 6. 5-Year Forecast */}
               <button
                 onClick={() => setActiveTab('forecast')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeTab === 'forecast'
-                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
                 }`}
               >
-                <TrendingUp className="w-3.5 h-3.5" />
+                <TrendingUp className={`w-3.5 h-3.5 ${activeTab === 'forecast' ? 'text-slate-950 stroke-[2.5]' : 'text-cyan-400'}`} />
                 <span>5-Year Forecast</span>
               </button>
             </nav>
@@ -424,13 +415,13 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Right Status Badges in Row 2 */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Active Officer Badge */}
-              <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300">
-                <UserCheck className="w-3 h-3 text-amber-400" />
+              <div className="hidden lg:flex items-center gap-1.5 text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 text-slate-300 shadow-inner">
+                <UserCheck className="w-3.5 h-3.5 text-amber-400" />
                 <span className="truncate max-w-[210px]">Officer: <strong className="text-white">{selectedJobTitle || 'SDO'}</strong></span>
               </div>
 
               {summary && activeTransformerKva && (
-                <div className="hidden sm:flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800">
+                <div className="hidden sm:flex items-center gap-2 text-xs font-mono px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700/80 shadow-inner">
                   <span className="text-slate-400">Trf:</span>
                   <span className="font-bold text-white">{activeTransformerKva} kVA</span>
                   <span className="text-slate-600">|</span>
@@ -443,9 +434,9 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
               
-              <div className="text-[11px] font-mono text-slate-400 flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full inline-block ${activeCategory === 'LV' ? 'bg-amber-400' : 'bg-sky-400'}`} />
-                <span className="hidden md:inline text-slate-300 font-semibold">{activeCategory === 'LV' ? '400V LT' : '11kV HT'}</span>
+              <div className="text-[11px] font-mono text-slate-300 flex items-center gap-1.5 px-2 py-0.5 rounded bg-slate-900 border border-slate-800">
+                <span className={`w-2 h-2 rounded-full inline-block ${activeCategory === 'LV' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]'}`} />
+                <span className="text-slate-300 font-semibold">{activeCategory === 'LV' ? '400V LT' : '11kV HT'}</span>
               </div>
             </div>
           </div>
