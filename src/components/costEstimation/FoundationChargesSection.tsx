@@ -1,6 +1,6 @@
 import React from 'react';
 import { EstimateLineDetails } from '../../types/costEstimation';
-import { HT_POLE_FOUNDATION_RATE, LT_POLE_FOUNDATION_RATE, calculateFoundationCharges } from '../../utils/foundationCharges';
+import { HT_POLE_FOUNDATION_RATE, LT_POLE_FOUNDATION_RATE, STEEL_LATTICE_POLE_FOUNDATION_RATE, calculateFoundationCharges } from '../../utils/foundationCharges';
 import { Layers } from 'lucide-react';
 
 interface FoundationChargesSectionProps {
@@ -10,6 +10,8 @@ interface FoundationChargesSectionProps {
 
 export const FoundationChargesSection: React.FC<FoundationChargesSectionProps> = ({ details, onUpdateDetails }) => {
   const foundationCost = calculateFoundationCharges(details);
+  const isSteelLattice = details.poleType === 'STEEL_STRUCTURE';
+  const htRate = isSteelLattice ? STEEL_LATTICE_POLE_FOUNDATION_RATE : HT_POLE_FOUNDATION_RATE;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
@@ -32,8 +34,8 @@ export const FoundationChargesSection: React.FC<FoundationChargesSectionProps> =
       {details.foundationEnabled && (
         <div className="space-y-2 text-xs">
             <div className="flex justify-between">
-                <span>HT Poles ({details.htPoles} × Rs. {HT_POLE_FOUNDATION_RATE.toLocaleString()}):</span>
-                <span className="font-mono">Rs. {((details.htPoles || 0) * HT_POLE_FOUNDATION_RATE).toLocaleString()}</span>
+                <span>HT Poles ({details.htPoles} × Rs. {htRate.toLocaleString()}):</span>
+                <span className="font-mono">Rs. {((details.htPoles || 0) * htRate).toLocaleString()}</span>
             </div>
             <div className="flex justify-between">
                 <span>LT Poles ({details.ltPoles} × Rs. {LT_POLE_FOUNDATION_RATE.toLocaleString()}):</span>

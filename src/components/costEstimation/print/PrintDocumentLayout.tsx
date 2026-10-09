@@ -6,6 +6,7 @@
 import React from 'react';
 import { CostEstimateRecord } from '../../../types/costEstimation';
 import { format11DigitWorkOrder } from '../../../utils/costEngine';
+import { calculateFoundationCharges } from '../../../utils/foundationCharges';
 
 export interface PrintDocumentLayoutProps {
   estimate: CostEstimateRecord;
@@ -769,7 +770,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 
             {/* Grand Estimated Charge Summary Box */}
             {(() => {
-              const foundationCost = estimate.lineDetails.foundationEnabled ? ((estimate.lineDetails.htPoles || 0) * 11450.75 + (estimate.lineDetails.ltPoles || 0) * 7324) : 0;
+              const foundationCost = calculateFoundationCharges(estimate.lineDetails);
               const netDismantleCost = estimate.dismantledCharges ? (estimate.dismantledCharges.materialCost + estimate.dismantledCharges.labourCost) : 0;
               const grandEstCharge = ((grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
               return (

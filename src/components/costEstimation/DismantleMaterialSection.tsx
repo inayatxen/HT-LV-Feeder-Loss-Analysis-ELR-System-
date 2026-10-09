@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { MaterialItem, EstimateItem } from '../../types/costEstimation';
-import { Plus, Trash2, Search, X } from 'lucide-react';
+import { Plus, Trash2, Search, X, Printer } from 'lucide-react';
 
 interface DismantleMaterialSectionProps {
   materials: MaterialItem[];
@@ -76,6 +76,14 @@ export const DismantleMaterialSection: React.FC<DismantleMaterialSectionProps> =
     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-900">Dismantle Material Estimate</h3>
+        <button 
+          onClick={() => window.print()}
+          className="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+          title="Print Dismantle Estimate"
+        >
+          <Printer className="w-4 h-4" />
+          Print
+        </button>
         <span className="text-[10px] font-medium bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
           Materials to be returned to store
         </span>

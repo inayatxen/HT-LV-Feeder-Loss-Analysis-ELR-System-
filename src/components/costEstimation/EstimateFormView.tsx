@@ -242,6 +242,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     overheadBasis: initialEstimate?.charges.overheadBasis
   });
 
+  const [isDismantleDeducted, setIsDismantleDeducted] = useState(true);
+
   // Material search / adder state
   const [selectedMaterialToAdd, setSelectedMaterialToAdd] = useState<string>('');
   const [materialSearchText, setMaterialSearchText] = useState('');
@@ -857,13 +859,16 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     return computeEstimateCharges(items, totalKm, transportSettings, percentages);
   }, [items, totalKm, transportSettings, percentages]);
 
+  const netDismantleCost = useMemo(() => {
+    return isDismantleDeducted ? dismantleItems.reduce((sum, item) => sum + item.materialAmount, 0) * 1.1 : 0;
+  }, [dismantleItems, isDismantleDeducted]);
+
   // Updated Grand Total calculation as requested
   const finalTotal = useMemo(() => {
     const foundationCost = calculateFoundationCharges(lineDetails);
-    const netDismantleCost = dismantleItems.reduce((sum, item) => sum + item.materialAmount, 0) * 1.1;
     const charge051 = ((computedCharges.grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
     return computedCharges.grandTotal - netDismantleCost + charge051;
-  }, [computedCharges, lineDetails, dismantleItems]);
+  }, [computedCharges, lineDetails, netDismantleCost]);
 
   // Handler: Run Automatic Material Calculation Engine
   const handleCalculateRequiredMaterials = () => {
@@ -3385,6 +3390,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   className="w-24 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
                 />
               </div>
+              
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <label className="flex items-center gap-2 font-semibold text-slate-800 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isDismantleDeducted}
+                    onChange={(e) => setIsDismantleDeducted(e.target.checked)}
+                    className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
+                  />
+                  <span>Deduct Dismantle Cost</span>
+                  {isDismantleDeducted && (
+                    <span className="text-slate-600 font-normal ml-auto">
+                      (Rs. {netDismantleCost.toLocaleString('en-PK', {minimumFractionDigits: 2})})
+                    </span>
+                  )}
+                </label>
+              </div>
             </div>
           </div>
 
@@ -3534,7 +3556,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             {/* Grand Estimated Charge Summary Card */}
             {(() => {
               const foundationCost = calculateFoundationCharges(lineDetails);
-              const netDismantleCost = dismantleItems.reduce((sum, item) => sum + item.materialAmount, 0) * 1.1;
               const grandEstCharge = ((computedCharges.grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
               return (
                 <div className="bg-emerald-950 p-4 rounded-xl border border-emerald-800 space-y-2 text-white">
