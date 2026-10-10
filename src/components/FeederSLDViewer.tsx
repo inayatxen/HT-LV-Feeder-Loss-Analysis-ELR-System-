@@ -594,6 +594,17 @@ export const FeederSLDViewer: React.FC<FeederSLDViewerProps> = ({
                         stroke={incomingSegResult && incomingSegResult.percentVoltDrop > 9.0 ? '#dc2626' : (isProp2 && incomingSegResult?.fedByTransformer === 'T2' ? '#a855f7' : '#475569')}
                         strokeWidth="1.8"
                       />
+                      {/* Heatmap Overlay for critical voltage or loading */}
+                      {(incomingSegResult && (incomingSegResult.percentVoltDrop > 9.0 || incomingSegResult.percentLoading > 95)) && (
+                        <circle
+                          r="15"
+                          fill="none"
+                          stroke={incomingSegResult.percentVoltDrop > 9.0 ? '#ef4444' : '#f59e0b'}
+                          strokeWidth="2"
+                          strokeDasharray="2 2"
+                          className="animate-pulse"
+                        />
+                      )}
                       <text
                         x="0"
                         y="3.5"
