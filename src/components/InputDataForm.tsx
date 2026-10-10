@@ -615,7 +615,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
             className="flex items-center gap-2 px-4 py-1.5 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-sm transition-all whitespace-nowrap cursor-pointer"
           >
             <Save className="w-4 h-4" />
-            <span>Apply & Calculate Outputs (image2.png)</span>
+            <span>Apply & Calculate Outputs</span>
           </button>
         </div>
       </div>
@@ -1535,7 +1535,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
               className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-950 bg-amber-400 hover:bg-amber-300 rounded-lg shadow-sm transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>Apply & Calculate Outputs (image2.png)</span>
+              <span>Apply & Calculate Outputs </span>
             </button>
           </div>
         </div>
