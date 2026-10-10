@@ -5,7 +5,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { FeederAnalysisSummary, FeederData, ForecastYearResult } from '../types/feeder';
-import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp } from 'lucide-react';
+import { SensitivityAnalysisRecharts } from './SensitivityAnalysisRecharts';
+import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp, Layers } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   ComposedChart, 
@@ -35,7 +36,7 @@ export const LossCharts: React.FC<LossChartsProps> = ({
   existingSummary,
   proposedSummary
 }) => {
-  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery' | 'loss-profile'>('hotspots');
+  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery' | 'loss-profile' | 'scenario-comparison'>('hotspots');
   
   // Financial recovery parameters
   const [customTariff, setCustomTariff] = useState<number>(feeder.tariffPerKwh || 24.83);
@@ -176,6 +177,18 @@ export const LossCharts: React.FC<LossChartsProps> = ({
           >
             <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
             Loss Profile & Hot Spots
+          </button>
+
+          <button
+            onClick={() => setActiveChart('scenario-comparison')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+              activeChart === 'scenario-comparison'
+                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5 text-slate-500" />
+            Scenario Comparison
           </button>
         </div>
 
@@ -751,6 +764,26 @@ export const LossCharts: React.FC<LossChartsProps> = ({
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* Chart Viewport 7: Scenario Comparison */}
+      {activeChart === 'scenario-comparison' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <SensitivityAnalysisRecharts 
+            feeder={feeder}
+            existingSummary={existingSummary || summary}
+            proposedSummary={proposedSummary || summary}
+            activeConductors={{}}
+            activeCapacitors={{}}
+            activeTransformerKva={feeder.existingTransformerKva}
+            bifurcationConfig={{ 
+              enabled: false,
+              bifurcationNodeId: '',
+              transformerCapacityKva: 0,
+              mode: 'ADDITIONAL_TRANSFORMER'
+            }}
+          />
         </div>
       )}
     </div>
