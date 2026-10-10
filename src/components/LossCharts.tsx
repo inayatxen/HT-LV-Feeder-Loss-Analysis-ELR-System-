@@ -5,10 +5,11 @@
 
 import React, { useState, useMemo } from 'react';
 import { FeederAnalysisSummary, FeederData, ForecastYearResult } from '../types/feeder';
-import { BarChart3, TrendingDown, Activity, PieChart, Coins } from 'lucide-react';
+import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   ComposedChart, 
+  Bar, 
   Area, 
   Line, 
   XAxis, 
@@ -34,7 +35,7 @@ export const LossCharts: React.FC<LossChartsProps> = ({
   existingSummary,
   proposedSummary
 }) => {
-  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery'>('hotspots');
+  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery' | 'loss-profile'>('hotspots');
   
   // Financial recovery parameters
   const [customTariff, setCustomTariff] = useState<number>(feeder.tariffPerKwh || 24.83);
@@ -83,6 +84,22 @@ export const LossCharts: React.FC<LossChartsProps> = ({
     }
     return data;
   }, [monthlySavings, customCapEx]);
+
+  // Loss Profile chart data (Real-time vs 5-yr projected I²R losses across segments)
+  const lossProfileChartData = useMemo(() => {
+    return sortedSegments.map(seg => {
+      const growth = (feeder.annualGrowthRatePercent || 5) / 100;
+      const loadFactor5Yr = Math.pow(1 + growth, 5);
+      const projectedKw = seg.lineLossKw * (loadFactor5Yr * loadFactor5Yr);
+      return {
+        span: `${seg.fromNodeId}→${seg.toNodeId}`,
+        conductor: seg.conductor.code,
+        length: seg.lengthMeters,
+        realTimeLossKw: Number(seg.lineLossKw.toFixed(3)),
+        projectedLossKw: Number(projectedKw.toFixed(3)),
+      };
+    });
+  }, [sortedSegments, feeder.annualGrowthRatePercent]);
 
   return (
     <div className="space-y-6">
@@ -147,6 +164,18 @@ export const LossCharts: React.FC<LossChartsProps> = ({
           >
             <Coins className="w-3.5 h-3.5 text-emerald-500" />
             Financial Recovery
+          </button>
+
+          <button
+            onClick={() => setActiveChart('loss-profile')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+              activeChart === 'loss-profile'
+                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-indigo-500" />
+            Loss Profile & Hot Spots
           </button>
         </div>
 
@@ -625,6 +654,102 @@ export const LossCharts: React.FC<LossChartsProps> = ({
                 Net return over 36 operating months
               </span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart Viewport 6: Loss Profile & Hot Spots Chart */}
+      {activeChart === 'loss-profile' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>Feeder Loss Profile: Real-Time vs 5-Year Projected I²R Losses</span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+                  Thermal Hot Spot Analysis
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Compares current ohmic dissipation against 5-year load growth projections (scaling with I²R current squared) to prioritize reconductoring.
+              </p>
+            </div>
+            <div className="text-xs font-mono text-slate-600">
+              Growth Rate: <span className="font-bold text-slate-900">{feeder.annualGrowthRatePercent}% / yr</span>
+            </div>
+          </div>
+
+          {/* Recharts BarChart */}
+          <div className="h-80 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={lossProfileChartData}
+                margin={{ top: 10, right: 20, left: 10, bottom: 30 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="span" 
+                  tick={{ fontSize: 11 }}
+                  angle={-25}
+                  textAnchor="end"
+                  interval={0}
+                  height={40}
+                  label={{ value: 'Feeder Spans (Node ID)', position: 'insideBottom', offset: -15, fontSize: 11 }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  label={{ value: 'Line Loss (kW)', angle: -90, position: 'insideLeft', offset: 0, fontSize: 11 }}
+                />
+                <Tooltip 
+                  formatter={(value: any, name: any) => [`${Number(value).toFixed(3)} kW`, name]}
+                  labelFormatter={(label) => `Span ${label}`}
+                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px' }} />
+
+                <Bar dataKey="realTimeLossKw" name="Real-Time I²R Loss (kW)" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="projectedLossKw" name="5-Yr Projected Loss (kW)" fill="#6366f1" radius={[4, 4, 0, 0]} opacity={0.85} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Span Hot Spot Diagnostics Table */}
+          <div className="overflow-x-auto pt-2">
+            <table className="w-full text-xs text-left text-slate-700 border border-slate-200 rounded-lg overflow-hidden">
+              <thead className="bg-slate-100 text-slate-800 font-bold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-3 py-2.5">Span ID</th>
+                  <th className="px-3 py-2.5">Conductor</th>
+                  <th className="px-3 py-2.5">Length (m)</th>
+                  <th className="px-3 py-2.5">Real-Time Loss</th>
+                  <th className="px-3 py-2.5">5-Yr Projected Loss</th>
+                  <th className="px-3 py-2.5">Thermal Severity</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 font-mono">
+                {lossProfileChartData.map((row, idx) => {
+                  const isHotspot = row.realTimeLossKw > 0.5;
+                  return (
+                    <tr key={row.span} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                      <td className="px-3 py-2 font-bold text-slate-900">Span {row.span}</td>
+                      <td className="px-3 py-2">{row.conductor}</td>
+                      <td className="px-3 py-2">{row.length}m</td>
+                      <td className="px-3 py-2 font-bold text-rose-600">{row.realTimeLossKw} kW</td>
+                      <td className="px-3 py-2 font-bold text-indigo-600">{row.projectedLossKw} kW</td>
+                      <td className="px-3 py-2">
+                        {isHotspot ? (
+                          <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                            Hot Spot (High I²R)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded text-[10px] font-bold">
+                            Normal Dissipation
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
