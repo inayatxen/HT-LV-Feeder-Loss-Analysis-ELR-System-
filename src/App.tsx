@@ -730,6 +730,8 @@ export default function App() {
                   summary={hasActiveInterventions ? proposedSummary : existingSummary}
                   feeder={activeFeeder}
                   forecastData={forecastData}
+                  existingSummary={existingSummary}
+                  proposedSummary={proposedSummary}
                 />
               </div>
             )}

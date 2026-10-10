@@ -3,22 +3,42 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { FeederAnalysisSummary, FeederData, ForecastYearResult } from '../types/feeder';
-import { BarChart3, TrendingDown, Activity, PieChart, ShieldAlert } from 'lucide-react';
+import { BarChart3, TrendingDown, Activity, PieChart, Coins } from 'lucide-react';
+import { 
+  ResponsiveContainer, 
+  ComposedChart, 
+  Area, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ReferenceLine 
+} from 'recharts';
 
 interface LossChartsProps {
   summary: FeederAnalysisSummary;
   feeder: FeederData;
   forecastData?: ForecastYearResult[];
+  existingSummary?: FeederAnalysisSummary;
+  proposedSummary?: FeederAnalysisSummary;
 }
 
 export const LossCharts: React.FC<LossChartsProps> = ({
   summary,
   feeder,
-  forecastData = []
+  forecastData = [],
+  existingSummary,
+  proposedSummary
 }) => {
-  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition'>('hotspots');
+  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery'>('hotspots');
+  
+  // Financial recovery parameters
+  const [customTariff, setCustomTariff] = useState<number>(feeder.tariffPerKwh || 24.83);
+  const [customCapEx, setCustomCapEx] = useState<number>(450000);
 
   // Sorted segments for hotspot chart
   const sortedSegments = [...summary.segmentResults].sort((a, b) => b.lineLossKw - a.lineLossKw);
@@ -35,6 +55,34 @@ export const LossCharts: React.FC<LossChartsProps> = ({
       voltage: seg ? seg.receivingVoltage : summary.baseVoltage
     };
   });
+
+  // Financial Recovery calculations
+  const baseLossKw = existingSummary ? (existingSummary.totalLineLossKw || existingSummary.totalPowerLossKw || summary.totalLineLossKw) : summary.totalLineLossKw;
+  const propLossKw = proposedSummary ? (proposedSummary.totalLineLossKw || proposedSummary.totalPowerLossKw || (summary.totalLineLossKw * 0.4)) : (summary.totalLineLossKw * 0.5);
+
+  const baselineAnnualLossKwh = baseLossKw * 8760 * 0.42;
+  const proposedAnnualLossKwh = propLossKw * 8760 * 0.42;
+  const annualEnergySavedKwh = Math.max(0, baselineAnnualLossKwh - proposedAnnualLossKwh);
+  const annualSavings = annualEnergySavedKwh * customTariff;
+  const monthlySavings = annualSavings / 12;
+
+  const paybackMonths = annualSavings <= 0 ? Infinity : (customCapEx / annualSavings) * 12;
+  const paybackYears = paybackMonths / 12;
+
+  const recoveryChartData = useMemo(() => {
+    const data = [];
+    for (let m = 0; m <= 36; m++) {
+      const cumulativeSavings = monthlySavings * m;
+      const netCashFlow = -customCapEx + cumulativeSavings;
+      data.push({
+        month: m,
+        cumulativeSavings: Math.round(cumulativeSavings),
+        netCashFlow: Math.round(netCashFlow),
+        capexThreshold: -customCapEx
+      });
+    }
+    return data;
+  }, [monthlySavings, customCapEx]);
 
   return (
     <div className="space-y-6">
@@ -88,10 +136,22 @@ export const LossCharts: React.FC<LossChartsProps> = ({
             <PieChart className="w-3.5 h-3.5 text-purple-500" />
             Loss Breakdown
           </button>
+
+          <button
+            onClick={() => setActiveChart('recovery')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+              activeChart === 'recovery'
+                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Coins className="w-3.5 h-3.5 text-emerald-500" />
+            Financial Recovery
+          </button>
         </div>
 
         <div className="text-xs text-slate-500 px-3 hidden sm:block">
-          Click any segment bar or data point for technical diagnostics
+          Click any chart view or parameter for technical diagnostics
         </div>
       </div>
 
@@ -206,7 +266,6 @@ export const LossCharts: React.FC<LossChartsProps> = ({
               <line x1="50" y1="240" x2="750" y2="240" stroke="#cbd5e1" strokeWidth="1" />
 
               {/* 5% Warning Threshold Line */}
-              {/* Scale: Y=40 is 0% drop, Y=240 is 12% drop => 16.66 px per % drop */}
               <line x1="50" y1="123" x2="750" y2="123" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 4" />
               <text x="755" y="126" fill="#f59e0b" fontSize="10" fontFamily="monospace">
                 -5% (380V)
@@ -231,7 +290,6 @@ export const LossCharts: React.FC<LossChartsProps> = ({
                 
                 const points = trunkPoints.map((pt, i) => {
                   const x = 50 + i * stepX;
-                  // y = 40 + (pt.dropPct / 12) * 200
                   const y = 40 + (pt.dropPct / 12) * 200;
                   return { x, y, pt };
                 });
@@ -244,13 +302,9 @@ export const LossCharts: React.FC<LossChartsProps> = ({
 
                 return (
                   <g>
-                    {/* Shaded Area */}
                     <path d={areaD} fill="url(#voltageAreaGrad)" />
-
-                    {/* Line */}
                     <path d={pathD} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
 
-                    {/* Nodes Circles and Labels */}
                     {points.map((p, i) => (
                       <g key={p.pt.nodeId}>
                         <circle
@@ -375,7 +429,7 @@ export const LossCharts: React.FC<LossChartsProps> = ({
                 {summary.totalLineLossKw} kW
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Ohmic I²R heat loss in overhead ACSR and PVC conductors along the 426m network.
+                Ohmic I²R heat loss in overhead ACSR and PVC conductors along the network.
               </p>
             </div>
 
@@ -399,8 +453,177 @@ export const LossCharts: React.FC<LossChartsProps> = ({
                 2.30 kW
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                Winding resistance dissipation under 118% overload condition.
+                Winding resistance dissipation under heavy operating load condition.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chart Viewport 5: Financial Recovery & Payback Period Chart */}
+      {activeChart === 'recovery' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>Financial Recovery & Payback Period Trajectory</span>
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {paybackMonths !== Infinity ? `${paybackMonths.toFixed(1)} Months Payback` : 'No Savings'}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Visualizes cumulative energy loss reduction savings offsetting capital expenditure (CapEx) based on current utility tariff rates.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <span className="text-[10px] text-slate-400 block font-mono uppercase">Annual Savings</span>
+                <span className="text-sm font-bold text-emerald-600 font-mono">Rs. {Math.round(annualSavings).toLocaleString()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Parameter Controls */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Energy Tariff Rate (PKR / kWh)</span>
+                <span className="font-mono text-slate-900 font-bold">Rs. {customTariff.toFixed(2)}</span>
+              </label>
+              <input
+                type="range"
+                min="15"
+                max="55"
+                step="0.5"
+                value={customTariff}
+                onChange={(e) => setCustomTariff(Number(e.target.value))}
+                className="w-full accent-emerald-600 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+                <span>Rs. 15/kWh</span>
+                <span>Current: Rs. {feeder.tariffPerKwh || 24.83}</span>
+                <span>Rs. 55/kWh</span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Intervention CapEx Investment (PKR)</span>
+                <span className="font-mono text-slate-900 font-bold">Rs. {customCapEx.toLocaleString()}</span>
+              </label>
+              <input
+                type="range"
+                min="50000"
+                max="2000000"
+                step="25000"
+                value={customCapEx}
+                onChange={(e) => setCustomCapEx(Number(e.target.value))}
+                className="w-full accent-indigo-600 cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
+                <span>Rs. 50k</span>
+                <span>Estimated Upgrade</span>
+                <span>Rs. 2.0M</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Recharts ComposedChart for Financial Recovery */}
+          <div className="h-72 w-full pt-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={recoveryChartData}
+                margin={{ top: 10, right: 20, left: 20, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 11 }}
+                  label={{ value: 'Timeline (Months After Intervention)', position: 'insideBottom', offset: -10, fontSize: 11 }}
+                />
+                <YAxis 
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(val) => `Rs.${(val / 1000).toFixed(0)}k`}
+                  label={{ value: 'Net Cash Flow (PKR)', angle: -90, position: 'insideLeft', offset: -5, fontSize: 11 }}
+                />
+                <Tooltip 
+                  formatter={(value: any, name: any) => {
+                    const num = Number(value) || 0;
+                    return [`Rs. ${num.toLocaleString()}`, name];
+                  }}
+                  labelFormatter={(label) => `Month ${label}`}
+                />
+                <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '11px' }} />
+
+                <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
+                
+                {paybackMonths !== Infinity && paybackMonths > 0 && (
+                  <ReferenceLine 
+                    x={Math.round(paybackMonths)} 
+                    stroke="#059669" 
+                    strokeWidth={2}
+                    strokeDasharray="4 4"
+                    label={{ 
+                      value: `Breakeven @ ${paybackMonths.toFixed(1)} Mos`, 
+                      position: 'top', 
+                      fill: '#047857', 
+                      fontSize: 10, 
+                      fontWeight: 'bold' 
+                    }} 
+                  />
+                )}
+
+                <Area 
+                  type="monotone" 
+                  dataKey="cumulativeSavings" 
+                  name="Cumulative Energy Savings" 
+                  fill="#10b981" 
+                  fillOpacity={0.15} 
+                  stroke="#10b981" 
+                  strokeWidth={2} 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="netCashFlow" 
+                  name="Net Cash Flow (CapEx Offset)" 
+                  stroke="#4f46e5" 
+                  strokeWidth={3} 
+                  dot={false}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Key Metrics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase">Simple Payback Period</span>
+              <div className="mt-1 text-xl font-black text-slate-900 font-mono">
+                {paybackMonths !== Infinity ? `${paybackMonths.toFixed(1)} Months` : 'N/A'}
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                ({paybackYears.toFixed(2)} Years to recover capital)
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase">Annual Energy Loss Saved</span>
+              <div className="mt-1 text-xl font-black text-emerald-600 font-mono">
+                {Math.round(annualEnergySavedKwh).toLocaleString()} kWh
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                Reduction in resistive feeder dissipation
+              </span>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase">3-Year ROI Potential</span>
+              <div className="mt-1 text-xl font-black text-indigo-600 font-mono">
+                {customCapEx > 0 ? `${(((annualSavings * 3 - customCapEx) / customCapEx) * 100).toFixed(1)}%` : '0%'}
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                Net return over 36 operating months
+              </span>
             </div>
           </div>
         </div>
