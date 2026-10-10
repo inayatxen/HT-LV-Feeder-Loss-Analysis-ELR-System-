@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { PescoLogo } from './PescoLogo';
 
 export interface FladixOfficialHeaderProps {
   subtitle?: string;
@@ -47,13 +48,7 @@ export const FladixOfficialHeader: React.FC<FladixOfficialHeaderProps> = ({
       <div className="flex items-center justify-between gap-3 sm:gap-4">
         {/* Left: Official PESCO Insignia */}
         <div className="shrink-0">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-2xl p-1.5 shadow-lg border-2 border-slate-800 flex items-center justify-center">
-            <img
-              src="/pesco-logo.svg"
-              alt="PESCO Logo"
-              className="w-full h-full object-contain rounded-xl"
-            />
-          </div>
+          <PescoLogo className="w-full h-full" />
         </div>
 
         {/* Center: Standardized Official Hierarchy */}
