@@ -6,6 +6,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Printer, Download, Maximize2, Minimize2, Calculator, Loader2 } from 'lucide-react';
 import { exportElementToPdf } from '../../utils/pdfExport';
+import { FladixOfficialHeader } from '../FladixOfficialHeader';
 
 interface CostBenefitAnalysisPrintModalProps {
   isOpen: boolean;
@@ -201,27 +202,15 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
             <table className="w-full border-none border-collapse print-doc-table">
             <thead className="print-running-header">
               <tr>
-                <th className="font-normal text-left p-0 pb-4 border-b-2 border-slate-900">
-                  <div className="flex items-center justify-between gap-4">
-                    <img src="/pesco-logo.svg" alt="PESCO Logo" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain" />
-                    <div className="text-center flex-1">
-                      <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
-                        PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-                      </div>
-                      <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
-                        FLADIX, Feeder Loss Analysis and Data Indexing
-                      </h1>
-                      <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
-                        Economic Cost Benefit Analysis & Benefit-Cost Ratio (BCR) Report · System Rehabilitation
-                      </div>
-                    </div>
-                    <div className="w-16 sm:w-20 shrink-0 text-center">
-                      <div className="w-12 h-12 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
-                        <span className="text-[10px] font-black text-amber-600 leading-tight">BCR</span>
-                      </div>
-                    </div>
-                  </div>
+                <th className="font-normal text-left p-0 pb-2">
+                  <FladixOfficialHeader
+                    subtitle="Economic Cost Benefit Analysis & Benefit-Cost Ratio (BCR) Report · System Rehabilitation"
+                    badgeLabel="BCR"
+                    badgeStd="WAPDA"
+                    refCode={data.estimateNo}
+                    category={data.accountHead}
+                    division="Peshawar City"
+                  />
                 </th>
               </tr>
             </thead>

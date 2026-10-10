@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { CostEstimateRecord } from '../../types/costEstimation';
 import { exportEstimateToExcelWorkbook, format11DigitWorkOrder } from '../../utils/costEngine';
 import { X, Printer, Download, Maximize2, Minimize2, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { FladixOfficialHeader } from '../FladixOfficialHeader';
 
 interface EstimatePrintReportModalProps {
   isOpen: boolean;
@@ -250,50 +251,17 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                ======================================================== */}
             <thead className="print-running-header">
               <tr>
-                <th className="font-normal text-left p-0 pb-3 border-b-2 border-slate-900">
-                  <div className="flex items-center justify-between gap-4">
-                    <img
-                      src="/pesco-logo.svg"
-                      alt="PESCO Logo"
-                      className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain"
-                    />
-                    
-                    <div className="text-center flex-1">
-                      <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
-                        PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-                      </div>
-                      <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 tracking-tight">
-                        FLADIX, Feeder Loss Analysis and Data Indexing
-                      </h1>
-                      <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
-                        Detailed Electrical Line Extension & BOQ Schedule · {estimate.type.replace(/_/g, ' ')}
-                      </div>
-                    </div>
-
-                    <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
-                        <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">EST</span>
-                        <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">WAPDA</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-5 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
-                    <span>Est No: <strong>{estimate.projectInfo.estimateNo}</strong></span>
-                    <span>·</span>
-                    <span>11-Digit W.O.: <strong className="text-amber-950 bg-amber-100 px-1.5 py-0.5 rounded font-black border border-amber-300">{format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}</strong></span>
-                    <span>·</span>
-                    <span>ELR Code: <strong className="text-blue-950">{estimate.projectInfo.elrCode || 'ELR-71-26-042'}</strong></span>
-                    <span>·</span>
-                    <span>Rev: <strong>{estimate.projectInfo.revisionNo}</strong></span>
-                    <span>·</span>
-                    <span>Date: <strong>{estimate.projectInfo.estimateDate}</strong></span>
-                    <span>·</span>
-                    <span>Division: <strong>{estimate.projectInfo.division}</strong></span>
-                    <span>·</span>
-                    <span>Status: <strong className="text-blue-900 font-bold">{estimate.status}</strong></span>
-                  </div>
+                <th className="font-normal text-left p-0 pb-3">
+                  <FladixOfficialHeader
+                    subtitle={`Detailed Electrical Line Extension & BOQ Schedule · ${estimate.type.replace(/_/g, ' ')}`}
+                    badgeLabel="EST"
+                    badgeStd="WAPDA"
+                    refCode={estimate.projectInfo.estimateNo}
+                    dateStr={estimate.projectInfo.estimateDate}
+                    category={estimate.projectInfo.schemeCategory || estimate.type}
+                    nominalVoltage={estimate.lineDetails?.transformerCapacityKva ? `${estimate.lineDetails.transformerCapacityKva} kVA` : '11kV / 400V'}
+                    division={estimate.projectInfo.division}
+                  />
                 </th>
               </tr>
             </thead>

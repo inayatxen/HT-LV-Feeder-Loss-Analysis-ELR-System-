@@ -26,6 +26,7 @@ import {
   Printer
 } from 'lucide-react';
 import { FeederData, FeederAnalysisSummary } from '../types/feeder';
+import { FladixOfficialHeader } from './FladixOfficialHeader';
 import { 
   SavedAnalysisSnapshot, 
   getAllSnapshotsFromDb, 
@@ -748,46 +749,17 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                 className="print-page-unit flex flex-col justify-between space-y-4 border-b-2 border-dashed border-slate-200 pb-8 last:border-b-0 print:border-none print:pb-0"
               >
                 {/* Official Running Header */}
-                <header className="border-b-2 border-slate-900 pb-3 mb-4 w-full">
-                  <div className="flex items-center justify-between gap-4">
-                    <img
-                      src="/pesco-logo.svg"
-                      alt="PESCO Logo"
-                      className="w-14 h-14 shrink-0 object-contain"
-                    />
-                    <div className="text-center flex-1">
-                      <div className="text-[11px] font-black tracking-widest text-slate-800 uppercase">
-                        PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-                      </div>
-                      <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight mt-0.5">
-                        FLADIX, Feeder Loss Analysis and Data Indexing
-                      </h1>
-                      <p className="text-xs font-semibold text-slate-700 mt-0.5 uppercase tracking-wide">
-                        Saved Workspace Technical Analysis Snapshot
-                      </p>
-                    </div>
-                    <div className="text-right text-[11px] font-mono text-slate-600 shrink-0">
-                      <div>Page {idx + 1} of {printSnapshotsModal.length}</div>
-                      <div className="text-[10px] text-slate-500 font-sans">Official Record</div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
-                    <span>Feeder: <strong>{snap.feederData?.name || snap.name}</strong></span>
-                    <span>·</span>
-                    <span>Category: <strong>{snap.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
-                    <span>·</span>
-                    <span>Transformer: <strong>{snap.transformerKva} kVA</strong></span>
-                    {snap.feederData?.workOrderNo && (
-                      <>
-                        <span>·</span>
-                        <span>WO #: <strong>{snap.feederData.workOrderNo}</strong></span>
-                      </>
-                    )}
-                    <span>·</span>
-                    <span>Saved: <strong>{new Date(snap.timestamp).toLocaleDateString()}</strong></span>
-                  </div>
-                </header>
+                <FladixOfficialHeader
+                  subtitle="Saved Workspace Technical Analysis Snapshot"
+                  badgeLabel="SNAP"
+                  badgeStd="WAPDA"
+                  refCode={snap.feederData?.workOrderNo || snap.id.substring(0, 8).toUpperCase()}
+                  dateStr={new Date(snap.timestamp).toLocaleDateString()}
+                  category={snap.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}
+                  nominalVoltage={snap.transformerKva ? `${snap.transformerKva} kVA` : undefined}
+                  division={snap.feederData?.name || snap.name}
+                  pageNumberText={`Page ${idx + 1} of ${printSnapshotsModal.length}`}
+                />
 
                 {/* Snapshot Details Content */}
                 <div className="space-y-4 flex-1">
