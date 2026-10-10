@@ -108,6 +108,17 @@ export const LossCharts: React.FC<LossChartsProps> = ({
       <div className="bg-white p-2 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 shadow-xs">
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs">
           <button
+            onClick={() => {
+              const event = new CustomEvent('open-report-modal');
+              window.dispatchEvent(event);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold bg-slate-900 text-white shadow-xs hover:bg-slate-800 transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Export to PDF
+          </button>
+          <div className="w-px h-6 bg-slate-200 mx-1" />
+          <button
             onClick={() => setActiveChart('hotspots')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
               activeChart === 'hotspots'

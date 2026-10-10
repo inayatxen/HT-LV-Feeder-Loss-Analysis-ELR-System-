@@ -434,6 +434,12 @@ export default function App() {
     setTimeout(() => setDbToast(''), 3500);
   };
 
+  React.useEffect(() => {
+    const handleOpenReport = () => setIsReportOpen(true);
+    window.addEventListener('open-report-modal', handleOpenReport);
+    return () => window.removeEventListener('open-report-modal', handleOpenReport);
+  }, []);
+
   // Open Unified Project Save Modal (Saves ELR Analysis + Cost Estimation as One Project)
   const handleOpenSaveUnifiedProject = async () => {
     try {
