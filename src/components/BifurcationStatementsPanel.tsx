@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { FladixOfficialHeader } from './FladixOfficialHeader';
 import { 
   BifurcationFourStatementDossier, 
   BifurcationZoneAnalysisStatement,
@@ -407,30 +408,13 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
   // MULTI-PAGE PRINTING MODE: Treat each analysis snapshot / statement scenario as a separate page with FLADIX header
   if (isPrintView && printSeparatePages) {
     const defaultPrintHeader = (subTitle: string) => (
-      <header className="border-b-2 border-slate-900 pb-2 mb-3">
-        <div className="flex items-center justify-between gap-3">
-          <img
-            src="/pesco-logo.svg"
-            alt="PESCO Logo"
-            className="w-12 h-12 shrink-0 object-contain"
-          />
-          <div className="text-center flex-1">
-            <div className="text-[11px] font-black tracking-widest text-slate-800 uppercase">
-              PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-            </div>
-            <h1 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
-              FLADIX, Feeder Loss Analysis and Data Indexing
-            </h1>
-            <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
-              {subTitle}
-            </p>
-          </div>
-          <div className="text-right text-[10px] font-mono text-slate-600 shrink-0">
-            <div>Bifurcation Study</div>
-            <div className="text-[9px] text-slate-500">Official Dossier</div>
-          </div>
-        </div>
-      </header>
+      <FladixOfficialHeader
+        subtitle={subTitle}
+        badgeLabel="BIF"
+        badgeStd="STD"
+        division="Peshawar City"
+        showMetaBar={false}
+      />
     );
 
     return (

@@ -59,37 +59,16 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
         )}
 
         <div className="relative z-10 print-page-unit space-y-6">
-          <header className="border-b-2 border-slate-900 pb-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <img
-                  src="/pesco-logo.svg"
-                  alt="PESCO Logo"
-                  className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain"
-                />
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700">PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA</div>
-                  <h1 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
-                    FLADIX, Feeder Loss Analysis and Data Indexing
-                  </h1>
-                  <div className="text-[11px] font-semibold text-amber-800">
-                    Dismantle Material Estimate Report (Retired Assets Credit)
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-xs font-mono font-bold text-slate-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded">
-                  ESTIMATE NO: {estimate.projectInfo.estimateNo}
-                </div>
-                <div className="text-[11px] font-mono font-bold text-amber-900 mt-0.5">
-                  11-DIGIT W.O.: {format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}
-                </div>
-                <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                  ELR Code: {estimate.projectInfo.elrCode || 'ELR-71-26-042'}
-                </div>
-              </div>
-            </div>
-          </header>
+          <FladixOfficialHeader
+            subtitle="Dismantle Material Estimate Report (Retired Assets Credit)"
+            badgeLabel="EST"
+            badgeStd="WAPDA"
+            refCode={estimate.projectInfo.estimateNo}
+            dateStr={estimate.projectInfo.estimateDate}
+            category={estimate.projectInfo.schemeCategory || estimate.type}
+            nominalVoltage={estimate.lineDetails?.transformerCapacityKva ? `${estimate.lineDetails.transformerCapacityKva} kVA` : '11kV / 400V'}
+            division={estimate.projectInfo.division}
+          />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 border border-slate-200 p-3 rounded-lg text-xs font-sans">
             <div>
@@ -348,57 +327,16 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
           {/* ========================================================
               1. OFFICIAL HEADER BLOCK
              ======================================================== */}
-          <header className="border-b-2 border-slate-900 pb-3">
-            <div className="flex items-center justify-between gap-4">
-              <img
-                src="/pesco-logo.svg"
-                alt="PESCO Official Insignia"
-                className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain"
-              />
-              
-              <div className="text-center flex-1">
-                <div className="text-[10px] sm:text-xs uppercase tracking-widest font-black text-slate-700 mb-0.5">
-                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
-                </div>
-                <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight mt-1">
-                  FLADIX, Feeder Loss Analysis and Data Indexing
-                </h1>
-                <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
-                  Detailed Electrical Line Extension & Bill of Quantities (BOQ) Dossier · {estimate.type.replace(/_/g, ' ')}
-                </div>
-              </div>
-
-              <div className="hidden sm:flex flex-col items-center justify-center w-20 shrink-0 text-center">
-                <div className="w-16 h-16 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
-                  <span className="text-[9px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
-                  <span className="text-[12px] font-black text-amber-600 leading-tight">EST</span>
-                  <span className="text-[8px] font-bold text-slate-600 leading-none">WAPDA</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Reference Meta Sub-header */}
-            <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-700 mt-3 pt-2 border-t border-slate-200 bg-slate-50/70 px-3 py-1.5 rounded-md">
-              <span>Est No: <strong className="text-slate-950 font-bold">{estimate.projectInfo.estimateNo}</strong></span>
-              <span>11-Digit W.O.: <strong className="text-amber-950 bg-amber-100 px-1.5 py-0.5 rounded font-black border border-amber-300">{format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}</strong></span>
-              <span>ELR Code: <strong className="text-blue-950">{estimate.projectInfo.elrCode || 'ELR-71-26-042'}</strong></span>
-              <span>Rev: <strong>{estimate.projectInfo.revisionNo}</strong></span>
-              <span>Date: <strong>{estimate.projectInfo.estimateDate}</strong></span>
-              <span>Division: <strong>{estimate.projectInfo.division}</strong></span>
-              <span>Status: <strong className="px-2 py-0.5 rounded bg-blue-100 text-blue-900 font-bold text-[11px]">{estimate.status}</strong></span>
-            </div>
-
-            {/* SLD Scheme Scope Banner */}
-            <div className="mt-2 flex items-center justify-between text-xs bg-amber-50 border border-amber-300 text-amber-900 px-3 py-1.5 rounded-md font-sans">
-              <span className="font-bold flex items-center gap-1.5">
-                <span>⚡ SLD Scheme Scope Variant:</span>
-                <span className="font-mono bg-amber-200/70 text-amber-950 px-2 py-0.5 rounded font-black">{sldScheme}</span>
-              </span>
-              <span className="text-[11px] text-amber-800 italic">
-                {sldScheme.includes('Comparison') ? 'Comparative multi-scheme technical evaluation' : 'Single scheme configuration layout'}
-              </span>
-            </div>
-          </header>
+          <FladixOfficialHeader
+            subtitle={`Detailed Electrical Line Extension & Bill of Quantities (BOQ) Dossier · ${estimate.type.replace(/_/g, ' ')}`}
+            badgeLabel="EST"
+            badgeStd="WAPDA"
+            refCode={estimate.projectInfo.estimateNo}
+            dateStr={estimate.projectInfo.estimateDate}
+            category={estimate.projectInfo.schemeCategory || estimate.type}
+            nominalVoltage={estimate.lineDetails?.transformerCapacityKva ? `${estimate.lineDetails.transformerCapacityKva} kVA` : '11kV / 400V'}
+            division={estimate.projectInfo.division}
+          />
 
           {/* ========================================================
               2. PROJECT & ADMINISTRATIVE INFORMATION

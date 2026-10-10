@@ -52,7 +52,7 @@ export const useCustomLogo = () => {
 
 export const PescoLogo: React.FC<PescoLogoProps> = ({
   className = '',
-  size = 70,
+  size = 100,
   alt = 'Peshawar Electric Supply Company (PESCO / WAPDA) - FLADIX',
   clickable = true
 }) => {
@@ -84,8 +84,8 @@ export const PescoLogo: React.FC<PescoLogoProps> = ({
     <div
       onClick={handleClick}
       title={clickable ? "Click to upload custom logo from PC" : alt}
-      style={{ width: '70px', height: '70px', minWidth: '70px', minHeight: '70px' }}
-      className={`bg-white rounded-2xl p-1.5 shadow-lg border-2 border-amber-400 dark:border-slate-800 flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-105 relative group ${clickable ? 'cursor-pointer' : ''}`}
+      style={{ width: '100px', height: '100px', minWidth: '100px', minHeight: '100px' }}
+      className={`bg-white rounded-2xl p-2 shadow-lg border-2 border-amber-400 dark:border-slate-800 flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-105 relative group ${clickable ? 'cursor-pointer' : ''}`}
     >
       <img
         src={logoSrc}
@@ -96,7 +96,7 @@ export const PescoLogo: React.FC<PescoLogoProps> = ({
         loading="eager"
       />
       {clickable && (
-        <div className="absolute inset-0 bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold pointer-events-none text-center px-0.5 shadow-md">
+        <div className="absolute inset-0 bg-black/50 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-bold pointer-events-none text-center px-1 shadow-md">
           Upload
         </div>
       )}
