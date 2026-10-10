@@ -104,12 +104,15 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-sm sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
                   FLADIX
                 </span>
+                <span className="hidden sm:inline text-xs sm:text-sm md:text-base font-bold tracking-normal text-amber-300">
+                  — Feeder Loss Analysis and Data Indexing
+                </span>
                 <span className="text-[10px] sm:text-xs md:text-sm font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
                   PESCO · WAPDA
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 font-semibold leading-snug mt-0.5 tracking-wide">
-                Feeder Loss Analysis and Data Indexing · Engineering & Loss Reduction
+                Feeder Loss Analysis and Data Indexing · Engineering & Loss Reduction (ELR) & CSR-2026 Line Cost Suite
               </p>
             </div>
           </div>

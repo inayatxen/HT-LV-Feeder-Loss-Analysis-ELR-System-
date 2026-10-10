@@ -400,7 +400,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     const showOnScreen = isFirstPage || isSoloView || pageBreakMode === 'page_per_section';
 
     return (
-      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full no-print ${showOnScreen ? 'block' : 'hidden print:block'}`}>
+      <div className={`border-b-2 border-slate-900 pb-3 mb-4 print-avoid-break w-full ${showOnScreen ? 'block' : 'hidden print:block'}`}>
         <div className="flex items-center justify-between gap-4">
           <img
             src="/pesco-logo.svg"
@@ -414,8 +414,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
               </div>
             )}
-            <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
-              FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
+            <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 tracking-tight">
+              FLADIX, Feeder Loss Analysis and Data Indexing
             </h1>
             <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
               {sectionSubtitle || 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'}

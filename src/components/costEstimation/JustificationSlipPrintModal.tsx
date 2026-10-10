@@ -200,8 +200,8 @@ export const JustificationSlipPrintModal: React.FC<JustificationSlipPrintModalPr
                       <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                       </div>
-                      <h1 className="text-base sm:text-xl font-black text-slate-950 uppercase tracking-tight">
-                        FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
+                      <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight">
+                        FLADIX, Feeder Loss Analysis and Data Indexing
                       </h1>
                       <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
                         Official System Rehabilitation Justification Slip · Loss Reduction & Transformer Relief

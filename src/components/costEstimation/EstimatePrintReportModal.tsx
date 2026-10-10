@@ -262,8 +262,8 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                       <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                       </div>
-                      <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
-                        FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
+                      <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 tracking-tight">
+                        FLADIX, Feeder Loss Analysis and Data Indexing
                       </h1>
                       <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
                         Detailed Electrical Line Extension & BOQ Schedule · {estimate.type.replace(/_/g, ' ')}

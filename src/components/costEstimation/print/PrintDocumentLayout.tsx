@@ -61,14 +61,19 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
           <header className="border-b-2 border-slate-900 pb-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-amber-600 flex items-center justify-center text-white font-black text-xl shadow-sm">
-                  ⚡
-                </div>
+                <img
+                  src="/pesco-logo.svg"
+                  alt="PESCO Logo"
+                  className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 object-contain"
+                />
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700">FLADIX · Peshawar Electric Supply Company (PESCO)</div>
-                  <h1 className="text-base sm:text-lg font-black text-slate-950 uppercase tracking-tight">
-                    FLADIX · DISMANTLE MATERIAL ESTIMATE REPORT (RETIRED ASSETS)
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700">PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA</div>
+                  <h1 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
+                    FLADIX, Feeder Loss Analysis and Data Indexing
                   </h1>
+                  <div className="text-[11px] font-semibold text-amber-800">
+                    Dismantle Material Estimate Report (Retired Assets Credit)
+                  </div>
                 </div>
               </div>
               <div className="text-right">
@@ -354,8 +359,8 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                 <div className="text-[10px] sm:text-xs uppercase tracking-widest font-black text-slate-700 mb-0.5">
                   PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                 </div>
-                <h1 className="text-base sm:text-xl font-black text-slate-950 uppercase tracking-tight mt-1">
-                  FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
+                <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight mt-1">
+                  FLADIX, Feeder Loss Analysis and Data Indexing
                 </h1>
                 <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
                   Detailed Electrical Line Extension & Bill of Quantities (BOQ) Dossier · {estimate.type.replace(/_/g, ' ')}
@@ -534,6 +539,33 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 
         {/* --- PAGE UNIT 2: DETAILED BOQ MATERIALS SCHEDULE --- */}
         <div className="print-page-unit space-y-6">
+          <header className="border-b-2 border-slate-900 pb-2 mb-2">
+            <div className="flex items-center justify-between gap-3">
+              <img
+                src="/pesco-logo.svg"
+                alt="PESCO Logo"
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 object-contain"
+              />
+              <div className="text-center flex-1">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-slate-700 mb-0.5">
+                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                </div>
+                <h2 className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
+                  FLADIX, Feeder Loss Analysis and Data Indexing
+                </h2>
+                <div className="text-[10px] font-semibold text-slate-600 mt-0.5">
+                  Detailed BOQ Materials & Erection Schedule · Est No: {estimate.projectInfo.estimateNo} · W.O.: {format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}
+                </div>
+              </div>
+              <div className="hidden sm:flex flex-col items-center justify-center w-12 shrink-0 text-center">
+                <div className="w-10 h-10 rounded-lg border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-0.5">
+                  <span className="text-[7px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
+                  <span className="text-[9px] font-black text-emerald-600 leading-tight">BOQ</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
           {/* ========================================================
               4. DETAILED BILL OF QUANTITIES (BOQ) TABLE
              ======================================================== */}
@@ -620,6 +652,33 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 
         {/* --- PAGE UNIT 3: ABSTRACT OF COST & OVERHEADS --- */}
         <div className="print-page-unit space-y-6">
+          <header className="border-b-2 border-slate-900 pb-2 mb-2">
+            <div className="flex items-center justify-between gap-3">
+              <img
+                src="/pesco-logo.svg"
+                alt="PESCO Logo"
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 object-contain"
+              />
+              <div className="text-center flex-1">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-slate-700 mb-0.5">
+                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                </div>
+                <h2 className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
+                  FLADIX, Feeder Loss Analysis and Data Indexing
+                </h2>
+                <div className="text-[10px] font-semibold text-slate-600 mt-0.5">
+                  Abstract of Cost & Departmental Overheads · Est No: {estimate.projectInfo.estimateNo} · W.O.: {format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}
+                </div>
+              </div>
+              <div className="hidden sm:flex flex-col items-center justify-center w-12 shrink-0 text-center">
+                <div className="w-10 h-10 rounded-lg border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-0.5">
+                  <span className="text-[7px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
+                  <span className="text-[9px] font-black text-blue-600 leading-tight">COST</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
           {/* ========================================================
               5. ABSTRACT OF COST & DEPARTMENTAL OVERHEADS
              ======================================================== */}
@@ -795,15 +854,31 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
         {estimate.dismantledItems && estimate.dismantledItems.length > 0 && (
           <div className="print-page-unit space-y-3">
             {/* Header for Dismantle Only Report */}
-            <header className="border-b-2 border-slate-900 pb-3 mb-4">
-                <div className="text-center">
-                    <h1 className="text-base sm:text-lg font-black text-slate-950 uppercase tracking-tight">
-                        FLADIX · DISMANTLE MATERIAL ESTIMATE REPORT
-                    </h1>
-                    <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
-                        {estimate.projectInfo.schemeProjectName} · {estimate.projectInfo.estimateNo}
-                    </div>
+            <header className="border-b-2 border-slate-900 pb-2 mb-3">
+              <div className="flex items-center justify-between gap-3">
+                <img
+                  src="/pesco-logo.svg"
+                  alt="PESCO Logo"
+                  className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 object-contain"
+                />
+                <div className="text-center flex-1">
+                  <div className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-slate-700 mb-0.5">
+                    PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                  </div>
+                  <h2 className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
+                    FLADIX, Feeder Loss Analysis and Data Indexing
+                  </h2>
+                  <div className="text-[10px] font-semibold text-slate-600 mt-0.5">
+                    Part-II: Dismantle Material Estimate Report (Retired Assets) · {estimate.projectInfo.schemeProjectName} · {estimate.projectInfo.estimateNo}
+                  </div>
                 </div>
+                <div className="hidden sm:flex flex-col items-center justify-center w-12 shrink-0 text-center">
+                  <div className="w-10 h-10 rounded-lg border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-0.5">
+                    <span className="text-[7px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
+                    <span className="text-[9px] font-black text-amber-600 leading-tight">DISM</span>
+                  </div>
+                </div>
+              </div>
             </header>
 
             <div className="bg-slate-50 border-l-4 border-amber-600 p-3 rounded-r-lg">
@@ -904,6 +979,33 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
 
         {/* --- PAGE UNIT 5: AUDITED FORMULAS, SIGNATURES & OFFICIAL FOOTER --- */}
         <div className="print-page-unit space-y-6">
+          <header className="border-b-2 border-slate-900 pb-2 mb-2">
+            <div className="flex items-center justify-between gap-3">
+              <img
+                src="/pesco-logo.svg"
+                alt="PESCO Logo"
+                className="w-10 h-10 sm:w-12 sm:h-12 shrink-0 object-contain"
+              />
+              <div className="text-center flex-1">
+                <div className="text-[9px] sm:text-[10px] uppercase tracking-widest font-black text-slate-700 mb-0.5">
+                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                </div>
+                <h2 className="text-sm sm:text-base font-black text-slate-950 tracking-tight">
+                  FLADIX, Feeder Loss Analysis and Data Indexing
+                </h2>
+                <div className="text-[10px] font-semibold text-slate-600 mt-0.5">
+                  Audited Formulas, Signatures & Administrative Approvals · Est No: {estimate.projectInfo.estimateNo} · W.O.: {format11DigitWorkOrder(estimate.projectInfo.workOrderNo) || '26-14-71-26-042'}
+                </div>
+              </div>
+              <div className="hidden sm:flex flex-col items-center justify-center w-12 shrink-0 text-center">
+                <div className="w-10 h-10 rounded-lg border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-0.5">
+                  <span className="text-[7px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
+                  <span className="text-[9px] font-black text-indigo-600 leading-tight">AUTH</span>
+                </div>
+              </div>
+            </div>
+          </header>
+
           {/* ========================================================
               6. AUDITED FORMULAS & CALCULATION TRANSPARENCY
              ======================================================== */}
