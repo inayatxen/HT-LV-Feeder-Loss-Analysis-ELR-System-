@@ -36,7 +36,7 @@ export const LossCharts: React.FC<LossChartsProps> = ({
   existingSummary,
   proposedSummary
 }) => {
-  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery' | 'loss-profile' | 'scenario-comparison'>('hotspots');
+  const [activeChart, setActiveChart] = useState<'hotspots' | 'voltage' | 'forecast' | 'composition' | 'recovery' | 'loss-profile' | 'scenario-comparison' | 'bifurcation-delta'>('hotspots');
   
   // Financial recovery parameters
   const [customTariff, setCustomTariff] = useState<number>(feeder.tariffPerKwh || 24.83);
@@ -200,6 +200,18 @@ export const LossCharts: React.FC<LossChartsProps> = ({
           >
             <Layers className="w-3.5 h-3.5 text-slate-500" />
             Scenario Comparison
+          </button>
+
+          <button
+            onClick={() => setActiveChart('bifurcation-delta')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-medium transition-colors ${
+              activeChart === 'bifurcation-delta'
+                ? 'bg-white text-slate-900 shadow-xs font-semibold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            Bifurcation Impact
           </button>
         </div>
 
@@ -795,6 +807,39 @@ export const LossCharts: React.FC<LossChartsProps> = ({
               mode: 'ADDITIONAL_TRANSFORMER'
             }}
           />
+        </div>
+      )}
+
+      {/* Chart Viewport 8: Bifurcation Delta Chart */}
+      {activeChart === 'bifurcation-delta' && (
+        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+          <div className="pb-4 border-b border-slate-100">
+            <h3 className="text-sm font-bold text-slate-900">Bifurcation Impact: Baseline vs. Bifurcated</h3>
+            <p className="text-xs text-slate-500 mt-0.5">Delta visualization of line losses and voltage drop relief.</p>
+          </div>
+          <div className="h-80 w-full pt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={sortedSegments.map(s => {
+                  const baseSeg = existingSummary?.segmentResults.find(b => b.segment.id === s.segment.id);
+                  return {
+                    span: `${s.fromNodeId}→${s.toNodeId}`,
+                    lossDelta: baseSeg ? (baseSeg.lineLossKw - s.lineLossKw) : 0,
+                    voltDropDelta: baseSeg ? (baseSeg.percentVoltDrop - s.percentVoltDrop) : 0,
+                  };
+                })}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="span" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                <Tooltip />
+                <Legend />
+                <Bar yAxisId="left" dataKey="lossDelta" name="Loss Reduction (kW)" fill="#10b981" />
+                <Line yAxisId="right" type="monotone" dataKey="voltDropDelta" name="Voltage Drop Delta (%)" stroke="#f59e0b" />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
     </div>
