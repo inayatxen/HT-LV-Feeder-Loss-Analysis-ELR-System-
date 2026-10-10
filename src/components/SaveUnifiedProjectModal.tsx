@@ -42,10 +42,10 @@ export const SaveUnifiedProjectModal: React.FC<SaveUnifiedProjectModalProps> = (
   onExportProjectFile
 }) => {
   const [projectName, setProjectName] = useState(
-    feeder.schemeProjectName || `${feeder.name} - Unified ELR & Cost Project`
+    feeder.schemeProjectName || `${feeder.name} - Unified FLADIX & Cost Project`
   );
   const [remarks, setRemarks] = useState(
-    feeder.purposeOfWork || `Unified PESCO project containing 1. Feeder Loss Analysis (ELR) and 2. Line Cost Estimation under Work Order ${feeder.workOrderNo || '26-14-71-26-042'}.`
+    feeder.purposeOfWork || `Unified PESCO project containing 1. FLADIX Feeder Loss Analysis and Data Indexing and 2. Line Cost Estimation under Work Order ${feeder.workOrderNo || '26-14-71-26-042'}.`
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -85,13 +85,13 @@ export const SaveUnifiedProjectModal: React.FC<SaveUnifiedProjectModalProps> = (
             </div>
             <div>
               <h3 className="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
-                <span>Save Unified Project</span>
+                <span>Save Unified FLADIX Project</span>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
                   2-in-1 Project Bundle
                 </span>
               </h3>
               <p className="text-xs text-slate-300 mt-0.5">
-                Saves <strong>1. ELR Loss Analysis</strong> and <strong>2. Line Cost Estimation</strong> together in one synchronized project file.
+                Saves <strong>1. FLADIX Feeder Loss Analysis</strong> and <strong>2. Line Cost Estimation</strong> together in one synchronized project file.
               </p>
             </div>
           </div>
@@ -115,7 +115,7 @@ export const SaveUnifiedProjectModal: React.FC<SaveUnifiedProjectModalProps> = (
               <div className="flex items-center justify-between pb-2 border-b border-amber-200/80">
                 <span className="text-xs font-bold text-amber-950 flex items-center gap-1.5">
                   <Zap className="w-4 h-4 text-amber-600" />
-                  1. ELR Loss Analysis
+                  1. FLADIX Feeder Loss Analysis
                 </span>
                 <span className="text-[10px] font-mono font-bold bg-amber-200/70 text-amber-900 px-2 py-0.5 rounded">
                   {isHt ? '11kV HT' : '400V LT'}

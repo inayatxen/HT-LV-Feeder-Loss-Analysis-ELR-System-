@@ -194,7 +194,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
             />
             <div>
               <span className="font-bold text-xs sm:text-sm block leading-tight">
-                PESCO / WAPDA Official Estimate & BOQ Dossier
+                FLADIX · Official Estimate & BOQ Dossier
               </span>
               <span className="text-[11px] text-slate-400">
                 {estimate.projectInfo.estimateNo} · {estimate.projectInfo.revisionNo} ({estimate.status})
@@ -263,16 +263,16 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                       </div>
                       <h1 className="text-base sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
-                        DETAILED ELECTRICAL LINE EXTENSION & FEEDER ESTIMATE
+                        FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
                       </h1>
                       <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
-                        Technical Sanction & Detailed Bill of Quantities (BOQ) Schedule · {estimate.type.replace(/_/g, ' ')}
+                        Detailed Electrical Line Extension & BOQ Schedule · {estimate.type.replace(/_/g, ' ')}
                       </div>
                     </div>
 
                     <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
                       <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">PESCO</span>
+                        <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
                         <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">EST</span>
                         <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">WAPDA</span>
                       </div>

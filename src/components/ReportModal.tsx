@@ -195,15 +195,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     try {
       const cleanName = (feeder.name || 'Feeder').replace(/[^a-zA-Z0-9_-]/g, '_');
       const todayStr = new Date().toISOString().slice(0, 10);
-      const filename = `PESCO_ELR_Report_${cleanName}_${todayStr}`;
+      const filename = `FLADIX_Report_${cleanName}_${todayStr}`;
 
       const result = await exportElementToPdf(printContentRef.current, {
         filename,
         paperSize: 'a4',
         orientation: pageOrientation === 'landscape' ? 'landscape' : 'portrait',
         marginMm: printScale === 'compact' ? 8 : 10,
-        reportTitle: `PESCO ELR Engineering Report - ${feeder.name}`,
-        docReference: `ELR-PESCO-${feeder.id.toUpperCase()}`,
+        reportTitle: `FLADIX Feeder Loss Analysis and Data Indexing Report - ${feeder.name}`,
+        docReference: `FLADIX-PESCO-${feeder.id.toUpperCase()}`,
         excludeGraphics: excludeUnnecessaryGraphics,
         pageBreakMode: pageBreakMode
       });
@@ -415,7 +415,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               </div>
             )}
             <h1 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950 uppercase tracking-tight">
-              ENERGY LOSS REDUCTION (ELR) ENGINEERING REPORT
+              FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
             </h1>
             <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
               {sectionSubtitle || 'Feeder Loading, Transformer Overloading, Line Losses & Upgradation Study'}
@@ -424,15 +424,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
           <div className="hidden sm:flex flex-col items-center justify-center w-16 sm:w-20 shrink-0 text-center">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
-              <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">WAPDA</span>
-              <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">ELR</span>
+              <span className="text-[8px] sm:text-[9px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
+              <span className="text-[10px] sm:text-[11px] font-black text-amber-600 leading-tight">INDEX</span>
               <span className="text-[7px] sm:text-[8px] font-bold text-slate-600 leading-none">STD</span>
             </div>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-6 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
-          <span>Ref: <strong>ELR-PESCO-{feeder.id.toUpperCase()}</strong></span>
+          <span>Ref: <strong>FLADIX-PESCO-{feeder.id.toUpperCase()}</strong></span>
           <span aria-hidden="true" className="hidden sm:inline">·</span>
           <span>Date: <strong>{today}</strong></span>
           <span aria-hidden="true" className="hidden sm:inline">·</span>
@@ -846,7 +846,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm block leading-tight">
-                  PESCO / WAPDA Feeder Loss Analysis & ELR Report
+                  FLADIX — Feeder Loss Analysis and Data Indexing Report
                 </span>
                 {excludeUnnecessaryGraphics && (
                   <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-mono px-2 py-0.2 rounded font-bold uppercase">

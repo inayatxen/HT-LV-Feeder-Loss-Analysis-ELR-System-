@@ -364,10 +364,10 @@ export const CostEstimationDashboard: React.FC<CostEstimationDashboardProps> = (
                 type="button"
                 onClick={onSaveUnifiedProject}
                 className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg shadow-sm transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
-                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                title="Save both 1. FLADIX Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
               >
                 <Save className="w-4 h-4 stroke-[2.5]" />
-                <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+                <span>Save as One Project (1. FLADIX Analysis + 2. Cost Estimation)</span>
               </button>
             )}
 

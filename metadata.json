@@ -1,6 +1,6 @@
 {
-  "name": "HT & LV Feeder Loss Analysis (ELR System)",
-  "description": "Comprehensive electrical distribution loss calculation, transformer overloading analysis, voltage drop profiling, and energy loss reduction planning for HT and LV networks.",
+  "name": "FLADIX - Feeder Loss Analysis and Data Indexing",
+  "description": "FLADIX: Comprehensive electrical distribution feeder loss calculation, data indexing, transformer overloading analysis, voltage drop profiling, and energy loss reduction planning for HT and LV networks.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

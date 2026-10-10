@@ -149,7 +149,7 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
             </div>
             <div>
               <span className="font-bold text-xs sm:text-sm block leading-tight">
-                PESCO / WAPDA Cost Benefit Analysis Report (BCR)
+                FLADIX · Cost Benefit Analysis Report (BCR)
               </span>
               <span className="text-[11px] text-slate-400">
                 Study Period: {data.studyPeriodYears} Years · Discount Rate: {data.discountRatePercent}%
@@ -209,15 +209,15 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                       </div>
                       <h1 className="text-base sm:text-xl font-black text-slate-950 uppercase tracking-tight">
-                        ECONOMIC COST BENEFIT ANALYSIS & BENEFIT-COST RATIO (BCR) REPORT
+                        FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
                       </h1>
                       <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
-                        System Rehabilitation & Loss Reduction Investment Appraisal
+                        Economic Cost Benefit Analysis & Benefit-Cost Ratio (BCR) Report · System Rehabilitation
                       </div>
                     </div>
                     <div className="w-16 sm:w-20 shrink-0 text-center">
                       <div className="w-12 h-12 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">PESCO</span>
+                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
                         <span className="text-[10px] font-black text-amber-600 leading-tight">BCR</span>
                       </div>
                     </div>

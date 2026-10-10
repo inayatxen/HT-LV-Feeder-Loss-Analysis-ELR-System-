@@ -806,10 +806,10 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                 type="button"
                 onClick={onSaveUnifiedProject}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-black text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-lg shadow-sm transition-all cursor-pointer ring-1 ring-emerald-300 active:scale-95"
-                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                title="Save both 1. FLADIX Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
               >
                 <Save className="w-3.5 h-3.5 stroke-[2.5]" />
-                <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+                <span>Save as One Project (1. FLADIX Analysis + 2. Cost Estimation)</span>
               </button>
             )}
 

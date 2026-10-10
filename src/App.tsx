@@ -500,7 +500,7 @@ export default function App() {
     };
     await saveAnalysisSnapshotToDb(snapshot);
 
-    setDbToast(`✅ Unified Project "${projectName}" Saved! (1. ELR Loss Analysis + 2. Cost Estimate under WO: ${updatedFeeder.workOrderNo || '26-14-71-26-042'})`);
+    setDbToast(`✅ Unified Project "${projectName}" Saved! (1. FLADIX Feeder Loss Analysis + 2. Cost Estimate under WO: ${updatedFeeder.workOrderNo || '26-14-71-26-042'})`);
     setTimeout(() => setDbToast(''), 4500);
   };
 
@@ -758,7 +758,7 @@ export default function App() {
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto no-print print:hidden w-full">
         <div className="w-full px-3 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
           <div>
-            PESCO Distribution Suite · WAPDA ELR Feeder Loss & CSR-2026 Line Cost Estimation
+            FLADIX · Feeder Loss Analysis and Data Indexing · PESCO Distribution Suite & CSR-2026 Line Cost Estimation
           </div>
           <div className="flex items-center gap-4">
             <button
@@ -768,7 +768,7 @@ export default function App() {
               }`}
             >
               <Calculator className="w-3.5 h-3.5" />
-              <span>{activeSystemModule === 'line_cost_estimation' ? 'Switch to Feeder Loss Analysis' : 'Line Extension Cost Estimation'}</span>
+              <span>{activeSystemModule === 'line_cost_estimation' ? 'Switch to FLADIX Feeder Loss Analysis' : 'Line Extension Cost Estimation'}</span>
             </button>
             <button
               onClick={() => setIsLocalDbOpen(true)}

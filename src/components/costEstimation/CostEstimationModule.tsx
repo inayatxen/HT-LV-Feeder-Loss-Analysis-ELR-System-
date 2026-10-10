@@ -412,10 +412,10 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
                   type="button"
                   onClick={onSaveUnifiedProject}
                   className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition-all shadow-md active:scale-95 cursor-pointer ring-1 ring-emerald-300"
-                  title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                  title="Save both 1. FLADIX Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
                 >
                   <Save className="w-4 h-4 stroke-[2.5]" />
-                  <span>Save as One Project (1. ELR Analysis + 2. Cost Estimation)</span>
+                  <span>Save as One Project (1. FLADIX Analysis + 2. Cost Estimation)</span>
                 </button>
               )}
 
@@ -423,10 +423,10 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
                 type="button"
                 onClick={handleOpenLinkedEstimate}
                 className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-md active:scale-95 cursor-pointer"
-                title="Open and edit the estimate for this active ELR Feeder"
+                title="Open and edit the estimate for this active FLADIX Feeder"
               >
                 <Calculator className="w-4 h-4" />
-                <span>{linkedEstimate ? 'Open Estimate for this ELR Feeder' : 'Generate Linked Estimate'}</span>
+                <span>{linkedEstimate ? 'Open Estimate for this FLADIX Feeder' : 'Generate Linked Estimate'}</span>
               </button>
 
               {onSwitchToAnalysis && (
@@ -434,10 +434,10 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
                   type="button"
                   onClick={onSwitchToAnalysis}
                   className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all shadow-xs cursor-pointer"
-                  title="Switch back to Feeder Loss Analysis workbench"
+                  title="Switch back to FLADIX Feeder Loss Analysis & Data Indexing workbench"
                 >
                   <Zap className="w-3.5 h-3.5 text-amber-400" />
-                  <span>View Loss Analysis</span>
+                  <span>View FLADIX Loss Analysis</span>
                 </button>
               )}
             </div>

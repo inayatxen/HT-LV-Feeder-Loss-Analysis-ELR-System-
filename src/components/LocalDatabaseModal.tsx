@@ -622,7 +622,7 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                   rows={4}
                   value={importJsonText}
                   onChange={(e) => setImportJsonText(e.target.value)}
-                  placeholder={`{"appName": "HT LV Feeder Loss Analysis", "feeders": [...], "snapshots": [...]}`}
+                  placeholder={`{"appName": "FLADIX - Feeder Loss Analysis and Data Indexing", "feeders": [...], "snapshots": [...]}`}
                   className="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-mono text-slate-900 focus:outline-none focus:ring-1 focus:ring-amber-500"
                 />
 

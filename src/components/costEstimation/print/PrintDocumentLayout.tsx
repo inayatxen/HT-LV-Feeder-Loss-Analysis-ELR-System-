@@ -65,9 +65,9 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                   ⚡
                 </div>
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700">Peshawar Electric Supply Company (PESCO)</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-amber-700">FLADIX · Peshawar Electric Supply Company (PESCO)</div>
                   <h1 className="text-base sm:text-lg font-black text-slate-950 uppercase tracking-tight">
-                    DISMANTLE MATERIAL ESTIMATE REPORT (RETIRED ASSETS)
+                    FLADIX · DISMANTLE MATERIAL ESTIMATE REPORT (RETIRED ASSETS)
                   </h1>
                 </div>
               </div>
@@ -352,22 +352,19 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
               
               <div className="text-center flex-1">
                 <div className="text-[10px] sm:text-xs uppercase tracking-widest font-black text-slate-700 mb-0.5">
-                  WATER AND POWER DEVELOPMENT AUTHORITY (WAPDA)
-                </div>
-                <div className="text-xs sm:text-sm font-bold text-slate-800 tracking-wide">
-                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO)
+                  PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                 </div>
                 <h1 className="text-base sm:text-xl font-black text-slate-950 uppercase tracking-tight mt-1">
-                  DETAILED ELECTRICAL LINE EXTENSION & BILL OF QUANTITIES (BOQ) DOSSIER
+                  FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
                 </h1>
                 <div className="text-[11px] sm:text-xs font-semibold text-slate-600 mt-0.5">
-                  Technical Sanction & Erection Cost Schedule · {estimate.type.replace(/_/g, ' ')}
+                  Detailed Electrical Line Extension & Bill of Quantities (BOQ) Dossier · {estimate.type.replace(/_/g, ' ')}
                 </div>
               </div>
 
               <div className="hidden sm:flex flex-col items-center justify-center w-20 shrink-0 text-center">
                 <div className="w-16 h-16 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1 shadow-2xs">
-                  <span className="text-[9px] font-black uppercase text-slate-900 leading-none">PESCO</span>
+                  <span className="text-[9px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
                   <span className="text-[12px] font-black text-amber-600 leading-tight">EST</span>
                   <span className="text-[8px] font-bold text-slate-600 leading-none">WAPDA</span>
                 </div>
@@ -801,7 +798,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
             <header className="border-b-2 border-slate-900 pb-3 mb-4">
                 <div className="text-center">
                     <h1 className="text-base sm:text-lg font-black text-slate-950 uppercase tracking-tight">
-                        DISMANTLE MATERIAL ESTIMATE REPORT
+                        FLADIX · DISMANTLE MATERIAL ESTIMATE REPORT
                     </h1>
                     <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
                         {estimate.projectInfo.schemeProjectName} · {estimate.projectInfo.estimateNo}

@@ -364,7 +364,7 @@ export async function exportLocalDatabaseBackup(): Promise<string> {
   ]);
 
   const backupData = {
-    appName: 'HT LV Feeder Loss Analysis (WAPDA ELR)',
+    appName: 'FLADIX - Feeder Loss Analysis and Data Indexing',
     exportDate: new Date().toISOString(),
     version: DB_VERSION,
     feeders,

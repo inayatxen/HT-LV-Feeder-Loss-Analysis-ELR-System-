@@ -102,14 +102,14 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="text-center sm:text-left leading-tight">
               <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-3 flex-wrap">
                 <span className="text-sm sm:text-xl md:text-2xl font-black tracking-tight text-white drop-shadow-sm whitespace-nowrap">
-                  PESCO Distribution Suite
+                  FLADIX
                 </span>
                 <span className="text-[10px] sm:text-xs md:text-sm font-mono font-black tracking-wider px-2 py-0.5 rounded-md bg-amber-500/25 text-amber-300 border border-amber-500/50 shadow-xs">
-                  WAPDA
+                  PESCO · WAPDA
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs md:text-sm text-slate-300 font-semibold leading-snug mt-0.5 tracking-wide">
-                Peshawar Electric Supply Company · Engineering & Loss Reduction
+                Feeder Loss Analysis and Data Indexing · Engineering & Loss Reduction
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center p-1 bg-slate-900/90 rounded-xl border border-slate-700/80 shadow-inner shrink-0">
               <button
                 onClick={() => onSelectSystemModule?.('elr_loss_analysis')}
-                title="Switch to Feeder Loss Analysis & Technical Loss Reduction Module (WAPDA Engine)"
+                title="Switch to FLADIX: Feeder Loss Analysis & Data Indexing Module"
                 className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
                   activeSystemModule === 'elr_loss_analysis'
                     ? 'btn-3d-amber text-slate-950 font-extrabold shadow-md'
@@ -136,8 +136,8 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Zap className={`w-3.5 h-3.5 ${activeSystemModule === 'elr_loss_analysis' ? 'text-slate-950 stroke-[2.5]' : 'text-amber-400'}`} />
-                <span className="hidden xs:inline">Feeder Loss (ELR)</span>
-                <span className="xs:hidden">ELR</span>
+                <span className="hidden xs:inline">FLADIX Loss Analysis</span>
+                <span className="xs:hidden">FLADIX</span>
               </button>
 
               <button
@@ -246,7 +246,7 @@ export const Header: React.FC<HeaderProps> = ({
               {/* Direct "+ New Job" Tactile 3D Button */}
               <button
                 onClick={onOpenNewJob}
-                title="Start a new Feeder Loss Analysis Job"
+                title="Start a new FLADIX Feeder Loss Analysis Job"
                 className="btn-3d-slate flex items-center gap-1 px-2.5 py-1.5 text-xs whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
@@ -277,11 +277,11 @@ export const Header: React.FC<HeaderProps> = ({
             {onSaveUnifiedProject && (
               <button
                 onClick={onSaveUnifiedProject}
-                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                title="Save both 1. FLADIX Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
                 className="btn-3d-emerald flex items-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap shrink-0"
               >
                 <Save className="w-3.5 h-3.5 text-white stroke-[2.5]" />
-                <span className="hidden xl:inline">Save Project (Analysis & Cost)</span>
+                <span className="hidden xl:inline">Save Project (FLADIX & Cost)</span>
                 <span className="xl:hidden">Save</span>
               </button>
             )}
@@ -289,7 +289,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Official Report Button (3D Amber Finish) */}
             <button
               onClick={onOpenReport}
-              title="Open Official WAPDA ELR Form & Loss Analysis Report"
+              title="Open Official FLADIX Engineering Report"
               className="btn-3d-amber flex items-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
             >
               <FileText className="w-3.5 h-3.5 text-slate-950 stroke-[2.4]" />
@@ -320,7 +320,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="btn-3d-amber flex items-center gap-1.5 px-3 py-1.5 text-xs text-slate-950 whitespace-nowrap"
             >
               <Zap className="w-3.5 h-3.5 text-slate-950 stroke-[2.5]" />
-              <span>Switch to Feeder Loss Analysis (ELR) →</span>
+              <span>Switch to FLADIX Feeder Loss Analysis →</span>
             </button>
           </div>
         </div>

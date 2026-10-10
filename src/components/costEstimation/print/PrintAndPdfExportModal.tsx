@@ -244,7 +244,7 @@ export const PrintAndPdfExportModal: React.FC<PrintAndPdfExportModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-xs sm:text-sm block leading-tight">
-                  Official Print & PDF Export Center
+                  FLADIX · Official Print & PDF Export Center
                 </span>
                 <span className="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] text-amber-300 font-mono">
                   {paperSize.toUpperCase()} · {orientation.toUpperCase()}

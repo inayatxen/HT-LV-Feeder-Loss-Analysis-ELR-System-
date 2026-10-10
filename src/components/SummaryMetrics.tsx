@@ -124,7 +124,7 @@ export const SummaryMetrics: React.FC<SummaryMetricsProps> = ({
                 type="button"
                 onClick={onSaveUnifiedProject}
                 className="btn-3d-emerald flex items-center gap-1.5 px-3 py-2 text-xs whitespace-nowrap"
-                title="Save both 1. ELR Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
+                title="Save both 1. FLADIX Feeder Loss Analysis and 2. Line Cost Estimation together as One Project"
               >
                 <Save className="w-3.5 h-3.5 text-white stroke-[2.5]" />
                 <span className="hidden sm:inline">Save as One Project</span>

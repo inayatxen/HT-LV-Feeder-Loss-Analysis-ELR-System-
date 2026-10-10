@@ -141,7 +141,7 @@ export const JustificationSlipPrintModal: React.FC<JustificationSlipPrintModalPr
             </div>
             <div>
               <span className="font-bold text-xs sm:text-sm block leading-tight">
-                PESCO / WAPDA System Rehabilitation Justification Slip
+                FLADIX · System Rehabilitation Justification Slip
               </span>
               <span className="text-[11px] text-slate-400">
                 Project Cost: Rs. {data.totalCost.toLocaleString()} · BCR: {data.benefitCostRatio.toFixed(2)}
@@ -201,15 +201,15 @@ export const JustificationSlipPrintModal: React.FC<JustificationSlipPrintModalPr
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
                       </div>
                       <h1 className="text-base sm:text-xl font-black text-slate-950 uppercase tracking-tight">
-                        OFFICIAL SYSTEM REHABILITATION JUSTIFICATION SLIP
+                        FLADIX · FEEDER LOSS ANALYSIS AND DATA INDEXING
                       </h1>
                       <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
-                        Technical Sanction & Economic Justification for Line Loss Reduction (Proposal A) & Transformer Relief (Proposal B)
+                        Official System Rehabilitation Justification Slip · Loss Reduction & Transformer Relief
                       </div>
                     </div>
                     <div className="w-16 sm:w-20 shrink-0 text-center">
                       <div className="w-12 h-12 rounded-xl border-2 border-slate-900 flex flex-col items-center justify-center bg-slate-50 p-1">
-                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">PESCO</span>
+                        <span className="text-[8px] font-black uppercase text-slate-900 leading-none">FLADIX</span>
                         <span className="text-[10px] font-black text-emerald-600 leading-tight">SLIP</span>
                       </div>
                     </div>
