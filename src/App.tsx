@@ -57,24 +57,25 @@ export default function App() {
   const [selectedFeederId, setSelectedFeederId] = useState<string>('gulbhar-colony-peshawar');
   const [activeTab, setActiveTab] = useState<'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast'>('input_form');
 
-  // Light / Dark Theme State
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+  // Light / Dark / Blue / Amber Theme State
+  const [theme, setTheme] = useState<'light' | 'dark' | 'blue' | 'amber'>(() => {
     try {
       const saved = localStorage.getItem('pesco_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
+      if (saved === 'dark' || saved === 'light' || saved === 'blue' || saved === 'amber') return saved;
     } catch {}
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
   });
 
   React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
     try {
       localStorage.setItem('pesco_theme', theme);
     } catch {}
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  const toggleTheme = (newTheme: 'light' | 'dark' | 'blue' | 'amber') => {
+    setTheme(newTheme);
   };
 
   // Job Title Selection State (persisted locally)
@@ -142,6 +143,13 @@ export default function App() {
     };
   };
 
+  interface ConfigSnapshot {
+    conductors: Record<string, string>;
+    capacitors: Record<string, number>;
+    transformerKva: number;
+    bifurcation: BifurcationConfig;
+  }
+
   // What-If Interventions State
   const [activeTransformerKva, setActiveTransformerKva] = useState<number>(activeFeeder.existingTransformerKva);
   const [activeInjectedVoltage, setActiveInjectedVoltage] = useState<number>(activeFeeder.nominalVoltage);
@@ -152,8 +160,53 @@ export default function App() {
     return getSavedBifurcationConfig(GULBHAR_COLONY_LT_FEEDER);
   });
 
+  // History Tracker
+  const [history, setHistory] = useState<ConfigSnapshot[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const addToHistory = () => {
+    const snapshot: ConfigSnapshot = {
+      conductors: { ...activeConductors },
+      capacitors: { ...activeCapacitors },
+      transformerKva: activeTransformerKva,
+      bifurcation: { ...bifurcationConfig }
+    };
+    const newHistory = [...history.slice(0, historyIndex + 1), snapshot];
+    if (newHistory.length > 4) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      const prev = history[historyIndex - 1];
+      setActiveConductors(prev.conductors);
+      setActiveCapacitors(prev.capacitors);
+      setActiveTransformerKva(prev.transformerKva);
+      setBifurcationConfig(prev.bifurcation);
+      setHistoryIndex(historyIndex - 1);
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const next = history[historyIndex + 1];
+      setActiveConductors(next.conductors);
+      setActiveCapacitors(next.capacitors);
+      setActiveTransformerKva(next.transformerKva);
+      setBifurcationConfig(next.bifurcation);
+      setHistoryIndex(historyIndex + 1);
+    }
+  };
+
   // Handler to update and persist bifurcation config
+  const handleUpdateTransformerKva = (kva: number) => {
+    addToHistory();
+    setActiveTransformerKva(kva);
+  };
+
   const handleUpdateBifurcationConfig = (newConfig: BifurcationConfig) => {
+    addToHistory();
     setBifurcationConfig(newConfig);
     try {
       localStorage.setItem(`pesco_bifurcation_${selectedFeederId}`, JSON.stringify(newConfig));
@@ -305,6 +358,7 @@ export default function App() {
 
   // Handlers for What-If
   const handleSetConductor = (segmentId: string, conductorCode: string) => {
+    addToHistory();
     setActiveConductors(prev => {
       const next = { ...prev };
       if (conductorCode === 'A' || conductorCode === activeFeeder.segments.find(s => s.id === segmentId)?.conductorCode) {
@@ -317,6 +371,7 @@ export default function App() {
   };
 
   const handleSetCapacitor = (nodeId: string, kvar: number) => {
+    addToHistory();
     setActiveCapacitors(prev => {
       const next = { ...prev };
       if (kvar <= 0) {
@@ -648,12 +703,28 @@ export default function App() {
                     <strong className="font-bold text-emerald-900">What-If Scenario Active:</strong> Viewing upgraded system ({activeTransformerKva} kVA transformer, {Object.keys(activeConductors).length} re-conductored spans, {proposedSummary.totalCapacitorKvar} kVAR capacitors).
                   </span>
                 </div>
-                <button
-                  onClick={handleResetInterventions}
-                  className="btn-3d-slate px-3 py-1 text-xs text-rose-300 hover:text-white font-bold whitespace-nowrap self-end sm:self-auto cursor-pointer"
-                >
-                  Reset to Baseline
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={undo}
+                    disabled={historyIndex <= 0}
+                    className={`btn-3d-slate px-3 py-1 text-xs font-bold cursor-pointer ${historyIndex <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    Undo
+                  </button>
+                  <button
+                    onClick={redo}
+                    disabled={historyIndex >= history.length - 1}
+                    className={`btn-3d-slate px-3 py-1 text-xs font-bold cursor-pointer ${historyIndex >= history.length - 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    Redo
+                  </button>
+                  <button
+                    onClick={handleResetInterventions}
+                    className="btn-3d-slate px-3 py-1 text-xs text-rose-300 hover:text-white font-bold cursor-pointer"
+                  >
+                    Reset to Baseline
+                  </button>
+                </div>
               </div>
             )}
 

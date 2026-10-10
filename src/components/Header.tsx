@@ -58,8 +58,8 @@ interface HeaderProps {
   selectedJobTitle: JobTitle;
   onSelectJobTitle: (title: JobTitle) => void;
   onSaveUnifiedProject?: () => void;
-  theme: 'light' | 'dark';
-  onToggleTheme: () => void;
+  theme: 'light' | 'dark' | 'blue' | 'amber';
+  onToggleTheme: (theme: 'light' | 'dark' | 'blue' | 'amber') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -443,24 +443,18 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-slate-300 font-semibold">{activeCategory === 'LV' ? '400V LT' : '11kV HT'}</span>
               </div>
 
-              {/* Theme Toggle Button */}
-              <button
-                onClick={onToggleTheme}
-                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700/80 transition-all cursor-pointer shadow-inner shrink-0"
+              {/* Theme Selector Dropdown */}
+              <select
+                value={theme}
+                onChange={(e) => onToggleTheme(e.target.value as 'light' | 'dark' | 'blue' | 'amber')}
+                className="bg-slate-900 text-amber-300 text-xs font-bold rounded-lg border border-slate-700/80 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer shadow-inner"
+                title="Select Color Theme"
               >
-                {theme === 'dark' ? (
-                  <>
-                    <span className="text-xs">☀️</span>
-                    <span className="hidden md:inline">Light</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xs">🌙</span>
-                    <span className="hidden md:inline">Dark</span>
-                  </>
-                )}
-              </button>
+                <option value="light">☀️ Light</option>
+                <option value="dark">🌙 Dark</option>
+                <option value="blue">🔵 Blue</option>
+                <option value="amber">🔶 Amber</option>
+              </select>
             </div>
           </div>
         </div>
