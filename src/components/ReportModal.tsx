@@ -802,7 +802,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             <img
               src="/pesco-logo.svg"
               alt="PESCO Logo"
-              className="w-9 h-9 rounded-full border border-amber-500/40 shadow-xs shrink-0"
+              className="w-12 h-12 rounded-full border-2 border-amber-500/60 shadow-md shrink-0"
             />
             <div>
               <div className="flex items-center gap-2">

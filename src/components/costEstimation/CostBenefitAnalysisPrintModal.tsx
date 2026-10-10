@@ -203,7 +203,7 @@ export const CostBenefitAnalysisPrintModal: React.FC<CostBenefitAnalysisPrintMod
               <tr>
                 <th className="font-normal text-left p-0 pb-4 border-b-2 border-slate-900">
                   <div className="flex items-center justify-between gap-4">
-                    <img src="/pesco-logo.svg" alt="PESCO Logo" className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 object-contain" />
+                    <img src="/pesco-logo.svg" alt="PESCO Logo" className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain" />
                     <div className="text-center flex-1">
                       <div className="text-[11px] sm:text-xs uppercase tracking-widest font-extrabold text-slate-700 mb-0.5">
                         PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA

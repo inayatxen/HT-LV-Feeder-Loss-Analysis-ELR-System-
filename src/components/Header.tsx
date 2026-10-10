@@ -93,9 +93,9 @@ export const Header: React.FC<HeaderProps> = ({
               <img
                 src="/pesco-logo.svg"
                 alt="PESCO WAPDA Logo"
-                className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full border-2 border-amber-500/70 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/30"
+                className="w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-full border-2 border-amber-500/70 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/30"
               />
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-5.5 sm:h-5.5 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
+              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
             </div>

@@ -65,7 +65,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                 <img
                   src="/pesco-logo.svg"
                   alt="PESCO Logo"
-                  className="w-12 h-12 sm:w-14 sm:h-14 shrink-0 object-contain"
+                  className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 object-contain"
                 />
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-widest text-slate-700">PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA</div>
@@ -1007,6 +1007,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
               {/* Official Disclaimer & Verification Stamp */}
               <div className="mt-8 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-1">
                 <span>Security Stamp: Verified through PESCO Technical Automation Sub-system (Audit Ref: {estimate.id})</span>
+                <span className="font-bold text-amber-800">Designed By Engr. Inayatullah</span>
                 <span>Computer Generated Engineering Document · No Manual Amendments Valid Without Re-Sanction</span>
               </div>
             </section>

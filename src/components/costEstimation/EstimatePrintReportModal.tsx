@@ -190,7 +190,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
             <img
               src="/pesco-logo.svg"
               alt="PESCO Logo"
-              className="w-8 h-8 rounded-full border border-amber-500/40 shadow-xs shrink-0"
+              className="w-12 h-12 rounded-full border-2 border-amber-500/60 shadow-md shrink-0"
             />
             <div>
               <span className="font-bold text-xs sm:text-sm block leading-tight">

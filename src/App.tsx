@@ -757,8 +757,9 @@ export default function App() {
       {/* Footer (100% Width) - Hidden during print */}
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto no-print print:hidden w-full">
         <div className="w-full px-3 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-500">
-          <div>
-            FLADIX · Feeder Loss Analysis and Data Indexing · PESCO Distribution Suite & CSR-2026 Line Cost Estimation
+          <div className="flex flex-col sm:flex-row items-center gap-2">
+            <span>FLADIX · Feeder Loss Analysis and Data Indexing · PESCO Distribution Suite & CSR-2026 Line Cost Estimation</span>
+            <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">Designed By Engr. Inayatullah</span>
           </div>
           <div className="flex items-center gap-4">
             <button
