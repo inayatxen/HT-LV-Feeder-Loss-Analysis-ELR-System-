@@ -94,14 +94,14 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="w-full max-w-[1920px] mx-auto flex flex-col items-center justify-center text-center">
           <div className="flex items-center justify-center gap-2.5 sm:gap-4 md:gap-5">
             <div className="relative group shrink-0">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white rounded-full p-1 shadow-xl border-2 border-amber-400 flex items-center justify-center transition-transform group-hover:scale-105">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 bg-white rounded-2xl p-1.5 shadow-2xl border-2 border-amber-400 flex items-center justify-center transition-transform group-hover:scale-105">
                 <img
                   src="/pesco-logo.svg"
                   alt="PESCO WAPDA Logo"
-                  className="w-full h-full object-contain rounded-full"
+                  className="w-full h-full object-contain rounded-xl"
                 />
               </div>
-              <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
+              <span className="absolute -bottom-1 -right-1 w-6 h-6 sm:w-7 sm:h-7 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
             </div>
