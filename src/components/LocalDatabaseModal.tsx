@@ -22,7 +22,8 @@ import {
   Plus,
   Maximize2,
   Minimize2,
-  Settings
+  Settings,
+  Printer
 } from 'lucide-react';
 import { FeederData, FeederAnalysisSummary } from '../types/feeder';
 import { 
@@ -74,6 +75,9 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
 
   // Backup Import state
   const [importJsonText, setImportJsonText] = useState('');
+
+  // Print Snapshots modal state
+  const [printSnapshotsModal, setPrintSnapshotsModal] = useState<SavedAnalysisSnapshot[] | null>(null);
 
   // Load snapshots when modal opens
   useEffect(() => {
@@ -435,17 +439,30 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
           {/* TAB 2: SAVED SNAPSHOTS */}
           {activeTab === 'snapshots' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs text-slate-500">
                   Select a saved snapshot to restore it into the active calculation workspace:
                 </span>
-                <button
-                  onClick={() => setActiveTab('save_new')}
-                  className="flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Save New Snapshot</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPrintSnapshotsModal(snapshots)}
+                    disabled={snapshots.length === 0}
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-800 bg-white hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed border border-slate-300 px-2.5 py-1 rounded-lg cursor-pointer transition-colors shadow-2xs"
+                    title="Print all saved snapshots (each snapshot printed on a separate page)"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Print All Snapshots</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('save_new')}
+                    className="flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Save New Snapshot</span>
+                  </button>
+                </div>
               </div>
 
               {snapshots.length === 0 ? (
@@ -497,6 +514,14 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setPrintSnapshotsModal([snap])}
+                          className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                          title="Print this snapshot as a separate page"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => {
                             onLoadSnapshot(snap);
@@ -678,6 +703,206 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* ========================================================
+          SNAPSHOT PRINT DOSSIER (EACH SNAPSHOT AS SEPARATE PAGE)
+         ======================================================== */}
+      {printSnapshotsModal && (
+        <div className="fixed inset-0 z-60 bg-slate-950/85 backdrop-blur-xs flex flex-col p-2 sm:p-4 overflow-y-auto print:p-0 print:bg-white print:static print:overflow-visible">
+          {/* Print Toolbar */}
+          <div className="no-print bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-xl flex items-center justify-between mb-4 max-w-5xl mx-auto w-full">
+            <div className="flex items-center gap-2.5">
+              <Printer className="w-5 h-5 text-amber-400" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Print Snapshot Dossier</h3>
+                <p className="text-[11px] text-slate-400">
+                  {printSnapshotsModal.length} saved snapshot{printSnapshotsModal.length > 1 ? 's' : ''} — each snapshot is formatted as a separate page with FLADIX header
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 text-xs font-black rounded-lg shadow-sm cursor-pointer transition-colors flex items-center gap-1.5"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Print Document</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintSnapshotsModal(null)}
+                className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer transition-colors"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Printable Document Container */}
+          <div className="max-w-5xl mx-auto w-full space-y-8 bg-white p-6 sm:p-8 rounded-2xl shadow-2xl print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none">
+            {printSnapshotsModal.map((snap, idx) => (
+              <div 
+                key={snap.id} 
+                className="print-page-unit flex flex-col justify-between space-y-4 border-b-2 border-dashed border-slate-200 pb-8 last:border-b-0 print:border-none print:pb-0"
+              >
+                {/* Official Running Header */}
+                <header className="border-b-2 border-slate-900 pb-3 mb-4 w-full">
+                  <div className="flex items-center justify-between gap-4">
+                    <img
+                      src="/pesco-logo.svg"
+                      alt="PESCO Logo"
+                      className="w-14 h-14 shrink-0 object-contain"
+                    />
+                    <div className="text-center flex-1">
+                      <div className="text-[11px] font-black tracking-widest text-slate-800 uppercase">
+                        PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                      </div>
+                      <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight mt-0.5">
+                        FLADIX, Feeder Loss Analysis and Data Indexing
+                      </h1>
+                      <p className="text-xs font-semibold text-slate-700 mt-0.5 uppercase tracking-wide">
+                        Saved Workspace Technical Analysis Snapshot
+                      </p>
+                    </div>
+                    <div className="text-right text-[11px] font-mono text-slate-600 shrink-0">
+                      <div>Page {idx + 1} of {printSnapshotsModal.length}</div>
+                      <div className="text-[10px] text-slate-500 font-sans">Official Record</div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-mono text-slate-600 mt-2.5 pt-2 border-t border-slate-200">
+                    <span>Feeder: <strong>{snap.feederData?.name || snap.name}</strong></span>
+                    <span>·</span>
+                    <span>Category: <strong>{snap.category === 'HV' ? '11kV High Tension (HT)' : '400V Low Tension (LT)'}</strong></span>
+                    <span>·</span>
+                    <span>Transformer: <strong>{snap.transformerKva} kVA</strong></span>
+                    {snap.feederData?.workOrderNo && (
+                      <>
+                        <span>·</span>
+                        <span>WO #: <strong>{snap.feederData.workOrderNo}</strong></span>
+                      </>
+                    )}
+                    <span>·</span>
+                    <span>Saved: <strong>{new Date(snap.timestamp).toLocaleDateString()}</strong></span>
+                  </div>
+                </header>
+
+                {/* Snapshot Details Content */}
+                <div className="space-y-4 flex-1">
+                  <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2 mb-3">
+                      <h2 className="text-base font-black text-slate-900">{snap.name}</h2>
+                      <span className="text-xs font-mono text-slate-500">Record ID: {snap.id}</span>
+                    </div>
+                    {snap.notes && (
+                      <p className="text-xs text-slate-700 mb-3 bg-white p-2.5 rounded border border-slate-200 italic">
+                        "{snap.notes}"
+                      </p>
+                    )}
+
+                    {/* Key Technical Indicators Grid */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-sans uppercase block">Total Line Loss:</span>
+                        <span className="text-base font-black text-amber-700">{snap.totalLineLossKw} kW</span>
+                        <span className="text-[10px] text-slate-500 font-sans block mt-0.5">Calculated peak loss</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-sans uppercase block">Worst Volt Drop:</span>
+                        <span className="text-base font-black text-rose-600">-{snap.worstVoltageDropPercent}%</span>
+                        <span className="text-[10px] text-slate-500 font-sans block mt-0.5">End-of-line regulation</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-sans uppercase block">Transformer Rating:</span>
+                        <span className="text-base font-black text-blue-800">{snap.transformerKva} kVA</span>
+                        <span className="text-[10px] text-slate-500 font-sans block mt-0.5">{snap.category === 'HV' ? '11kV Feeder' : 'Distribution Sub'}</span>
+                      </div>
+                      <div className="bg-white p-3 rounded-lg border border-slate-200">
+                        <span className="text-[10px] text-slate-500 font-sans uppercase block">Network Spans:</span>
+                        <span className="text-base font-black text-purple-800">{snap.feederData?.segments?.length || 0} Spans</span>
+                        <span className="text-[10px] text-slate-500 font-sans block mt-0.5">
+                          {(snap.feederData?.segments?.reduce((acc, s) => acc + (s.lengthKm || 0), 0) || 0).toFixed(2)} km line
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Linked Cost Estimate (if any) */}
+                  {snap.linkedEstimate && (
+                    <div className="border border-emerald-300 bg-emerald-50/50 p-4 rounded-xl text-xs">
+                      <div className="flex items-center justify-between border-b border-emerald-200 pb-2 mb-2">
+                        <span className="font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>🔗 Paired Cost Estimate: {snap.linkedEstimate.generalInfo?.estimateNo || 'EST-RECORD'}</span>
+                        </span>
+                        <span className="font-mono font-bold text-emerald-800">
+                          Total: Rs. {snap.linkedEstimate.charges?.grandTotal?.toLocaleString() || 0}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-[11px] font-mono text-emerald-900">
+                        <div>Material Cost: Rs. {snap.linkedEstimate.charges?.totalMaterialCost?.toLocaleString() || 0}</div>
+                        <div>Labor Cost: Rs. {snap.linkedEstimate.charges?.totalLaborCost?.toLocaleString() || 0}</div>
+                        <div>Overheads: Rs. {((snap.linkedEstimate.charges?.grandTotal || 0) - (snap.linkedEstimate.charges?.subtotal || 0)).toLocaleString()}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Spans Summary Table */}
+                  {snap.feederData?.segments && snap.feederData.segments.length > 0 && (
+                    <div className="border border-slate-300 rounded-lg overflow-hidden">
+                      <div className="bg-slate-100 px-3 py-1.5 text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                        Feeder Spans Topology Schedule ({snap.feederData.segments.length} segments)
+                      </div>
+                      <table className="w-full text-left text-[11px] font-mono border-collapse">
+                        <thead>
+                          <tr className="bg-slate-200 text-slate-700 font-bold border-b border-slate-300">
+                            <th className="py-1 px-2 text-center w-8">#</th>
+                            <th className="py-1 px-2 text-center">From</th>
+                            <th className="py-1 px-2 text-center">To</th>
+                            <th className="py-1 px-2 text-right">Length (m)</th>
+                            <th className="py-1 px-2 text-right">3Φ Cust</th>
+                            <th className="py-1 px-2 text-right">1Φ Cust</th>
+                            <th className="py-1 px-2 text-left">Conductor</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {snap.feederData.segments.slice(0, 15).map((seg, sIdx) => {
+                            const node = snap.feederData?.nodes?.find(n => n.id === seg.toNodeId);
+                            const lengthM = Math.round((seg.lengthKm || 0) * 1000);
+                            return (
+                              <tr key={seg.id || sIdx} className={sIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                                <td className="py-1 px-2 text-center text-slate-400">{sIdx + 1}</td>
+                                <td className="py-1 px-2 text-center font-bold text-slate-900">{seg.fromNodeId}</td>
+                                <td className="py-1 px-2 text-center font-bold text-slate-900">{seg.toNodeId}</td>
+                                <td className="py-1 px-2 text-right">{lengthM} m</td>
+                                <td className="py-1 px-2 text-right">{node?.threePhaseCustomers ?? '-'}</td>
+                                <td className="py-1 px-2 text-right">{node?.singlePhaseCustomers ?? '-'}</td>
+                                <td className="py-1 px-2 text-left font-sans">{seg.conductorCode || '-'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                      {snap.feederData.segments.length > 15 && (
+                        <div className="bg-slate-50 text-slate-500 text-[10px] text-center py-1">
+                          + {snap.feederData.segments.length - 15} additional spans in full database model
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Sign-off footer */}
+                <div className="pt-4 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
+                  <span>FLADIX Local Database Snapshot Record</span>
+                  <span>Peshawar Electric Supply Company</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

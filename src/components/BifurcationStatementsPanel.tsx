@@ -33,18 +33,22 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-interface BifurcationStatementsPanelProps {
+export interface BifurcationStatementsPanelProps {
   dossier: BifurcationFourStatementDossier;
   currencySymbol?: string;
   onOpenPrintReport?: () => void;
   isPrintView?: boolean;
+  printSeparatePages?: boolean;
+  renderPrintHeader?: (title: string, subtitle?: string) => React.ReactNode;
 }
 
 export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProps> = ({
   dossier,
   currencySymbol = 'Rupees',
   onOpenPrintReport,
-  isPrintView = false
+  isPrintView = false,
+  printSeparatePages = false,
+  renderPrintHeader
 }) => {
   const { existYear0, existYear5, t1Year0, t1Year5, t2Year0, t2Year5, combinedYear0, combinedYear5, reliefBenefits } = dossier;
 
@@ -81,9 +85,12 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
         : (isYr0 ? 'bg-purple-800 text-purple-100 border-purple-700' : 'bg-purple-950 text-purple-300 border-purple-800');
 
     return (
-      <div className={`rounded-xl border ${
-        isExist ? 'border-amber-300' : isT1 ? 'border-blue-200' : 'border-purple-200'
-      } bg-white overflow-hidden shadow-xs flex flex-col justify-between print:border-slate-400 print:shadow-none`}>
+      <div 
+        className={`rounded-xl border ${
+          isExist ? 'border-amber-300' : isT1 ? 'border-blue-200' : 'border-purple-200'
+        } bg-white overflow-hidden shadow-xs flex flex-col justify-between print:border-slate-400 print:shadow-none print-avoid-break break-inside-avoid`}
+        style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+      >
         {/* Statement Header */}
         <div className={`p-3.5 ${headerGradient} flex items-center justify-between`}>
           <div className="flex items-center gap-2">
@@ -209,7 +216,10 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
         : (isYr0 ? 'bg-purple-900' : 'bg-slate-900');
 
     return (
-      <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none print:border-slate-800 print-avoid-break mb-6">
+      <div 
+        className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none print:border-slate-800 print-avoid-break mb-6 break-inside-avoid"
+        style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+      >
         {/* Table Title Banner */}
         <div className={`px-4 py-3 ${bannerBg} text-white flex flex-wrap items-center justify-between gap-2`}>
           <div className="flex items-center gap-2.5">
@@ -394,6 +404,190 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
     );
   };
 
+  // MULTI-PAGE PRINTING MODE: Treat each analysis snapshot / statement scenario as a separate page with FLADIX header
+  if (isPrintView && printSeparatePages) {
+    const defaultPrintHeader = (subTitle: string) => (
+      <header className="border-b-2 border-slate-900 pb-2 mb-3">
+        <div className="flex items-center justify-between gap-3">
+          <img
+            src="/pesco-logo.svg"
+            alt="PESCO Logo"
+            className="w-12 h-12 shrink-0 object-contain"
+          />
+          <div className="text-center flex-1">
+            <div className="text-[11px] font-black tracking-widest text-slate-800 uppercase">
+              PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+            </div>
+            <h1 className="text-base sm:text-lg font-black text-slate-950 tracking-tight">
+              FLADIX, Feeder Loss Analysis and Data Indexing
+            </h1>
+            <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+              {subTitle}
+            </p>
+          </div>
+          <div className="text-right text-[10px] font-mono text-slate-600 shrink-0">
+            <div>Bifurcation Study</div>
+            <div className="text-[9px] text-slate-500">Official Dossier</div>
+          </div>
+        </div>
+      </header>
+    );
+
+    return (
+      <div className="space-y-6">
+        {/* --- PAGE UNIT 1: 6 STATEMENTS OVERVIEW & RELIEF HIGHLIGHTS --- */}
+        <div className="print-page-unit flex flex-col justify-between space-y-4">
+          <div className="space-y-4">
+            {renderPrintHeader 
+              ? renderPrintHeader('Line Bifurcation Study: Dual-Zone 6 Analysis Statements Overview & Highlights', 'Page 5 (Overview)')
+              : defaultPrintHeader('Dual-Zone 6 Analysis Statements Overview & Upstream Relief Highlights')
+            }
+
+            {/* Highlights: Upstream Relief & Capital Savings Banner */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="bg-purple-50 border border-purple-200 p-3 rounded-xl">
+                <span className="text-purple-800 font-semibold block text-[11px]">T-1 Backbone Load Relieved:</span>
+                <span className="text-lg font-black text-purple-950 font-mono mt-0.5 block">
+                  -{reliefBenefits.t1ReliefKva} kVA
+                </span>
+                <span className="text-[10px] text-purple-700">({reliefBenefits.t1CurrentReliefAmps} A current cut from head)</span>
+              </div>
+
+              <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
+                <span className="text-emerald-800 font-semibold block text-[11px]">Yr 0 Peak Loss Reduction:</span>
+                <span className="text-lg font-black text-emerald-950 font-mono mt-0.5 block">
+                  -{reliefBenefits.lossReductionKwYear0} kW
+                </span>
+                <span className="text-[10px] text-emerald-700">Immediate relief upon commissioning</span>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 p-3 rounded-xl">
+                <span className="text-blue-800 font-semibold block text-[11px]">Yr 5 Annual Energy Saved:</span>
+                <span className="text-lg font-black text-blue-950 font-mono mt-0.5 block">
+                  {reliefBenefits.annualEnergySavedKwhYear5.toLocaleString()} kWh
+                </span>
+                <span className="text-[10px] text-blue-700">Cumulative 5-year benefit</span>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-xl">
+                <span className="text-amber-800 font-semibold block text-[11px]">Yr 5 Financial Savings:</span>
+                <span className="text-lg font-black text-amber-950 font-mono mt-0.5 block">
+                  {currencySymbol} {reliefBenefits.annualFinancialSavingPkrYear5.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-amber-700">At tariff of {currencySymbol} {dossier.tariffPerKwh}/kWh</span>
+              </div>
+            </div>
+
+            {/* The Six Analysis Statements (Overview Cards) */}
+            <div className="space-y-3">
+              <div className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
+                <span>6 Engineering Analysis Statements (Exist, Proposed-1, Proposed-2)</span>
+                <span className="text-[10px] font-mono text-slate-500">
+                  Cut-Off @ Node {dossier.bifurcationNodeId} · T-2 Substation: {dossier.additionalTransformerKva} kVA @ Node {dossier.transformerNodeId || dossier.bifurcationNodeId}
+                </span>
+              </div>
+
+              {/* Section A: Exist Line (Baseline) */}
+              <div className="print-avoid-break">
+                <div className="text-[11px] font-bold text-amber-950 mb-1 flex items-center justify-between bg-amber-50/80 px-2.5 py-0.5 rounded border border-amber-200">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    EXIST LINE (BASELINE RADIAL FEEDER - PRE-BIFURCATION)
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-mono">Un-bifurcated System</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>{renderStatementCard(existYear0, 'amber')}</div>
+                  <div>{renderStatementCard(existYear5, 'amber')}</div>
+                </div>
+              </div>
+
+              {/* Section B: Proposed-1 Line (Main T-1 Zone) */}
+              <div className="print-avoid-break">
+                <div className="text-[11px] font-bold text-blue-950 mb-1 flex items-center justify-between bg-blue-50/80 px-2.5 py-0.5 rounded border border-blue-200">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    PROPOSED-1 LINE (MAIN TRANSFORMER T-1 ZONE UP TO CUT-OFF)
+                  </span>
+                  <span className="text-[10px] text-blue-800 font-mono">Trunk Section ({t1Year0.spansCount} Spans)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>{renderStatementCard(t1Year0, 'blue')}</div>
+                  <div>{renderStatementCard(t1Year5, 'blue')}</div>
+                </div>
+              </div>
+
+              {/* Section C: Proposed-2 Line (Additional T-2 Zone) */}
+              <div className="print-avoid-break">
+                <div className="text-[11px] font-bold text-purple-950 mb-1 flex items-center justify-between bg-purple-50/80 px-2.5 py-0.5 rounded border border-purple-200">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-purple-600" />
+                    PROPOSED-2 LINE (NEW ADDITIONAL TRANSFORMER T-2 BIFURCATED ZONE)
+                  </span>
+                  <span className="text-[10px] text-purple-800 font-mono">Bifurcated Branch ({t2Year0.spansCount} Spans)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>{renderStatementCard(t2Year0, 'purple')}</div>
+                  <div>{renderStatementCard(t2Year5, 'purple')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* --- PAGE UNIT 2: EXIST LINE TECHNICAL SNAPSHOT (0 & 5 YEARS) --- */}
+        <div className="print-page-unit flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            {renderPrintHeader 
+              ? renderPrintHeader('Line Bifurcation Study: Exist Line (Baseline Radial Feeder) Analysis Snapshot', 'Page 5 (Snapshot A: Exist Line)')
+              : defaultPrintHeader('Exist Line (Baseline Radial Feeder) Technical Analysis Snapshot (0 & 5 Years)')
+            }
+            {existYear0 && renderNodeAnalysisTable(existYear0, 'EXIST LINE (0 YEAR / CURRENT PEAK)', 'amber')}
+            {existYear5 && renderNodeAnalysisTable(existYear5, 'EXIST LINE (AFTER 5 YEARS / +5% COMPOUNDED)', 'amber')}
+          </div>
+        </div>
+
+        {/* --- PAGE UNIT 3: PROPOSED-1 LINE TECHNICAL SNAPSHOT (0 & 5 YEARS) --- */}
+        <div className="print-page-unit flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            {renderPrintHeader 
+              ? renderPrintHeader('Line Bifurcation Study: Proposed-1 Line (Main Transformer T-1 Zone) Analysis Snapshot', 'Page 5 (Snapshot B: Proposed-1 Line)')
+              : defaultPrintHeader('Proposed-1 Line (Main Transformer T-1 Zone) Technical Analysis Snapshot (0 & 5 Years)')
+            }
+            {t1Year0 && renderNodeAnalysisTable(t1Year0, 'PROPOSED-1 LINE: T-1 MAIN ZONE (0 YEAR)', 'blue')}
+            {t1Year5 && renderNodeAnalysisTable(t1Year5, 'PROPOSED-1 LINE: T-1 MAIN ZONE (AFTER 5 YEARS)', 'blue')}
+          </div>
+        </div>
+
+        {/* --- PAGE UNIT 4: PROPOSED-2 LINE TECHNICAL SNAPSHOT (0 & 5 YEARS) --- */}
+        <div className="print-page-unit flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            {renderPrintHeader 
+              ? renderPrintHeader('Line Bifurcation Study: Proposed-2 Line (Additional Transformer T-2 Zone) Analysis Snapshot', 'Page 5 (Snapshot C: Proposed-2 Line)')
+              : defaultPrintHeader('Proposed-2 Line (Additional Transformer T-2 Zone) Technical Analysis Snapshot (0 & 5 Years)')
+            }
+            {t2Year0 && renderNodeAnalysisTable(t2Year0, 'PROPOSED-2 LINE: T-2 BIFURCATED ZONE (0 YEAR)', 'purple')}
+            {t2Year5 && renderNodeAnalysisTable(t2Year5, 'PROPOSED-2 LINE: T-2 BIFURCATED ZONE (AFTER 5 YEARS)', 'purple')}
+          </div>
+        </div>
+
+        {/* --- PAGE UNIT 5: MASTER COMPARATIVE TECHNICAL PERFORMANCE & CAPITAL RELIEF MATRIX --- */}
+        <div className="print-page-unit flex flex-col justify-between space-y-4">
+          <div className="space-y-3">
+            {renderPrintHeader 
+              ? renderPrintHeader('Line Bifurcation Study: Master Comparative Technical Performance & Capital Relief Matrix', 'Page 5 (Comparative Matrix)')
+              : defaultPrintHeader('Comparative Analysis Matrix: Exist vs Proposed-1 vs Proposed-2 Line @ 0 & 5 Years')
+            }
+            <MasterComparativeMatrixTable
+              dossier={dossier}
+              currencySymbol={currencySymbol}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       
@@ -480,7 +674,10 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
 
         <div className="space-y-4">
           {/* Section A: Exist Line (Baseline) */}
-          <div>
+          <div 
+            className="print-avoid-break break-inside-avoid print:page-break-after-always print:break-after-page"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
             <div className="text-[11px] font-bold text-amber-950 mb-1.5 flex items-center justify-between bg-amber-50/80 px-2.5 py-1 rounded border border-amber-200">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -489,11 +686,11 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               <span className="text-[10px] text-amber-800 font-mono">Un-bifurcated System</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">EXIST LINE @ 0 YEAR (CURRENT PEAK)</div>
                 {renderStatementCard(existYear0, 'amber')}
               </div>
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">EXIST LINE AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
                 {renderStatementCard(existYear5, 'amber')}
               </div>
@@ -501,7 +698,10 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           </div>
 
           {/* Section B: Proposed-1 Line (Main T-1 Zone) */}
-          <div>
+          <div 
+            className="print-avoid-break break-inside-avoid print:page-break-after-always print:break-after-page"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
             <div className="text-[11px] font-bold text-blue-950 mb-1.5 flex items-center justify-between bg-blue-50/80 px-2.5 py-1 rounded border border-blue-200">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-600" />
@@ -510,11 +710,11 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               <span className="text-[10px] text-blue-800 font-mono">Trunk Section ({t1Year0.spansCount} Spans)</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-1 @ 0 YEAR (CURRENT PEAK)</div>
                 {renderStatementCard(t1Year0, 'blue')}
               </div>
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-1 AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
                 {renderStatementCard(t1Year5, 'blue')}
               </div>
@@ -522,7 +722,10 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
           </div>
 
           {/* Section C: Proposed-2 Line (Additional T-2 Zone) */}
-          <div>
+          <div 
+            className="print-avoid-break break-inside-avoid print:page-break-after-always print:break-after-page"
+            style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+          >
             <div className="text-[11px] font-bold text-purple-950 mb-1.5 flex items-center justify-between bg-purple-50/80 px-2.5 py-1 rounded border border-purple-200">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-purple-600" />
@@ -531,11 +734,11 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
               <span className="text-[10px] text-purple-800 font-mono">Bifurcated Branch ({t2Year0.spansCount} Spans)</span>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-2 @ 0 YEAR (COMMISSIONING)</div>
                 {renderStatementCard(t2Year0, 'purple')}
               </div>
-              <div>
+              <div className="print-avoid-break break-inside-avoid" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
                 <div className="text-[10px] font-bold text-slate-600 mb-1">PROPOSED-2 AFTER 5 YEARS (+{dossier.growthRatePercent}%/YR COMPOUNDED)</div>
                 {renderStatementCard(t2Year5, 'purple')}
               </div>
@@ -684,168 +887,190 @@ export const BifurcationStatementsPanel: React.FC<BifurcationStatementsPanelProp
       {/* ========================================================
           COMPREHENSIVE 6-STATEMENT MASTER COMPARATIVE MATRIX (TABLE)
          ======================================================== */}
-      <div className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none">
-        <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-amber-400" />
-            <span className="font-bold uppercase tracking-wider">
-              Comparative Analysis Matrix: Exist vs Proposed-1 vs Proposed-2 Line
-            </span>
-          </div>
-          <span className="font-mono text-[11px] text-slate-300">
-            0 Years vs After 5 Years Compounded
+      <MasterComparativeMatrixTable
+        dossier={dossier}
+        currencySymbol={currencySymbol}
+      />
+    </div>
+  );
+};
+
+export interface MasterComparativeMatrixTableProps {
+  dossier: BifurcationFourStatementDossier;
+  currencySymbol?: string;
+}
+
+export const MasterComparativeMatrixTable: React.FC<MasterComparativeMatrixTableProps> = ({
+  dossier,
+  currencySymbol = 'Rupees'
+}) => {
+  const { existYear0, existYear5, t1Year0, t1Year5, t2Year0, t2Year5, combinedYear0, combinedYear5 } = dossier;
+
+  return (
+    <div 
+      className="border border-slate-300 rounded-xl overflow-hidden bg-white shadow-xs print:rounded-none print-avoid-break break-inside-avoid"
+      style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}
+    >
+      <div className="bg-slate-800 text-white px-4 py-2.5 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-amber-400" />
+          <span className="font-bold uppercase tracking-wider">
+            Comparative Analysis Matrix: Exist vs Proposed-1 vs Proposed-2 Line
           </span>
         </div>
+        <span className="font-mono text-[11px] text-slate-300">
+          0 Years vs After 5 Years Compounded
+        </span>
+      </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse font-mono tabular-nums">
-            <thead>
-              <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
-                <th className="p-2.5 font-sans">Parameter / Metric</th>
-                <th className="p-2.5 text-right bg-amber-50 text-amber-950">Exist (0 Yr)</th>
-                <th className="p-2.5 text-right bg-amber-100 text-amber-950">Exist (5 Yrs)</th>
-                <th className="p-2.5 text-right bg-blue-50 text-blue-950">P-1 (0 Yr)</th>
-                <th className="p-2.5 text-right bg-blue-100 text-blue-950">P-1 (5 Yrs)</th>
-                <th className="p-2.5 text-right bg-purple-50 text-purple-950">P-2 (0 Yr)</th>
-                <th className="p-2.5 text-right bg-purple-100 text-purple-950">P-2 (5 Yrs)</th>
-                <th className="p-2.5 text-right bg-emerald-50 text-emerald-950 font-bold">Total P-1+P-2 (0 Yr)</th>
-                <th className="p-2.5 text-right bg-emerald-100 text-emerald-950 font-bold">Total P-1+P-2 (5 Yrs)</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              <tr>
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Rating (kVA)</td>
-                <td className="p-2.5 text-right font-bold text-amber-900">{existYear0 ? existYear0.capacityKva : '-'} kVA</td>
-                <td className="p-2.5 text-right font-bold text-amber-900">{existYear5 ? existYear5.capacityKva : '-'} kVA</td>
-                <td className="p-2.5 text-right font-bold text-blue-800">{t1Year0.capacityKva} kVA</td>
-                <td className="p-2.5 text-right font-bold text-blue-800">{t1Year5.capacityKva} kVA</td>
-                <td className="p-2.5 text-right font-bold text-purple-800">{t2Year0.capacityKva} kVA</td>
-                <td className="p-2.5 text-right font-bold text-purple-800">{t2Year5.capacityKva} kVA</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{combinedYear0.totalCapacityKva} kVA</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{combinedYear5.totalCapacityKva} kVA</td>
-              </tr>
-              <tr className="bg-slate-50/50">
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Peak Demand (kVA)</td>
-                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? existYear0.demandKva : '-'}</td>
-                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? existYear5.demandKva : '-'}</td>
-                <td className="p-2.5 text-right text-blue-900">{t1Year0.demandKva}</td>
-                <td className="p-2.5 text-right text-blue-900">{t1Year5.demandKva}</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year0.demandKva}</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year5.demandKva}</td>
-                <td className="p-2.5 text-right font-bold">{combinedYear0.totalDemandKva}</td>
-                <td className="p-2.5 text-right font-bold">{combinedYear5.totalDemandKva}</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Source Current (Amperes)</td>
-                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? `${existYear0.currentAmps} A` : '-'}</td>
-                <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? `${existYear5.currentAmps} A` : '-'}</td>
-                <td className="p-2.5 text-right text-blue-900">{t1Year0.currentAmps} A</td>
-                <td className="p-2.5 text-right text-blue-900">{t1Year5.currentAmps} A</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year0.currentAmps} A</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year5.currentAmps} A</td>
-                <td className="p-2.5 text-right font-bold">{(t1Year0.currentAmps + t2Year0.currentAmps).toFixed(1)} A</td>
-                <td className="p-2.5 text-right font-bold">{(t1Year5.currentAmps + t2Year5.currentAmps).toFixed(1)} A</td>
-              </tr>
-              <tr className="bg-slate-50/50">
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Loading %</td>
-                <td className={`p-2.5 text-right font-bold ${existYear0 && existYear0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {existYear0 ? `${existYear0.transformerLoadingPercent}%` : '-'}
-                </td>
-                <td className={`p-2.5 text-right font-bold ${existYear5 && existYear5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {existYear5 ? `${existYear5.transformerLoadingPercent}%` : '-'}
-                </td>
-                <td className={`p-2.5 text-right font-bold ${t1Year0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {t1Year0.transformerLoadingPercent}%
-                </td>
-                <td className={`p-2.5 text-right font-bold ${t1Year5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {t1Year5.transformerLoadingPercent}%
-                </td>
-                <td className={`p-2.5 text-right font-bold ${t2Year0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {t2Year0.transformerLoadingPercent}%
-                </td>
-                <td className={`p-2.5 text-right font-bold ${t2Year5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
-                  {t2Year5.transformerLoadingPercent}%
-                </td>
-                <td className="p-2.5 text-right font-bold text-slate-900">
-                  {Math.round((combinedYear0.totalDemandKva / combinedYear0.totalCapacityKva) * 100)}%
-                </td>
-                <td className="p-2.5 text-right font-bold text-slate-900">
-                  {Math.round((combinedYear5.totalDemandKva / combinedYear5.totalCapacityKva) * 100)}%
-                </td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Worst Voltage Drop %</td>
-                <td className="p-2.5 text-right font-bold text-amber-950">
-                  {existYear0 ? `-${existYear0.worstVoltageDropPercent}%` : '-'}
-                </td>
-                <td className="p-2.5 text-right font-bold text-amber-950">
-                  {existYear5 ? `-${existYear5.worstVoltageDropPercent}%` : '-'}
-                </td>
-                <td className="p-2.5 text-right text-slate-900">-{t1Year0.worstVoltageDropPercent}%</td>
-                <td className="p-2.5 text-right text-slate-900">-{t1Year5.worstVoltageDropPercent}%</td>
-                <td className="p-2.5 text-right text-slate-900">-{t2Year0.worstVoltageDropPercent}%</td>
-                <td className="p-2.5 text-right text-slate-900">-{t2Year5.worstVoltageDropPercent}%</td>
-                <td className="p-2.5 text-right font-bold">-{combinedYear0.worstVoltageDropPercent}%</td>
-                <td className="p-2.5 text-right font-bold">-{combinedYear5.worstVoltageDropPercent}%</td>
-              </tr>
-              <tr className="bg-slate-50/50">
-                <td className="p-2.5 font-sans font-semibold text-slate-800">End Receiving Voltage (V)</td>
-                <td className="p-2.5 text-right font-bold text-amber-950">{existYear0 ? `${existYear0.worstVoltageVolts} V` : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-amber-950">{existYear5 ? `${existYear5.worstVoltageVolts} V` : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{t1Year0.worstVoltageVolts} V</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{t1Year5.worstVoltageVolts} V</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{t2Year0.worstVoltageVolts} V</td>
-                <td className="p-2.5 text-right font-bold text-slate-900">{t2Year5.worstVoltageVolts} V</td>
-                <td className="p-2.5 text-right font-bold text-emerald-800">{combinedYear0.worstVoltageVolts} V</td>
-                <td className="p-2.5 text-right font-bold text-emerald-800">{combinedYear5.worstVoltageVolts} V</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Line Loss (kW)</td>
-                <td className="p-2.5 text-right font-bold text-rose-700">{existYear0 ? existYear0.lineLossKw : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-rose-700">{existYear5 ? existYear5.lineLossKw : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-amber-700">{t1Year0.lineLossKw}</td>
-                <td className="p-2.5 text-right font-bold text-amber-700">{t1Year5.lineLossKw}</td>
-                <td className="p-2.5 text-right font-bold text-amber-700">{t2Year0.lineLossKw}</td>
-                <td className="p-2.5 text-right font-bold text-amber-700">{t2Year5.lineLossKw}</td>
-                <td className="p-2.5 text-right font-bold text-amber-800">{combinedYear0.totalLineLossKw}</td>
-                <td className="p-2.5 text-right font-bold text-amber-800">{combinedYear5.totalLineLossKw}</td>
-              </tr>
-              <tr className="bg-slate-50/50">
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Total Power Loss (kW)</td>
-                <td className="p-2.5 text-right font-bold text-rose-800">{existYear0 ? existYear0.totalPowerLossKw : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-rose-800">{existYear5 ? existYear5.totalPowerLossKw : '-'}</td>
-                <td className="p-2.5 text-right text-slate-900">{t1Year0.totalPowerLossKw}</td>
-                <td className="p-2.5 text-right text-slate-900">{t1Year5.totalPowerLossKw}</td>
-                <td className="p-2.5 text-right text-slate-900">{t2Year0.totalPowerLossKw}</td>
-                <td className="p-2.5 text-right text-slate-900">{t2Year5.totalPowerLossKw}</td>
-                <td className="p-2.5 text-right font-bold">{combinedYear0.totalPowerLossKw}</td>
-                <td className="p-2.5 text-right font-bold">{combinedYear5.totalPowerLossKw}</td>
-              </tr>
-              <tr>
-                <td className="p-2.5 font-sans font-semibold text-slate-800">Annual Energy Loss (kWh)</td>
-                <td className="p-2.5 text-right font-bold text-rose-900">{existYear0 ? existYear0.annualEnergyLossKwh.toLocaleString() : '-'}</td>
-                <td className="p-2.5 text-right font-bold text-rose-900">{existYear5 ? existYear5.annualEnergyLossKwh.toLocaleString() : '-'}</td>
-                <td className="p-2.5 text-right text-slate-900">{t1Year0.annualEnergyLossKwh.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-slate-900">{t1Year5.annualEnergyLossKwh.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year0.annualEnergyLossKwh.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-purple-900">{t2Year5.annualEnergyLossKwh.toLocaleString()}</td>
-                <td className="p-2.5 text-right font-bold text-slate-950">{combinedYear0.annualEnergyLossKwh.toLocaleString()}</td>
-                <td className="p-2.5 text-right font-bold text-slate-950">{combinedYear5.annualEnergyLossKwh.toLocaleString()}</td>
-              </tr>
-              <tr className="bg-slate-100 font-bold">
-                <td className="p-2.5 font-sans text-slate-900">Annual Loss Cost ({currencySymbol})</td>
-                <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear0 ? existYear0.annualLossCostPkr.toLocaleString() : '-'}</td>
-                <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear5 ? existYear5.annualLossCostPkr.toLocaleString() : '-'}</td>
-                <td className="p-2.5 text-right text-blue-950">{t1Year0.annualLossCostPkr.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-blue-950">{t1Year5.annualLossCostPkr.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-purple-950">{t2Year0.annualLossCostPkr.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-purple-950">{t2Year5.annualLossCostPkr.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-emerald-950 font-extrabold">{combinedYear0.annualLossCostPkr.toLocaleString()}</td>
-                <td className="p-2.5 text-right text-emerald-950 font-extrabold">{combinedYear5.annualLossCostPkr.toLocaleString()}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="w-full text-left text-xs border-collapse font-mono tabular-nums">
+          <thead>
+            <tr className="bg-slate-100 text-slate-800 font-bold border-b border-slate-300">
+              <th className="p-2.5 font-sans">Parameter / Metric</th>
+              <th className="p-2.5 text-right bg-amber-50 text-amber-950">Exist (0 Yr)</th>
+              <th className="p-2.5 text-right bg-amber-100 text-amber-950">Exist (5 Yrs)</th>
+              <th className="p-2.5 text-right bg-blue-50 text-blue-950">P-1 (0 Yr)</th>
+              <th className="p-2.5 text-right bg-blue-100 text-blue-950">P-1 (5 Yrs)</th>
+              <th className="p-2.5 text-right bg-purple-50 text-purple-950">P-2 (0 Yr)</th>
+              <th className="p-2.5 text-right bg-purple-100 text-purple-950">P-2 (5 Yrs)</th>
+              <th className="p-2.5 text-right bg-emerald-50 text-emerald-950 font-bold">Total P-1+P-2 (0 Yr)</th>
+              <th className="p-2.5 text-right bg-emerald-100 text-emerald-950 font-bold">Total P-1+P-2 (5 Yrs)</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200">
+            <tr>
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Rating (kVA)</td>
+              <td className="p-2.5 text-right font-bold text-amber-900">{existYear0 ? existYear0.capacityKva : '-'} kVA</td>
+              <td className="p-2.5 text-right font-bold text-amber-900">{existYear5 ? existYear5.capacityKva : '-'} kVA</td>
+              <td className="p-2.5 text-right font-bold text-blue-800">{t1Year0.capacityKva} kVA</td>
+              <td className="p-2.5 text-right font-bold text-blue-800">{t1Year5.capacityKva} kVA</td>
+              <td className="p-2.5 text-right font-bold text-purple-800">{t2Year0.capacityKva} kVA</td>
+              <td className="p-2.5 text-right font-bold text-purple-800">{t2Year5.capacityKva} kVA</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{combinedYear0.totalCapacityKva} kVA</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{combinedYear5.totalCapacityKva} kVA</td>
+            </tr>
+            <tr className="bg-slate-50/50">
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Peak Demand (kVA)</td>
+              <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? existYear0.demandKva : '-'}</td>
+              <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? existYear5.demandKva : '-'}</td>
+              <td className="p-2.5 text-right text-blue-900">{t1Year0.demandKva}</td>
+              <td className="p-2.5 text-right text-blue-900">{t1Year5.demandKva}</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year0.demandKva}</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year5.demandKva}</td>
+              <td className="p-2.5 text-right font-bold">{combinedYear0.totalDemandKva}</td>
+              <td className="p-2.5 text-right font-bold">{combinedYear5.totalDemandKva}</td>
+            </tr>
+            <tr>
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Source Current (Amperes)</td>
+              <td className="p-2.5 text-right text-amber-900 font-bold">{existYear0 ? `${existYear0.currentAmps} A` : '-'}</td>
+              <td className="p-2.5 text-right text-amber-900 font-bold">{existYear5 ? `${existYear5.currentAmps} A` : '-'}</td>
+              <td className="p-2.5 text-right text-blue-900">{t1Year0.currentAmps} A</td>
+              <td className="p-2.5 text-right text-blue-900">{t1Year5.currentAmps} A</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year0.currentAmps} A</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year5.currentAmps} A</td>
+              <td className="p-2.5 text-right font-bold">{(t1Year0.currentAmps + t2Year0.currentAmps).toFixed(1)} A</td>
+              <td className="p-2.5 text-right font-bold">{(t1Year5.currentAmps + t2Year5.currentAmps).toFixed(1)} A</td>
+            </tr>
+            <tr className="bg-slate-50/50">
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Transformer Loading %</td>
+              <td className={`p-2.5 text-right font-bold ${existYear0 && existYear0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {existYear0 ? `${existYear0.transformerLoadingPercent}%` : '-'}
+              </td>
+              <td className={`p-2.5 text-right font-bold ${existYear5 && existYear5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {existYear5 ? `${existYear5.transformerLoadingPercent}%` : '-'}
+              </td>
+              <td className={`p-2.5 text-right font-bold ${t1Year0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {t1Year0.transformerLoadingPercent}%
+              </td>
+              <td className={`p-2.5 text-right font-bold ${t1Year5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {t1Year5.transformerLoadingPercent}%
+              </td>
+              <td className={`p-2.5 text-right font-bold ${t2Year0.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {t2Year0.transformerLoadingPercent}%
+              </td>
+              <td className={`p-2.5 text-right font-bold ${t2Year5.isOverloaded ? 'text-rose-600' : 'text-emerald-700'}`}>
+                {t2Year5.transformerLoadingPercent}%
+              </td>
+              <td className="p-2.5 text-right font-bold text-slate-900">
+                {Math.round((combinedYear0.totalDemandKva / combinedYear0.totalCapacityKva) * 100)}%
+              </td>
+              <td className="p-2.5 text-right font-bold text-slate-900">
+                {Math.round((combinedYear5.totalDemandKva / combinedYear5.totalCapacityKva) * 100)}%
+              </td>
+            </tr>
+            <tr>
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Worst Voltage Drop %</td>
+              <td className="p-2.5 text-right font-bold text-amber-950">
+                {existYear0 ? `-${existYear0.worstVoltageDropPercent}%` : '-'}
+              </td>
+              <td className="p-2.5 text-right font-bold text-amber-950">
+                {existYear5 ? `-${existYear5.worstVoltageDropPercent}%` : '-'}
+              </td>
+              <td className="p-2.5 text-right text-slate-900">-{t1Year0.worstVoltageDropPercent}%</td>
+              <td className="p-2.5 text-right text-slate-900">-{t1Year5.worstVoltageDropPercent}%</td>
+              <td className="p-2.5 text-right text-slate-900">-{t2Year0.worstVoltageDropPercent}%</td>
+              <td className="p-2.5 text-right text-slate-900">-{t2Year5.worstVoltageDropPercent}%</td>
+              <td className="p-2.5 text-right font-bold">-{combinedYear0.worstVoltageDropPercent}%</td>
+              <td className="p-2.5 text-right font-bold">-{combinedYear5.worstVoltageDropPercent}%</td>
+            </tr>
+            <tr className="bg-slate-50/50">
+              <td className="p-2.5 font-sans font-semibold text-slate-800">End Receiving Voltage (V)</td>
+              <td className="p-2.5 text-right font-bold text-amber-950">{existYear0 ? `${existYear0.worstVoltageVolts} V` : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-amber-950">{existYear5 ? `${existYear5.worstVoltageVolts} V` : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{t1Year0.worstVoltageVolts} V</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{t1Year5.worstVoltageVolts} V</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{t2Year0.worstVoltageVolts} V</td>
+              <td className="p-2.5 text-right font-bold text-slate-900">{t2Year5.worstVoltageVolts} V</td>
+              <td className="p-2.5 text-right font-bold text-emerald-800">{combinedYear0.worstVoltageVolts} V</td>
+              <td className="p-2.5 text-right font-bold text-emerald-800">{combinedYear5.worstVoltageVolts} V</td>
+            </tr>
+            <tr>
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Line Loss (kW)</td>
+              <td className="p-2.5 text-right font-bold text-rose-700">{existYear0 ? existYear0.lineLossKw : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-rose-700">{existYear5 ? existYear5.lineLossKw : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-amber-700">{t1Year0.lineLossKw}</td>
+              <td className="p-2.5 text-right font-bold text-amber-700">{t1Year5.lineLossKw}</td>
+              <td className="p-2.5 text-right font-bold text-amber-700">{t2Year0.lineLossKw}</td>
+              <td className="p-2.5 text-right font-bold text-amber-700">{t2Year5.lineLossKw}</td>
+              <td className="p-2.5 text-right font-bold text-amber-800">{combinedYear0.totalLineLossKw}</td>
+              <td className="p-2.5 text-right font-bold text-amber-800">{combinedYear5.totalLineLossKw}</td>
+            </tr>
+            <tr className="bg-slate-50/50">
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Total Power Loss (kW)</td>
+              <td className="p-2.5 text-right font-bold text-rose-800">{existYear0 ? existYear0.totalPowerLossKw : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-rose-800">{existYear5 ? existYear5.totalPowerLossKw : '-'}</td>
+              <td className="p-2.5 text-right text-slate-900">{t1Year0.totalPowerLossKw}</td>
+              <td className="p-2.5 text-right text-slate-900">{t1Year5.totalPowerLossKw}</td>
+              <td className="p-2.5 text-right text-slate-900">{t2Year0.totalPowerLossKw}</td>
+              <td className="p-2.5 text-right text-slate-900">{t2Year5.totalPowerLossKw}</td>
+              <td className="p-2.5 text-right font-bold">{combinedYear0.totalPowerLossKw}</td>
+              <td className="p-2.5 text-right font-bold">{combinedYear5.totalPowerLossKw}</td>
+            </tr>
+            <tr>
+              <td className="p-2.5 font-sans font-semibold text-slate-800">Annual Energy Loss (kWh)</td>
+              <td className="p-2.5 text-right font-bold text-rose-900">{existYear0 ? existYear0.annualEnergyLossKwh.toLocaleString() : '-'}</td>
+              <td className="p-2.5 text-right font-bold text-rose-900">{existYear5 ? existYear5.annualEnergyLossKwh.toLocaleString() : '-'}</td>
+              <td className="p-2.5 text-right text-slate-900">{t1Year0.annualEnergyLossKwh.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-slate-900">{t1Year5.annualEnergyLossKwh.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year0.annualEnergyLossKwh.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-purple-900">{t2Year5.annualEnergyLossKwh.toLocaleString()}</td>
+              <td className="p-2.5 text-right font-bold text-slate-950">{combinedYear0.annualEnergyLossKwh.toLocaleString()}</td>
+              <td className="p-2.5 text-right font-bold text-slate-950">{combinedYear5.annualEnergyLossKwh.toLocaleString()}</td>
+            </tr>
+            <tr className="bg-slate-100 font-bold">
+              <td className="p-2.5 font-sans text-slate-900">Annual Loss Cost ({currencySymbol})</td>
+              <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear0 ? existYear0.annualLossCostPkr.toLocaleString() : '-'}</td>
+              <td className="p-2.5 text-right text-rose-950 font-extrabold">{existYear5 ? existYear5.annualLossCostPkr.toLocaleString() : '-'}</td>
+              <td className="p-2.5 text-right text-blue-950">{t1Year0.annualLossCostPkr.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-blue-950">{t1Year5.annualLossCostPkr.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-purple-950">{t2Year0.annualLossCostPkr.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-purple-950">{t2Year5.annualLossCostPkr.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-emerald-950 font-extrabold">{combinedYear0.annualLossCostPkr.toLocaleString()}</td>
+              <td className="p-2.5 text-right text-emerald-950 font-extrabold">{combinedYear5.annualLossCostPkr.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   );

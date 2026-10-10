@@ -327,14 +327,22 @@
   }
   
   .print-break-inside-avoid,
-  .print-avoid-break {
+  .print-avoid-break,
+  .break-inside-avoid {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
 
-  .print-page-break {
+  .print-page-break,
+  .break-before-page {
     break-before: page !important;
     page-break-before: always !important;
+  }
+
+  .break-after-page,
+  .print-page-break-after {
+    page-break-after: always !important;
+    break-after: page !important;
   }
 
   #printable-estimate-container,

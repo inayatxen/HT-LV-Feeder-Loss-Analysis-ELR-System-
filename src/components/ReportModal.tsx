@@ -1877,7 +1877,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               REPORT 4: SINGLE LINE DIAGRAM (SLD) SCHEMATIC BLUEPRINT
              ======================================================== */}
           {pagesToPrint.singleLineDiagram && (displayMode === 'full_report' || displayMode === 'single_line_diagram' || displayMode === 'tri_sld_schemes') && (
-            sldScheme === 'tri_scheme' && pageBreakMode === 'page_per_section' ? (
+            (sldScheme === 'tri_scheme' || displayMode === 'tri_sld_schemes') && pageBreakMode === 'page_per_section' ? (
               <>
                 {/* Scheme 1: Exist Line Map */}
                 <div className="print-page-unit sld-blueprint-section flex flex-col justify-between space-y-4">
@@ -2064,33 +2064,44 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               REPORT 5: LINE BIFURCATION & MULTI-ZONE STUDY
              ======================================================== */}
           {pagesToPrint.bifurcationStatements && (displayMode === 'full_report' || displayMode === 'bifurcation_4_statements') && (
-            <div className="print-page-unit flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                {renderOfficialHeader('Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)', getPageInfo('bifurcationStatements').pageLabel)}
-                <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <Split className="w-4 h-4 text-purple-700" />
-                      <span>Line Bifurcation & Multi-Zone Study (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)</span>
-                    </h2>
-                    <p className="text-[11px] text-purple-800 mt-0.5">
-                      Node-by-node technical analysis of Exist Line (Baseline), Proposed-1 Line (T-1 Zone), and Proposed-2 Line (T-2 Zone) at 0 Year and after 5 Years (+5% compounded growth).
-                    </p>
+            pageBreakMode === 'page_per_section' ? (
+              <BifurcationStatementsPanel
+                dossier={bifurcationDossier}
+                currencySymbol={feeder.currencySymbol || 'PKR'}
+                isPrintView={true}
+                printSeparatePages={true}
+                renderPrintHeader={(subTitle, pageLbl) => renderOfficialHeader(subTitle, pageLbl)}
+              />
+            ) : (
+              <div className="print-page-unit flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  {renderOfficialHeader('Line Bifurcation & Multi-Zone Study (Exist, Proposed-1 & Proposed-2 @ 0 & 5 Years)', getPageInfo('bifurcationStatements').pageLabel)}
+                  <div className="bg-purple-50 border-l-4 border-purple-600 p-2.5 rounded-r-lg flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h2 className="text-xs font-bold text-purple-950 uppercase tracking-wider flex items-center gap-1.5">
+                        <Split className="w-4 h-4 text-purple-700" />
+                        <span>Line Bifurcation & Multi-Zone Study (Exist, Proposed-1, and Proposed-2 Lines @ 0 & 5 Years)</span>
+                      </h2>
+                      <p className="text-[11px] text-purple-800 mt-0.5">
+                        Node-by-node technical analysis of Exist Line (Baseline), Proposed-1 Line (T-1 Zone), and Proposed-2 Line (T-2 Zone) at 0 Year and after 5 Years (+5% compounded growth).
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
+                      Cut-Off @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA @ Node {bifurcationDossier.transformerNodeId || bifurcationDossier.bifurcationNodeId}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-mono text-purple-900 font-bold bg-purple-200/80 px-2 py-0.5 rounded border border-purple-300">
-                    Cut-Off @ Node {bifurcationDossier.bifurcationNodeId} · T-2: {bifurcationDossier.additionalTransformerKva} kVA @ Node {bifurcationDossier.transformerNodeId || bifurcationDossier.bifurcationNodeId}
-                  </span>
+
+                  <BifurcationStatementsPanel
+                    dossier={bifurcationDossier}
+                    currencySymbol={feeder.currencySymbol || 'PKR'}
+                    isPrintView={true}
+                    printSeparatePages={false}
+                  />
                 </div>
 
-                <BifurcationStatementsPanel
-                  dossier={bifurcationDossier}
-                  currencySymbol={feeder.currencySymbol || 'PKR'}
-                  isPrintView={true}
-                />
+                {renderOfficialFooter('5. Line Bifurcation & Multi-Zone 6-Node Technical Statements', 'bifurcationStatements')}
               </div>
-
-              {renderOfficialFooter('5. Line Bifurcation & Multi-Zone 6-Node Technical Statements', 'bifurcationStatements')}
-            </div>
+            )
           )}
 
           {/* ========================================================

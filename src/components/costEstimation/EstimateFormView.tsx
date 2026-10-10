@@ -3830,6 +3830,32 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
 
             {/* Modal Content */}
             <div className="p-5 space-y-4 max-h-[75vh] overflow-y-auto">
+              {/* Official Printable Header on Slip Print */}
+              <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4">
+                <div className="flex items-center justify-between gap-4">
+                  <img
+                    src="/pesco-logo.svg"
+                    alt="PESCO Logo"
+                    className="w-12 h-12 shrink-0 object-contain"
+                  />
+                  <div className="text-center flex-1">
+                    <div className="text-xs font-black tracking-widest text-slate-800 uppercase">
+                      PESHAWAR ELECTRIC SUPPLY COMPANY (PESCO) · WAPDA
+                    </div>
+                    <h1 className="text-base sm:text-xl font-black text-slate-950 tracking-tight mt-0.5">
+                      FLADIX, Feeder Loss Analysis and Data Indexing
+                    </h1>
+                    <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide">
+                      11kV HT Line Extension Mini-Estimate BOQ Slip
+                    </p>
+                  </div>
+                  <div className="text-right text-[11px] font-mono text-slate-600 shrink-0">
+                    <div>WAPDA Standard</div>
+                    <div className="text-[10px] text-slate-500 font-sans">Official BOQ</div>
+                  </div>
+                </div>
+              </div>
+
               {/* Technical Information Banner */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-emerald-50/70 p-3.5 rounded-xl border border-emerald-200 text-xs">
                 <div>
