@@ -59,6 +59,10 @@ interface WhatIfWorkbenchProps {
   onReset: () => void;
   onOpenPrintReport?: () => void;
   onOpenCostEstimation?: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
@@ -80,7 +84,11 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   onApplyPackage,
   onReset,
   onOpenPrintReport,
-  onOpenCostEstimation
+  onOpenCostEstimation,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo
 }) => {
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
@@ -182,6 +190,26 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
         {/* Quick Packages (3D Tactile Buttons) */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          {/* History Controls */}
+          <div className="flex items-center gap-1 mr-4">
+            <button
+              onClick={onUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-lg btn-3d-slate text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Undo"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-lg btn-3d-slate text-slate-400 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Redo"
+            >
+              <RotateCcw className="w-4 h-4 rotate-180" />
+            </button>
+          </div>
+
           {isHtLine ? (
             <>
               <button

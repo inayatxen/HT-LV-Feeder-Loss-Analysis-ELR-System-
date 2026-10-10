@@ -836,6 +836,10 @@ export default function App() {
                   onReset={handleResetInterventions}
                   onOpenPrintReport={() => setIsReportOpen(true)}
                   onOpenCostEstimation={() => setActiveSystemModule('line_cost_estimation')}
+                  onUndo={undo}
+                  onRedo={redo}
+                  canUndo={historyIndex > 0}
+                  canRedo={historyIndex < history.length - 1}
                 />
               </div>
             )}
