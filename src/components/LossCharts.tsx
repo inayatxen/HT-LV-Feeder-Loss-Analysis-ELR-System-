@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { FeederAnalysisSummary, FeederData, ForecastYearResult } from '../types/feeder';
 import { SensitivityAnalysisRecharts } from './SensitivityAnalysisRecharts';
-import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp, Layers } from 'lucide-react';
+import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp, Layers, FileText } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   ComposedChart, 
@@ -115,7 +115,7 @@ export const LossCharts: React.FC<LossChartsProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md font-bold bg-slate-900 text-white shadow-xs hover:bg-slate-800 transition-colors"
           >
             <FileText className="w-3.5 h-3.5" />
-            Export to PDF
+            <span>Export to PDF</span>
           </button>
           <div className="w-px h-6 bg-slate-200 mx-1" />
           <button
