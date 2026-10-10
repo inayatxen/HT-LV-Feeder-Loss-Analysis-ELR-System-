@@ -57,6 +57,26 @@ export default function App() {
   const [selectedFeederId, setSelectedFeederId] = useState<string>('gulbhar-colony-peshawar');
   const [activeTab, setActiveTab] = useState<'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast'>('input_form');
 
+  // Light / Dark Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('pesco_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch {}
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    try {
+      localStorage.setItem('pesco_theme', theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
   // Job Title Selection State (persisted locally)
   const [selectedJobTitle, setSelectedJobTitle] = useState<JobTitle>(() => {
     try {
@@ -543,7 +563,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-blueprint-grid flex flex-col font-sans text-slate-900 selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-blueprint-grid dark:bg-slate-950 flex flex-col font-sans text-slate-900 dark:text-slate-100 selection:bg-amber-500 selection:text-slate-950 transition-colors duration-200">
       {/* Header with Category & Navigation Controls (Sticky unscrollable at top, hidden when printing official reports) */}
       <div className="sticky top-0 z-40 print:hidden no-print shadow-xl">
         <Header
@@ -571,6 +591,8 @@ export default function App() {
           selectedJobTitle={selectedJobTitle}
           onSelectJobTitle={handleSelectJobTitle}
           onSaveUnifiedProject={handleOpenSaveUnifiedProject}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       </div>
 

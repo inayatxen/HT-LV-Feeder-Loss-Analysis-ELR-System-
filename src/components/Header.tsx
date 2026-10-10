@@ -57,6 +57,8 @@ interface HeaderProps {
   selectedJobTitle: JobTitle;
   onSelectJobTitle: (title: JobTitle) => void;
   onSaveUnifiedProject?: () => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -79,7 +81,9 @@ export const Header: React.FC<HeaderProps> = ({
   summary,
   selectedJobTitle,
   onSelectJobTitle,
-  onSaveUnifiedProject
+  onSaveUnifiedProject,
+  theme,
+  onToggleTheme
 }) => {
   return (
     <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 no-print shadow-xl w-full select-none">
@@ -90,11 +94,13 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="w-full max-w-[1920px] mx-auto flex flex-col items-center justify-center text-center">
           <div className="flex items-center justify-center gap-2.5 sm:gap-4 md:gap-5">
             <div className="relative group shrink-0">
-              <img
-                src="/pesco-logo.svg"
-                alt="PESCO WAPDA Logo"
-                className="w-14 h-14 sm:w-18 sm:h-18 md:w-22 md:h-22 rounded-full border-2 border-amber-500/70 shadow-lg transition-transform group-hover:scale-105 ring-2 ring-amber-400/30"
-              />
+              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white rounded-full p-1 shadow-xl border-2 border-amber-400 flex items-center justify-center transition-transform group-hover:scale-105">
+                <img
+                  src="/pesco-logo.svg"
+                  alt="PESCO WAPDA Logo"
+                  className="w-full h-full object-contain rounded-full"
+                />
+              </div>
               <span className="absolute -bottom-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-black shadow-md border-2 border-slate-900">
                 ⚡
               </span>
@@ -441,6 +447,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className={`w-2 h-2 rounded-full inline-block ${activeCategory === 'LV' ? 'bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.8)]' : 'bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,0.8)]'}`} />
                 <span className="text-slate-300 font-semibold">{activeCategory === 'LV' ? '400V LT' : '11kV HT'}</span>
               </div>
+
+              {/* Theme Toggle Button */}
+              <button
+                onClick={onToggleTheme}
+                title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-900 hover:bg-slate-800 text-amber-300 border border-slate-700/80 transition-all cursor-pointer shadow-inner shrink-0"
+              >
+                {theme === 'dark' ? (
+                  <>
+                    <span className="text-xs">☀️</span>
+                    <span className="hidden md:inline">Light</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-xs">🌙</span>
+                    <span className="hidden md:inline">Dark</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

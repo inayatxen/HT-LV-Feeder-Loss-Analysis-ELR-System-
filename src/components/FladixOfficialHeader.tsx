@@ -47,11 +47,13 @@ export const FladixOfficialHeader: React.FC<FladixOfficialHeaderProps> = ({
       <div className="flex items-center justify-between gap-3 sm:gap-4">
         {/* Left: Official PESCO Insignia */}
         <div className="shrink-0">
-          <img
-            src="/pesco-logo.svg"
-            alt="PESCO Logo"
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain"
-          />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white rounded-2xl p-1 shadow-md border border-slate-300 flex items-center justify-center">
+            <img
+              src="/pesco-logo.svg"
+              alt="PESCO Logo"
+              className="w-full h-full object-contain rounded-xl"
+            />
+          </div>
         </div>
 
         {/* Center: Standardized Official Hierarchy */}
