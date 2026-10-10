@@ -83,6 +83,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [sourceCurrentInput, setSourceCurrentInput] = useState<number>(summary.totalSourceCurrentAmps || 180);
   const [showFormulas, setShowFormulas] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [showSizingTooltip, setShowSizingTooltip] = useState(false);
 
   // Unified Project Linking & Administrative Hierarchy State
   const [workOrderNo, setWorkOrderNo] = useState(feeder.workOrderNo || '26147126042');
@@ -1064,7 +1065,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold flex items-center gap-1.5 ${
                   isOverloaded 
                     ? 'bg-rose-100 text-rose-800 border border-rose-200' 
@@ -1073,6 +1074,85 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                   {isOverloaded ? <AlertTriangle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
                   <span>Loading: {currentLoadingPercent}% ({isOverloaded ? 'OVERLOADED' : 'NORMAL'})</span>
                 </span>
+
+                {/* Sizing Guide Tooltip Toggle Button */}
+                {(() => {
+                  const peakDemandKva = summary.totalSystemDemandKva || 118;
+                  const minRequiredRating = peakDemandKva / 0.80;
+                  const recommendedTransformerKva = TRANSFORMER_CAPACITIES.find(c => c >= minRequiredRating) || TRANSFORMER_CAPACITIES[TRANSFORMER_CAPACITIES.length - 1];
+                  const projectedLoadingWithRecommended = Math.round((peakDemandKva / recommendedTransformerKva) * 100);
+
+                  return (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setShowSizingTooltip(!showSizingTooltip)}
+                        className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-300 rounded-md text-xs font-semibold transition-colors cursor-pointer shadow-2xs"
+                        title="Click for optimal transformer sizing guide based on feeder peak load"
+                      >
+                        <span>💡 Optimal Sizing Guide</span>
+                      </button>
+
+                      {/* Tooltip / Guide Popover */}
+                      {showSizingTooltip && (
+                        <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-80 bg-slate-900 text-white p-4 rounded-xl shadow-2xl z-50 border border-slate-700 text-xs space-y-3">
+                          <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                            <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                              <span>⚡ WAPDA Transformer Sizing Analysis</span>
+                            </span>
+                            <button 
+                              type="button"
+                              onClick={() => setShowSizingTooltip(false)}
+                              className="text-slate-400 hover:text-white font-mono text-sm px-1 cursor-pointer"
+                            >
+                              ✕
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5 font-mono text-[11px]">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Calculated Peak Load:</span>
+                              <span className="font-bold text-white">{peakDemandKva} kVA</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Current Rating:</span>
+                              <span className="font-bold text-amber-400">{activeTransformerKva} kVA ({currentLoadingPercent}%)</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Safe Loading Limit (80%):</span>
+                              <span className="font-bold text-slate-200">Max {Math.round(recommendedTransformerKva * 0.8)} kVA load</span>
+                            </div>
+                            <div className="flex justify-between border-t border-slate-800 pt-1.5">
+                              <span className="text-slate-300 font-bold">Recommended Size:</span>
+                              <span className="font-bold text-emerald-400 text-sm">{recommendedTransformerKva} kVA</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Projected Loading:</span>
+                              <span className="font-bold text-emerald-300">{projectedLoadingWithRecommended}% (Optimal)</span>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-300 leading-relaxed border-t border-slate-800 pt-2">
+                            Operating below 80% capacity prevents winding overheating, minimizes core/copper losses, and extends transformer insulation lifespan by over 2x.
+                          </p>
+
+                          <div className="pt-1 flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onUpdateTransformerKva(recommendedTransformerKva);
+                                setShowSizingTooltip(false);
+                              }}
+                              className="w-full py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-lg text-xs transition-colors cursor-pointer text-center"
+                            >
+                              Apply Recommended ({recommendedTransformerKva} kVA)
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
