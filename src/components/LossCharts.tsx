@@ -6,7 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { FeederAnalysisSummary, FeederData, ForecastYearResult } from '../types/feeder';
 import { SensitivityAnalysisRecharts } from './SensitivityAnalysisRecharts';
-import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp, Layers, FileText } from 'lucide-react';
+import { BarChart3, TrendingDown, Activity, PieChart, Coins, TrendingUp, Layers, FileText, Zap } from 'lucide-react';
 import { 
   ResponsiveContainer, 
   ComposedChart, 
