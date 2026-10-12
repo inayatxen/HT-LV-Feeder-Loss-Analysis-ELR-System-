@@ -3536,23 +3536,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 Rs. {finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
               </div>
 
-              <div className="pt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
-                {computedCharges.overheadBasis === 'MATERIAL' ? (
-                  <>
-                    <span>Package Basis:</span>
-                    <strong className="text-emerald-400 font-bold">
-                      25 kVA Transformer Installation
-                    </strong>
-                  </>
-                ) : (
-                  <>
-                    <span>Cost per Kilometer:</span>
-                    <strong className="text-emerald-400 font-bold">
-                      Rs. {computedCharges.costPerKm.toLocaleString()} / km
-                    </strong>
-                  </>
-                )}
-              </div>
+              {/* Grand Total Box continues */}
             </div>
 
             {/* Grand Estimated Charge Summary Card */}

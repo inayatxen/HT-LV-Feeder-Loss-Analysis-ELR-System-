@@ -26,6 +26,7 @@ import { SummaryMetrics } from './components/SummaryMetrics';
 import { SingleLineDiagram } from './components/SingleLineDiagram';
 import { SegmentTable } from './components/SegmentTable';
 import { LossCharts } from './components/LossCharts';
+import { VoltageProfileView } from './components/VoltageProfileView';
 import { WhatIfWorkbench } from './components/WhatIfWorkbench';
 import { ForecastingView } from './components/ForecastingView';
 import { InputDataForm } from './components/InputDataForm';
@@ -57,7 +58,7 @@ export default function App() {
   const [activeSystemModule, setActiveSystemModule] = useState<'elr_loss_analysis' | 'line_cost_estimation'>('elr_loss_analysis');
   const [activeCategory, setActiveCategory] = useState<FeederCategory>('LV');
   const [selectedFeederId, setSelectedFeederId] = useState<string>('gulbhar-colony-peshawar');
-  const [activeTab, setActiveTab] = useState<'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast'>('input_form');
+  const [activeTab, setActiveTab] = useState<'input_form' | 'sld' | 'table' | 'charts' | 'voltage_profile' | 'whatif' | 'forecast'>('input_form');
 
   // Light / Dark / Blue / Amber Theme State
   const [theme, setTheme] = useState<'light' | 'dark' | 'blue' | 'amber'>(() => {
@@ -820,6 +821,21 @@ export default function App() {
                   forecastData={forecastData}
                   existingSummary={existingSummary}
                   proposedSummary={proposedSummary}
+                />
+              </div>
+            )}
+
+            {activeTab === 'voltage_profile' && (
+              <div className="space-y-4">
+                <VoltageProfileView
+                  key={`voltage-profile-${activeFeeder.id}-${activeCategory}`}
+                  feeder={activeFeeder}
+                  summary={hasActiveInterventions ? proposedSummary : existingSummary}
+                  existingSummary={existingSummary}
+                  proposedSummary={proposedSummary}
+                  hasActiveInterventions={hasActiveInterventions}
+                  onSelectNode={(node) => setInspectedNode(node)}
+                  onNavigateToWhatIf={() => setActiveTab('whatif')}
                 />
               </div>
             )}

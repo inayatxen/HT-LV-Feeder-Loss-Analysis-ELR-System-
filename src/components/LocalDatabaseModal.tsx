@@ -17,13 +17,18 @@ import {
   RotateCcw, 
   Layers, 
   FileText, 
-  AlertTriangle,
-  FolderOpen,
-  Plus,
-  Maximize2,
-  Minimize2,
-  Settings,
-  Printer
+  AlertTriangle, 
+  FolderOpen, 
+  Plus, 
+  Maximize2, 
+  Minimize2, 
+  Settings, 
+  Printer,
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
 import { FeederData, FeederAnalysisSummary } from '../types/feeder';
 import { FladixOfficialHeader } from './FladixOfficialHeader';
@@ -39,6 +44,7 @@ import {
   saveFeederToLocalDb
 } from '../utils/localDatabase';
 import { MaterialPriceUploader } from './admin/MaterialPriceUploader';
+import { supabase } from '../lib/supabase';
 
 interface LocalDatabaseModalProps {
   isOpen: boolean;
@@ -79,6 +85,113 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
 
   // Print Snapshots modal state
   const [printSnapshotsModal, setPrintSnapshotsModal] = useState<SavedAnalysisSnapshot[] | null>(null);
+
+  // Offline Sync to Supabase state
+  const [offlineSyncEnabled, setOfflineSyncEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('fladix_offline_sync');
+      return saved === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [isOnline, setIsOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'synced' | 'error' | 'offline'>('idle');
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
+    try {
+      return localStorage.getItem('fladix_last_sync_time') || '';
+    } catch {
+      return '';
+    }
+  });
+
+  const toggleOfflineSync = (enabled: boolean) => {
+    setOfflineSyncEnabled(enabled);
+    try {
+      localStorage.setItem('fladix_offline_sync', enabled ? 'true' : 'false');
+    } catch {}
+    if (enabled && navigator.onLine) {
+      setSuccessMsg('Offline Sync enabled: Pushing local cache to Supabase cloud...');
+      syncLocalChangesToSupabase().then(() => {
+        setTimeout(() => setSuccessMsg(''), 4000);
+      });
+    }
+  };
+
+  const syncLocalChangesToSupabase = async () => {
+    if (!navigator.onLine) {
+      setSyncStatus('offline');
+      return;
+    }
+    try {
+      setSyncStatus('syncing');
+      const allSnaps = await getAllSnapshotsFromDb();
+      
+      // 1. Sync linked estimates to Supabase estimates table
+      for (const snap of allSnaps) {
+        if (snap.linkedEstimate) {
+          try {
+            await supabase.from('estimates').upsert(snap.linkedEstimate);
+          } catch (e) {
+            console.warn('Supabase estimate upsert warning:', e);
+          }
+        }
+      }
+
+      // 2. Sync snapshots to Supabase snapshots table if present
+      for (const snap of allSnaps) {
+        try {
+          await supabase.from('snapshots').upsert({
+            id: snap.id,
+            name: snap.name,
+            notes: snap.notes,
+            feeder_id: snap.feederId,
+            feeder_name: snap.feederName,
+            category: snap.category,
+            data: snap,
+            updated_at: new Date().toISOString()
+          });
+        } catch {
+          // Table may not exist yet, fallback gracefully
+        }
+      }
+
+      const timeStr = new Date().toLocaleTimeString();
+      setLastSyncTime(timeStr);
+      try {
+        localStorage.setItem('fladix_last_sync_time', timeStr);
+      } catch {}
+      setSyncStatus('synced');
+    } catch (err: any) {
+      console.error('Offline sync error:', err);
+      setSyncStatus('error');
+    }
+  };
+
+  // Auto-sync listener when network connection is restored
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      if (offlineSyncEnabled) {
+        setSuccessMsg('Network connection detected. Automatically syncing local cache to Supabase...');
+        syncLocalChangesToSupabase().then(() => {
+          setTimeout(() => setSuccessMsg(''), 4000);
+        });
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncStatus('offline');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [offlineSyncEnabled]);
 
   // Load snapshots when modal opens
   useEffect(() => {
@@ -136,6 +249,12 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
 
       await loadSnapshots();
       setSuccessMsg('Data and analysis snapshot successfully saved to local database (IndexedDB)!');
+      
+      // Auto push to Supabase if Offline Sync is enabled and currently online
+      if (offlineSyncEnabled && navigator.onLine) {
+        syncLocalChangesToSupabase();
+      }
+
       setSnapshotNotes('');
       setActiveTab('snapshots');
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -339,8 +458,60 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
             </button>
           </div>
 
-          <div className="text-[11px] font-mono text-slate-500 hidden sm:block">
-            Storage: <strong className="text-slate-700">FeederLossAnalysisDB</strong>
+          <div className="flex items-center gap-3">
+            {/* Offline Sync to Supabase Toggle */}
+            <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-lg border border-slate-200 text-xs shadow-xs">
+              <span className="flex items-center gap-1.5 text-slate-700 font-semibold text-[11px]">
+                {offlineSyncEnabled ? (
+                  isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-500" /> : <WifiOff className="w-3.5 h-3.5 text-amber-500" />
+                ) : (
+                  <CloudOff className="w-3.5 h-3.5 text-slate-400" />
+                )}
+                <span>Offline Sync:</span>
+              </span>
+
+              {/* Toggle switch */}
+              <button
+                type="button"
+                onClick={() => toggleOfflineSync(!offlineSyncEnabled)}
+                className={`relative inline-flex h-4 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  offlineSyncEnabled ? 'bg-emerald-500' : 'bg-slate-300'
+                }`}
+                title="Automatically push local changes to Supabase cloud whenever network connection is detected"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-3 w-3 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    offlineSyncEnabled ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+
+              <span className={`text-[10px] font-mono font-bold ${offlineSyncEnabled ? 'text-emerald-600' : 'text-slate-400'}`}>
+                {offlineSyncEnabled ? 'ON' : 'OFF'}
+              </span>
+
+              {offlineSyncEnabled && (
+                <button
+                  type="button"
+                  onClick={syncLocalChangesToSupabase}
+                  disabled={syncStatus === 'syncing' || !isOnline}
+                  className="p-1 text-slate-500 hover:text-slate-900 rounded hover:bg-slate-100 disabled:opacity-40 cursor-pointer transition-colors"
+                  title="Push local cache to Supabase cloud now"
+                >
+                  <RefreshCw className={`w-3 h-3 ${syncStatus === 'syncing' ? 'animate-spin text-blue-500' : ''}`} />
+                </button>
+              )}
+            </div>
+
+            {offlineSyncEnabled && lastSyncTime && (
+              <span className="text-[10px] font-mono text-slate-400 hidden lg:inline">
+                Synced: {lastSyncTime}
+              </span>
+            )}
+
+            <div className="text-[11px] font-mono text-slate-500 hidden sm:block">
+              Storage: <strong className="text-slate-700">FeederLossAnalysisDB</strong>
+            </div>
           </div>
         </div>
 

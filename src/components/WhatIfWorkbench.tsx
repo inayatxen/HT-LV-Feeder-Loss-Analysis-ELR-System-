@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   FeederData, 
   FeederAnalysisSummary,
@@ -30,7 +30,8 @@ import {
   Printer,
   Clock,
   DollarSign,
-  Calculator
+  Calculator,
+  ArrowLeftRight
 } from 'lucide-react';
 import { CONDUCTOR_LIST } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
@@ -38,6 +39,7 @@ import { calculateBifurcationFourStatements } from '../utils/elrEngine';
 import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
 import { SensitivityAnalysisSection } from './SensitivityAnalysisSection';
 import { EconomicAnalysisSection } from './EconomicAnalysisSection';
+import { FeederComparisonModal } from './FeederComparisonModal';
 
 interface WhatIfWorkbenchProps {
   feeder: FeederData;
@@ -90,6 +92,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   canUndo,
   canRedo
 }) => {
+  const [showCompareModal, setShowCompareModal] = useState(false);
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
   const tariff = feeder.tariffPerKwh || 24.83;
@@ -191,7 +194,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
         {/* Quick Packages (3D Tactile Buttons) */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {/* History Controls */}
-          <div className="flex items-center gap-1 mr-4">
+          <div className="flex items-center gap-1 mr-2">
             <button
               onClick={onUndo}
               disabled={!canUndo}
@@ -209,6 +212,17 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               <RotateCcw className="w-4 h-4 rotate-180" />
             </button>
           </div>
+
+          {/* Side-by-Side Compare Button */}
+          <button
+            type="button"
+            onClick={() => setShowCompareModal(true)}
+            className="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap btn-3d-blue text-white shadow-md hover:brightness-110 active:scale-95 mr-2"
+            title="Side-by-Side Baseline vs Proposed Feeder Comparison"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5 stroke-[2.2]" />
+            <span>Compare</span>
+          </button>
 
           {isHtLine ? (
             <>
@@ -1286,7 +1300,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
       {/* Comparison Matrix (Matching Table 1 from Paper + Proposed Benefits) */}
       <div className="card-3d-static overflow-hidden">
-        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 via-white to-slate-50 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
               <span>Table 1 Comparison & Upgradation Benefits Matrix</span>
@@ -1298,6 +1312,15 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               Comprehensive comparison of existing baseline vs proposed upgraded system.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => setShowCompareModal(true)}
+            className="px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap bg-blue-600 hover:bg-blue-500 text-white shadow-xs active:scale-95"
+            title="Open Interactive Side-by-Side Feeder Comparison"
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5" />
+            <span>Side-by-Side Comparison</span>
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -1554,6 +1577,26 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Side-by-Side Comparison Modal */}
+      <FeederComparisonModal
+        isOpen={showCompareModal}
+        onClose={() => setShowCompareModal(false)}
+        feeder={feeder}
+        existingSummary={existingSummary}
+        proposedSummary={proposedSummary}
+        activeTransformerKva={activeTransformerKva}
+        activeInjectedVoltage={activeInjectedVoltage}
+        activeConductors={activeConductors}
+        activeCapacitors={activeCapacitors}
+        activeLoadFactor={activeLoadFactor}
+        bifurcationConfig={bifurcationConfig}
+        quickCapexEstimate={quickCapexEstimate}
+        quickPaybackMonths={quickPaybackMonths}
+        tariff={tariff}
+        onOpenCostEstimation={onOpenCostEstimation}
+        onOpenPrintReport={onOpenPrintReport}
+      />
     </div>
   );
 };

@@ -24,7 +24,8 @@ import {
   FolderOpen,
   Calculator,
   Save,
-  FolderDown
+  FolderDown,
+  Activity
 } from 'lucide-react';
 import { 
   FeederType, 
@@ -41,8 +42,8 @@ interface HeaderProps {
   onSelectSystemModule?: (module: 'elr_loss_analysis' | 'line_cost_estimation') => void;
   activeCategory: FeederCategory;
   onSelectCategory: (category: FeederCategory) => void;
-  activeTab: 'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast';
-  setActiveTab: (tab: 'input_form' | 'sld' | 'table' | 'charts' | 'whatif' | 'forecast') => void;
+  activeTab: 'input_form' | 'sld' | 'table' | 'charts' | 'voltage_profile' | 'whatif' | 'forecast';
+  setActiveTab: (tab: 'input_form' | 'sld' | 'table' | 'charts' | 'voltage_profile' | 'whatif' | 'forecast') => void;
   feederType: FeederType;
   selectedFeederId: string;
   onSelectFeeder: (id: string) => void;
@@ -398,7 +399,20 @@ export const Header: React.FC<HeaderProps> = ({
                 <span>Loss Analytics</span>
               </button>
 
-              {/* 5. What-If Simulator */}
+              {/* 5. Voltage Profile & Sparklines */}
+              <button
+                onClick={() => setActiveTab('voltage_profile')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === 'voltage_profile'
+                    ? 'btn-3d-amber text-slate-950 shadow-md'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-800/80 border border-transparent'
+                }`}
+              >
+                <Activity className={`w-3.5 h-3.5 ${activeTab === 'voltage_profile' ? 'text-slate-950 stroke-[2.5]' : 'text-amber-400'}`} />
+                <span>Voltage Profile</span>
+              </button>
+
+              {/* 6. What-If Simulator */}
               <button
                 onClick={() => setActiveTab('whatif')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all whitespace-nowrap cursor-pointer ${
