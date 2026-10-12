@@ -1,5 +1,4 @@
-import { doc, getDocs, setDoc, collection, deleteDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { FeederData } from '../types/feeder';
 import { 
   CostEstimateRecord, 
@@ -15,29 +14,31 @@ import {
 } from '../data/materialMaster';
 import { calculateQuantitiesForLine, computeEstimateCharges } from './costEngine';
 
-const MATERIALS_COLLECTION = 'materials';
-const ESTIMATES_COLLECTION = 'estimates';
-
 export async function getAllMaterialsFromDb(): Promise<MaterialItem[]> {
-  const querySnapshot = await getDocs(collection(db, MATERIALS_COLLECTION));
-  return querySnapshot.docs.map(doc => doc.data() as MaterialItem);
+  const { data, error } = await supabase.from('materials').select('*');
+  if (error) throw error;
+  return data as MaterialItem[];
 }
 
 export async function saveMaterialToDb(material: MaterialItem): Promise<void> {
-  await setDoc(doc(db, MATERIALS_COLLECTION, material.id), material);
+  const { error } = await supabase.from('materials').upsert(material);
+  if (error) throw error;
 }
 
 export async function getAllEstimatesFromDb(): Promise<CostEstimateRecord[]> {
-  const querySnapshot = await getDocs(collection(db, ESTIMATES_COLLECTION));
-  return querySnapshot.docs.map(doc => doc.data() as CostEstimateRecord);
+  const { data, error } = await supabase.from('estimates').select('*');
+  if (error) throw error;
+  return data as unknown as CostEstimateRecord[];
 }
 
 export async function saveEstimateToDb(estimate: CostEstimateRecord): Promise<void> {
-  await setDoc(doc(db, ESTIMATES_COLLECTION, estimate.id), estimate);
+  const { error } = await supabase.from('estimates').upsert(estimate);
+  if (error) throw error;
 }
 
 export async function deleteEstimateFromDb(id: string): Promise<void> {
-  await deleteDoc(doc(db, ESTIMATES_COLLECTION, id));
+  const { error } = await supabase.from('estimates').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function initCostDatabase(): Promise<{
@@ -46,41 +47,27 @@ export async function initCostDatabase(): Promise<{
   designFactors: DesignFactorsConfig;
   templates: ConstructionTemplate[];
 }> {
-  // 1. Fetch Materials from Firestore
-  let materials = await getAllMaterialsFromDb();
+  let materialsData = await getAllMaterialsFromDb();
   
-  // Seed if empty
-  if (materials.length === 0) {
+  if (materialsData.length === 0) {
     for (const mat of INITIAL_MATERIALS) {
       await saveMaterialToDb(mat);
     }
-    materials = INITIAL_MATERIALS;
+    materialsData = INITIAL_MATERIALS;
   }
   
-  // Fetch estimates
-  const estimates = await getAllEstimatesFromDb();
+  const estimatesData = await getAllEstimatesFromDb();
   
   return {
-    estimates,
-    materials,
+    estimates: estimatesData,
+    materials: materialsData,
     designFactors: DEFAULT_DESIGN_FACTORS,
     templates: STANDARD_TEMPLATES
   };
 }
 
 export async function saveDesignFactorsToDb(factors: DesignFactorsConfig): Promise<void> {
-  // TODO: Implement Firestore for settings
-}
-
-
-// Helper to clear a collection
-async function clearCollection(collectionName: string) {
-  const querySnapshot = await getDocs(collection(db, collectionName));
-  const batch = writeBatch(db);
-  querySnapshot.docs.forEach((doc) => {
-    batch.delete(doc.ref);
-  });
-  await batch.commit();
+  // TODO: Implement Supabase for settings
 }
 
 export async function resetCostDbToDefaults(): Promise<{
@@ -89,12 +76,9 @@ export async function resetCostDbToDefaults(): Promise<{
   designFactors: DesignFactorsConfig;
   templates: ConstructionTemplate[];
 }> {
-  // Clear all Firestore collections
-  await clearCollection(MATERIALS_COLLECTION);
-  await clearCollection(ESTIMATES_COLLECTION);
-  // TODO: Add templates/settings collection names if needed
+  await supabase.from('materials').delete().neq('id', 'dummy_id_for_delete_all'); // Supabase doesn't support DELETE * directly easily without a filter, using a dummy filter or .select('*').delete()
+  await supabase.from('estimates').delete().neq('id', 'dummy_id_for_delete_all');
   
-  // Re-seed
   return initCostDatabase();
 }
 
