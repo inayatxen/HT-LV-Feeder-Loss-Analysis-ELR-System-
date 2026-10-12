@@ -32,7 +32,8 @@ export async function getAllEstimatesFromDb(): Promise<CostEstimateRecord[]> {
 }
 
 export async function saveEstimateToDb(estimate: CostEstimateRecord): Promise<void> {
-  const { error } = await supabase.from('estimates').upsert(estimate);
+  const { auditTrail, ...cleanEstimate } = estimate as any;
+  const { error } = await supabase.from('estimates').upsert(cleanEstimate);
   if (error) throw error;
 }
 

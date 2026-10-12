@@ -143,6 +143,7 @@ export interface EstimateItem {
 
 export interface EstimateCharges {
   materialCost: number;
+  labourPercent?: number;
   labourCost: number;
   transportationCost: number;
   civilWorksCost: number;
@@ -230,6 +231,7 @@ export interface ConstructionTemplate {
   standardPoleCode: string;
   defaultTransformerKva?: number;
   defaultAdditionalPercentages?: {
+    labourPercent?: number;
     engineeringPercent: number;
     contingencyPercent: number;
     departmentalPercent: number;

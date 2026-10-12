@@ -131,7 +131,8 @@ export const LocalDatabaseModal: React.FC<LocalDatabaseModalProps> = ({
       for (const snap of allSnaps) {
         if (snap.linkedEstimate) {
           try {
-            await supabase.from('estimates').upsert(snap.linkedEstimate);
+            const { auditTrail, ...cleanEstimate } = snap.linkedEstimate as any;
+            await supabase.from('estimates').upsert(cleanEstimate);
           } catch (e) {
             console.warn('Supabase estimate upsert warning:', e);
           }

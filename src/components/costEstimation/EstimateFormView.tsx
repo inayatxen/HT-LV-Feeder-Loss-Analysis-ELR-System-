@@ -170,41 +170,71 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               quantity: 1,
               unitRate: 434200,
               materialAmount: 434200,
-              labourRate: 43420,
-              labourAmount: 43420,
-              totalAmount: 477620,
+              labourRate: 0,
+              labourAmount: 0,
+              totalAmount: 434200,
               calculationNotes: '50 kVA Transformer Installation Schedule item: 10% Labour Cost applied'
             };
           }
-          return item;
+          return {
+            ...item,
+            labourRate: 0,
+            labourAmount: 0,
+            totalAmount: item.materialAmount
+          };
         }).filter(i => {
           if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
           return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
         });
       }
       if (initialEstimate.lineDetails.is25KvaLumpSumPackage || initialEstimate.lineDetails.transformerCapacityKva === 25) {
-        return initialEstimate.items.filter(i => {
+        return initialEstimate.items.map(item => ({
+          ...item,
+          labourRate: 0,
+          labourAmount: 0,
+          totalAmount: item.materialAmount
+        })).filter(i => {
           if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
           return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
         });
       }
-      return initialEstimate.items;
+      return initialEstimate.items.map(item => ({
+        ...item,
+        labourRate: 0,
+        labourAmount: 0,
+        totalAmount: item.materialAmount
+      }));
     }
     // Auto calculate initial default BOQ
     const calc = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
     if (lineDetails.is50KvaLumpSumPackage || lineDetails.transformerCapacityKva === 50) {
-      return calc.items.filter(i => {
+      return calc.items.map(item => ({
+        ...item,
+        labourRate: 0,
+        labourAmount: 0,
+        totalAmount: item.materialAmount
+      })).filter(i => {
         if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
         return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
       });
     }
     if (lineDetails.is25KvaLumpSumPackage || lineDetails.transformerCapacityKva === 25) {
-      return calc.items.filter(i => {
+      return calc.items.map(item => ({
+        ...item,
+        labourRate: 0,
+        labourAmount: 0,
+        totalAmount: item.materialAmount
+      })).filter(i => {
         if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
         return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
       });
     }
-    return calc.items;
+    return calc.items.map(item => ({
+      ...item,
+      labourRate: 0,
+      labourAmount: 0,
+      totalAmount: item.materialAmount
+    }));
   });
 
   // Dismantle Items State
@@ -225,6 +255,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   });
 
   const [percentages, setPercentages] = useState<{
+    labourPercent: number;
     engineeringPercent: number;
     contingencyPercent: number;
     departmentalPercent: number;
@@ -233,6 +264,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     otherChargesFixed: number;
     overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   }>({
+    labourPercent: initialEstimate?.charges.labourPercent ?? 10.0,
     engineeringPercent: initialEstimate?.charges.engineeringChargesPercent ?? 2.0,
     contingencyPercent: initialEstimate?.charges.contingencyPercent ?? 3.0,
     departmentalPercent: initialEstimate?.charges.departmentalOverheadPercent ?? 5.0,
@@ -458,6 +490,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -526,6 +559,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -595,6 +629,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -665,6 +700,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -736,6 +772,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -863,12 +900,10 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     return isDismantleDeducted ? dismantleItems.reduce((sum, item) => sum + item.materialAmount, 0) * 1.1 : 0;
   }, [dismantleItems, isDismantleDeducted]);
 
-  // Updated Grand Total calculation as requested
+  // Grand Total calculation
   const finalTotal = useMemo(() => {
-    const foundationCost = calculateFoundationCharges(lineDetails);
-    const charge051 = ((computedCharges.grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
-    return computedCharges.grandTotal - netDismantleCost + charge051;
-  }, [computedCharges, lineDetails, netDismantleCost]);
+    return computedCharges.grandTotal - netDismantleCost;
+  }, [computedCharges, netDismantleCost]);
 
   // Handler: Run Automatic Material Calculation Engine
   const handleCalculateRequiredMaterials = () => {
@@ -934,6 +969,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       };
       setLineDetails(updatedDetails);
       setPercentages({
+        labourPercent: 10.0,
         departmentalPercent: 6.0,
         contractorPercent: 10.0,
         engineeringPercent: 0.0,
@@ -987,16 +1023,19 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       if (field === 'quantity') {
         updated.quantity = Math.max(0, numVal);
         updated.materialAmount = Math.round(updated.quantity * updated.unitRate);
-        updated.labourAmount = Math.round(updated.quantity * updated.labourRate);
-        updated.totalAmount = updated.materialAmount + updated.labourAmount;
+        updated.labourRate = 0;
+        updated.labourAmount = 0;
+        updated.totalAmount = updated.materialAmount;
       } else if (field === 'unitRate') {
         updated.unitRate = Math.max(0, numVal);
         updated.materialAmount = Math.round(updated.quantity * updated.unitRate);
-        updated.totalAmount = updated.materialAmount + updated.labourAmount;
+        updated.labourRate = 0;
+        updated.labourAmount = 0;
+        updated.totalAmount = updated.materialAmount;
       } else if (field === 'labourRate') {
-        updated.labourRate = Math.max(0, numVal);
-        updated.labourAmount = Math.round(updated.quantity * updated.labourRate);
-        updated.totalAmount = updated.materialAmount + updated.labourAmount;
+        updated.labourRate = 0;
+        updated.labourAmount = 0;
+        updated.totalAmount = updated.materialAmount;
       } else if (field === 'remarks') {
         updated.remarks = String(value);
       }
@@ -1030,9 +1069,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       quantity: qtyToAdd || mat.defaultQtyFactor || 1,
       unitRate: mat.materialRate,
       materialAmount: mat.materialRate * (qtyToAdd || mat.defaultQtyFactor || 1),
-      labourRate: mat.labourRate,
-      labourAmount: mat.labourRate * (qtyToAdd || mat.defaultQtyFactor || 1),
-      totalAmount: (mat.materialRate + mat.labourRate) * (qtyToAdd || mat.defaultQtyFactor || 1),
+      labourRate: 0,
+      labourAmount: 0,
+      totalAmount: mat.materialRate * (qtyToAdd || mat.defaultQtyFactor || 1),
       isAutoCalculated: false,
       manualOverride: true,
       remarks: 'Manually added from Material Catalog'
@@ -2373,8 +2412,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                             <th className="py-2 px-2 text-right w-16">Qty</th>
                             <th className="py-2 px-3 text-right">Material Rate</th>
                             <th className="py-2 px-3 text-right">Material Amt</th>
-                            <th className="py-2 px-3 text-right">Labour Rate</th>
-                            <th className="py-2 px-3 text-right">Labour Amt</th>
                             <th className="py-2 px-3 text-right">Total (PKR)</th>
                           </tr>
                         </thead>
@@ -2395,12 +2432,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                               <td className="py-1.5 px-3 text-right font-bold text-slate-900">
                                 Rs. {item.materialAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
                               </td>
-                              <td className="py-1.5 px-3 text-right text-slate-700">
-                                Rs. {item.labourRate.toLocaleString('en-PK', {minimumFractionDigits: 2})}
-                              </td>
-                              <td className="py-1.5 px-3 text-right font-bold text-slate-900">
-                                Rs. {item.labourAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
-                              </td>
                               <td className="py-1.5 px-3 text-right font-bold text-emerald-900 bg-emerald-50/50">
                                 Rs. {item.totalAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}
                               </td>
@@ -2414,10 +2445,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono text-emerald-950">
                               Rs. {miniEstimate.materialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
-                            </td>
-                            <td></td>
-                            <td className="py-2.5 px-3 text-right font-mono text-emerald-950">
-                              Rs. {miniEstimate.labourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
                             </td>
                             <td className="py-2.5 px-3 text-right font-mono text-emerald-950 bg-emerald-200/80">
                               Rs. {miniEstimate.grandTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}
@@ -2977,9 +3004,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                               <div className="flex items-center gap-3 text-[11px] font-mono text-slate-600 mt-1">
                                 <span>Unit: <strong>{mat.unit}</strong></span>
                                 <span>•</span>
-                                <span>Material: <strong className="text-slate-900">PKR {mat.materialRate.toLocaleString()}</strong></span>
-                                <span>•</span>
-                                <span>Labour: <strong className="text-slate-700">PKR {mat.labourRate.toLocaleString()}</strong></span>
+                                <span>Material Rate: <strong className="text-slate-900">PKR {mat.materialRate.toLocaleString()}</strong></span>
                               </div>
                             </div>
                           </div>
@@ -3083,16 +3108,14 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     <th className="py-2.5 px-2 text-center">Unit</th>
                     <th className="py-2.5 px-3 text-right w-24">Quantity</th>
                     <th className="py-2.5 px-3 text-right">Unit Rate (PKR)</th>
-                    <th className="py-2.5 px-3 text-right">Material (PKR)</th>
-                    <th className="py-2.5 px-3 text-right">Labour (PKR)</th>
-                    <th className="py-2.5 px-3 text-right">Total (PKR)</th>
+                    <th className="py-2.5 px-3 text-right">Material Amount (PKR)</th>
                     <th className="py-2.5 px-2 text-center w-16">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
                   {filteredBoqItems.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="py-8 text-center text-slate-400 font-sans">
+                      <td colSpan={8} className="py-8 text-center text-slate-400 font-sans">
                         {tableFilterQuery 
                           ? `No items found in BOQ matching "${tableFilterQuery}". Clear search filter above.`
                           : 'No materials in BOQ yet. Use the search bar above or click "Calculate Required Materials".'}
@@ -3156,12 +3179,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                         <td className="py-2 px-3 text-right font-bold text-slate-900">
                           {item.materialAmount.toLocaleString()}
                         </td>
-                        <td className="py-2 px-3 text-right text-slate-600">
-                          {item.labourAmount.toLocaleString()}
-                        </td>
-                        <td className="py-2 px-3 text-right font-bold text-blue-900 bg-blue-50/20">
-                          {item.totalAmount.toLocaleString()}
-                        </td>
                         <td className="py-2 px-2 text-center font-sans">
                           <div className="flex items-center justify-center gap-1">
                             <button
@@ -3209,7 +3226,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 <strong className="text-slate-900 font-mono">PKR {computedCharges.materialCost.toLocaleString()}</strong>
               </div>
               <div>
-                <span className="text-slate-500">Labour Subtotal: </span>
+                <span className="text-slate-500">Labour Subtotal ({percentages.labourPercent}% on Material): </span>
                 <strong className="text-slate-900 font-mono">PKR {computedCharges.labourCost.toLocaleString()}</strong>
               </div>
               <div>
@@ -3217,7 +3234,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 <strong className="text-emerald-700 font-mono">PKR {calculateFoundationCharges(lineDetails).toLocaleString()}</strong>
               </div>
               <div>
-                <span className="text-slate-500">Combined Base Prime: </span>
+                <span className="text-slate-500">Prime Subtotal (Material + Labour): </span>
                 <strong className="text-blue-900 font-mono font-bold">
                   PKR {(computedCharges.materialCost + computedCharges.labourCost + calculateFoundationCharges(lineDetails)).toLocaleString()}
                 </strong>
@@ -3298,89 +3315,156 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
           <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <Sliders className="w-4 h-4 text-blue-600" />
-              <h3 className="text-sm font-bold text-slate-900">Overheads, Contingencies & Charges</h3>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Overheads, Contingencies & Percentage Charges</h3>
+                <p className="text-[11px] text-slate-500">All percentage rates calculated directly on total Material Cost (PKR {computedCharges.materialCost.toLocaleString()})</p>
+              </div>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between gap-2">
-                <label className="font-semibold text-slate-700">Engineering & Supervision Charges</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={percentages.engineeringPercent}
-                    onChange={(e) => setPercentages({ ...percentages, engineeringPercent: Number(e.target.value) })}
-                    className="w-14 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
-                  />
-                  <span className="text-slate-500 font-mono">%</span>
-                </div>
-              </div>
+            <div className="space-y-2.5 text-xs">
+              {/* 1. Labour Cost Percentage Dropdown */}
+              {(() => {
+                const labourOptions = Array.from(new Set([0, 2, 3, 5, 8, 10, 12, 15, 18, 20, 25, percentages.labourPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Labour Cost (% on Material)</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.labourPercent}
+                      onChange={(e) => setPercentages({ ...percentages, labourPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {labourOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
-              <div className="flex items-center justify-between gap-2">
-                <label className="font-semibold text-slate-700">Contingency Allowance</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="0.5"
-                    value={percentages.contingencyPercent}
-                    onChange={(e) => setPercentages({ ...percentages, contingencyPercent: Number(e.target.value) })}
-                    className="w-14 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
-                  />
-                  <span className="text-slate-500 font-mono">%</span>
-                </div>
-              </div>
+              {/* 2. Engineering & Supervision Charges Dropdown */}
+              {(() => {
+                const engOptions = Array.from(new Set([0, 1, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10, percentages.engineeringPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Engineering & Supervision Charges</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.engineeringChargesAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.engineeringPercent}
+                      onChange={(e) => setPercentages({ ...percentages, engineeringPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {engOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
-              <div className="flex items-center justify-between gap-2">
-                <label className="font-semibold text-slate-700">Departmental Overheads</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    value={percentages.departmentalPercent}
-                    onChange={(e) => setPercentages({ ...percentages, departmentalPercent: Number(e.target.value) })}
-                    className="w-14 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
-                  />
-                  <span className="text-slate-500 font-mono">%</span>
-                </div>
-              </div>
+              {/* 3. Contingency Allowance Dropdown */}
+              {(() => {
+                const contOptions = Array.from(new Set([0, 1, 1.5, 2, 3, 4, 5, 7.5, 10, percentages.contingencyPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Contingency Allowance</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.contingencyAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.contingencyPercent}
+                      onChange={(e) => setPercentages({ ...percentages, contingencyPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {contOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
-              <div className="flex items-center justify-between gap-2">
-                <label className="font-semibold text-slate-700">Contractor Overheads / Profit</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="20"
-                    step="0.5"
-                    value={percentages.contractorPercent}
-                    onChange={(e) => setPercentages({ ...percentages, contractorPercent: Number(e.target.value) })}
-                    className="w-14 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
-                  />
-                  <span className="text-slate-500 font-mono">%</span>
-                </div>
-              </div>
+              {/* 4. Departmental Overheads Dropdown */}
+              {(() => {
+                const deptOptions = Array.from(new Set([0, 2, 3, 5, 6, 7.5, 8, 10, 12, 15, 16, 20, percentages.departmentalPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Departmental Overheads</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.departmentalOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.departmentalPercent}
+                      onChange={(e) => setPercentages({ ...percentages, departmentalPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {deptOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
-              <div className="flex items-center justify-between gap-2">
-                <label className="font-semibold text-slate-700">Taxes / GST Applicable</label>
-                <div className="flex items-center gap-1">
-                  <input
-                    type="number"
-                    min="0"
-                    max="30"
-                    step="1"
-                    value={percentages.taxPercent}
-                    onChange={(e) => setPercentages({ ...percentages, taxPercent: Number(e.target.value) })}
-                    className="w-14 px-1.5 py-1 text-right bg-slate-50 border border-slate-300 rounded font-mono"
-                  />
-                  <span className="text-slate-500 font-mono">%</span>
-                </div>
-              </div>
+              {/* 5. Contractor Overheads / Profit Dropdown */}
+              {(() => {
+                const contOverheadOptions = Array.from(new Set([0, 5, 8, 10, 11, 12, 15, 16, 20, percentages.contractorPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Contractor Overheads / Profit</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.contractorOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.contractorPercent}
+                      onChange={(e) => setPercentages({ ...percentages, contractorPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {contOverheadOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
+
+              {/* 6. Taxes / GST Applicable Dropdown */}
+              {(() => {
+                const taxOptions = Array.from(new Set([0, 2, 5, 10, 15, 16, 17, 18, 19, 20, 25, percentages.taxPercent])).sort((a, b) => a - b);
+                return (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                    <div>
+                      <label className="font-semibold text-slate-800 block">Taxes / GST Applicable</label>
+                      <span className="text-[10px] text-slate-500 font-mono">
+                        PKR {computedCharges.taxGstAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </span>
+                    </div>
+                    <select
+                      value={percentages.taxPercent}
+                      onChange={(e) => setPercentages({ ...percentages, taxPercent: Number(e.target.value) })}
+                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    >
+                      {taxOptions.map(p => (
+                        <option key={p} value={p}>{p}%</option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
 
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                 <label className="font-semibold text-slate-700">Other Lump-Sum Charges (PKR)</label>
@@ -3423,7 +3507,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </h3>
               <p className="text-xs text-slate-400">
                 {computedCharges.overheadBasis === 'MATERIAL' 
-                  ? '18-Item Official Material Schedule + 10% Labour + 16% Over Heads'
+                  ? `18-Item Official Material Schedule + ${percentages.labourPercent}% Labour + ${percentages.departmentalPercent + percentages.contractorPercent}% Over Heads`
                   : `${estimateType.replace(/_/g, ' ')} · ${totalKm.toFixed(2)} km Line`}
               </p>
             </div>
@@ -3436,12 +3520,12 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Labour Cost (10% on Material Cost):</span>
+                  <span className="text-slate-400 font-sans">Labour Cost ({percentages.labourPercent}% on Material Cost):</span>
                   <span className="text-rose-400 font-bold">Rs. {computedCharges.labourCost.toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-slate-300">
-                  <span className="text-slate-400 font-sans">Subtotal (Material + 10% Labour):</span>
+                  <span className="text-slate-400 font-sans">Subtotal (Material + {percentages.labourPercent}% Labour):</span>
                   <span className="font-bold">Rs. {(computedCharges.materialCost + computedCharges.labourCost).toLocaleString()}</span>
                 </div>
 
@@ -3456,7 +3540,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-1 text-amber-300 font-bold">
-                  <span className="font-sans">Total Over Heads (16% on Material):</span>
+                  <span className="font-sans">Total Over Heads ({percentages.departmentalPercent + percentages.contractorPercent}% on Material):</span>
                   <span>Rs. {(computedCharges.departmentalOverheadAmount + computedCharges.contractorOverheadAmount).toLocaleString()}</span>
                 </div>
 
@@ -3482,38 +3566,40 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Labour / Erection Cost:</span>
+                  <span className="text-slate-400 font-sans">Labour / Erection Cost ({percentages.labourPercent}% on Material):</span>
                   <span className="text-slate-200">Rs. {computedCharges.labourCost.toLocaleString()}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Transportation & Hauling:</span>
-                  <span className="text-slate-200">Rs. {computedCharges.transportationCost.toLocaleString()}</span>
-                </div>
+                {computedCharges.transportationCost > 0 && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-slate-400 font-sans">Transportation & Hauling:</span>
+                    <span className="text-slate-200">Rs. {computedCharges.transportationCost.toLocaleString()}</span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Engineering Charges ({percentages.engineeringPercent}%):</span>
+                  <span className="text-slate-400 font-sans">Engineering Charges ({percentages.engineeringPercent}% on Material):</span>
                   <span className="text-slate-200">Rs. {computedCharges.engineeringChargesAmount.toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Contingency ({percentages.contingencyPercent}%):</span>
+                  <span className="text-slate-400 font-sans">Contingency ({percentages.contingencyPercent}% on Material):</span>
                   <span className="text-slate-200">Rs. {computedCharges.contingencyAmount.toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Departmental Overhead ({percentages.departmentalPercent}%):</span>
+                  <span className="text-slate-400 font-sans">Departmental Overhead ({percentages.departmentalPercent}% on Material):</span>
                   <span className="text-slate-200">Rs. {computedCharges.departmentalOverheadAmount.toLocaleString()}</span>
                 </div>
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-slate-400 font-sans">Contractor Overhead ({percentages.contractorPercent}%):</span>
+                  <span className="text-slate-400 font-sans">Contractor Overhead ({percentages.contractorPercent}% on Material):</span>
                   <span className="text-slate-200">Rs. {computedCharges.contractorOverheadAmount.toLocaleString()}</span>
                 </div>
 
                 {computedCharges.taxGstAmount > 0 && (
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-slate-400 font-sans">Taxes / GST ({percentages.taxPercent}%):</span>
+                    <span className="text-slate-400 font-sans">Taxes / GST ({percentages.taxPercent}% on Material):</span>
                     <span className="text-slate-200">Rs. {computedCharges.taxGstAmount.toLocaleString()}</span>
                   </div>
                 )}
@@ -3535,31 +3621,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               <div className="text-2xl font-black text-amber-400 font-mono tracking-tight">
                 Rs. {finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
               </div>
-
-              {/* Grand Total Box continues */}
             </div>
-
-            {/* Grand Estimated Charge Summary Card */}
-            {(() => {
-              const foundationCost = calculateFoundationCharges(lineDetails);
-              const grandEstCharge = ((computedCharges.grandTotal + foundationCost - netDismantleCost) * 0.51) / 100;
-              return (
-                <div className="bg-emerald-950 p-4 rounded-xl border border-emerald-800 space-y-2 text-white">
-                  <span className="text-[11px] text-emerald-300 font-sans font-bold block uppercase">
-                    Grand Estimated Charge (0.51% Formula):
-                  </span>
-                  <div className="text-xl font-black text-emerald-400 font-mono tracking-tight">
-                    Rs. {grandEstCharge.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </div>
-                  <div className="text-[10px] text-emerald-200/80 font-mono space-y-0.5 pt-1 border-t border-emerald-900">
-                    <div>Grand Total: Rs. {computedCharges.grandTotal.toLocaleString()}</div>
-                    <div>+ Foundation: Rs. {foundationCost.toLocaleString()}</div>
-                    <div>- Dismantling: Rs. {netDismantleCost.toLocaleString()}</div>
-                    <div className="text-emerald-300 font-bold">× 0.51 / 100</div>
-                  </div>
-                </div>
-              );
-            })()}
 
             {/* Quick Status Pill */}
             <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800">
@@ -3672,14 +3734,13 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                     <th className="py-2.5 px-2 text-center">Voltage</th>
                     <th className="py-2.5 px-2 text-center">Unit</th>
                     <th className="py-2.5 px-3 text-right">Material Rate</th>
-                    <th className="py-2.5 px-3 text-right">Labour Rate</th>
                     <th className="py-2.5 px-3 text-center w-28">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
                   {modalFilteredMaterials.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-400 font-sans">
+                      <td colSpan={7} className="py-12 text-center text-slate-400 font-sans">
                         No materials found matching your search query "{catalogModalSearch}".
                       </td>
                     </tr>
@@ -3723,9 +3784,6 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                           <td className="py-2.5 px-2 text-center font-sans text-slate-600 font-medium">{mat.unit}</td>
                           <td className="py-2.5 px-3 text-right font-bold text-slate-900">
                             PKR {mat.materialRate.toLocaleString()}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-slate-600">
-                            PKR {mat.labourRate.toLocaleString()}
                           </td>
                           <td className="py-2.5 px-3 text-center font-sans">
                             {inBoq ? (

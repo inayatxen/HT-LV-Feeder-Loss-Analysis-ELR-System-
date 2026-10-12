@@ -586,9 +586,16 @@ export function calculateHtExtensionMiniEstimate(
     });
   }
 
-  const materialTotal = Number(items.reduce((s, i) => s + (i.materialAmount || 0), 0).toFixed(2));
-  const labourTotal = Number(items.reduce((s, i) => s + (i.labourAmount || 0), 0).toFixed(2));
-  const grandTotal = Number((materialTotal + labourTotal).toFixed(2));
+  const sanitizedItems = items.map(item => ({
+    ...item,
+    labourRate: 0,
+    labourAmount: 0,
+    totalAmount: item.materialAmount
+  }));
+
+  const materialTotal = Number(sanitizedItems.reduce((s, i) => s + (i.materialAmount || 0), 0).toFixed(2));
+  const labourTotal = 0;
+  const grandTotal = materialTotal;
 
   return {
     meters,
@@ -602,7 +609,7 @@ export function calculateHtExtensionMiniEstimate(
     conductorName: condMat.name,
     conductorQtyKm,
     poleType: isSteelLattice ? '34.8ft Steel Lattice H-Type' : '36ft PC Spun Pole (PC HC)',
-    items,
+    items: sanitizedItems,
     materialTotal,
     labourTotal,
     grandTotal
@@ -704,8 +711,14 @@ export function calculateQuantitiesForLine(
       });
     });
 
+    const dogItems = Array.from(itemMap.values()).map(it => ({
+      ...it,
+      labourRate: 0,
+      labourAmount: 0,
+      totalAmount: it.materialAmount
+    }));
     return {
-      items: Array.from(itemMap.values()),
+      items: dogItems,
       steps,
       updatedLineDetails: {
         htPoles: Math.round(16 * multiplier),
@@ -1616,8 +1629,15 @@ export function calculateQuantitiesForLine(
     });
   }
 
+  const sanitizedFinalItems = finalItems.map(item => ({
+    ...item,
+    labourRate: 0,
+    labourAmount: 0,
+    totalAmount: item.materialAmount
+  }));
+
   return {
-    items: finalItems,
+    items: sanitizedFinalItems,
     steps,
     updatedLineDetails: {
       htPoles: calculatedHtPoles,
@@ -1640,6 +1660,7 @@ export function computeEstimateCharges(
     loadingUnloadingFixed: number;
   },
   percentages?: {
+    labourPercent?: number;
     engineeringPercent: number;
     contingencyPercent: number;
     departmentalPercent: number;
@@ -1653,27 +1674,18 @@ export function computeEstimateCharges(
   const dismantledItems = items.filter(i => !!i.isDismantled);
 
   const materialCost = Number(standardItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
-  const labourCost = Number(standardItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+
+  // Labour cost is calculated strictly on Material Cost from dropdown percentage
+  const labourPercent = percentages?.labourPercent !== undefined ? percentages.labourPercent : 10.0;
+  const labourCost = Number((materialCost * (labourPercent / 100)).toFixed(2));
 
   const dismantleMaterialCredit = Number(dismantledItems.reduce((sum, item) => sum + (Number(item.materialAmount) || 0), 0).toFixed(2));
-  const dismantleLabourCost = Number(dismantledItems.reduce((sum, item) => sum + (Number(item.labourAmount) || 0), 0).toFixed(2));
+  const dismantleLabourCost = Number((dismantleMaterialCredit * (labourPercent / 100)).toFixed(2));
   const dismantleNetTotal = Number((dismantleLabourCost - dismantleMaterialCredit).toFixed(2));
-
-  // Detect whether this estimate is the 25 kVA, 50 kVA or 100 kVA Transformer lump sum package
-  const isLumpSumPackage = Boolean(
-    percentages?.overheadBasis === 'MATERIAL' ||
-    (standardItems.some(i => i.materialCode === '08110') && Math.abs(materialCost - LUMP_SUM_25KVA_TOTALS.materialCost) < 5) ||
-    (standardItems.some(i => i.materialCode === '08120') && Math.abs(materialCost - LUMP_SUM_50KVA_TOTALS.materialCost) < 5) ||
-    (standardItems.some(i => i.materialCode === '08130') && Math.abs(materialCost - LUMP_SUM_100KVA_TOTALS.materialCost) < 5)
-  );
-
-  const overheadBasis = isLumpSumPackage || percentages?.overheadBasis === 'MATERIAL' ? 'MATERIAL' : 'PRIME_COST';
 
   // Transportation Cost calculation
   let transportationCost = 0;
-  if (isLumpSumPackage && (!transportSettings || transportSettings.loadingUnloadingFixed === 0)) {
-    transportationCost = 0; // Pure lump sum package has transportation inclusive
-  } else if (transportSettings) {
+  if (transportSettings) {
     if (transportSettings.method === 'PER_KM') {
       transportationCost = (transportSettings.distanceKm * transportSettings.ratePerKm) + (transportSettings.loadingUnloadingFixed || 0);
     } else if (transportSettings.method === 'PERCENT_OF_MATERIAL') {
@@ -1691,35 +1703,36 @@ export function computeEstimateCharges(
     .filter(i => i.materialCode.includes('CIVIL'))
     .reduce((sum, i) => sum + i.totalAmount, 0);
 
-  const basePrimeCost = Number((materialCost + labourCost + transportationCost).toFixed(2));
-
-  const engPercent = percentages?.engineeringPercent ?? (overheadBasis === 'MATERIAL' ? 0.0 : 2.0);
-  const contPercent = percentages?.contingencyPercent ?? (overheadBasis === 'MATERIAL' ? 0.0 : 3.0);
-  const deptPercent = percentages?.departmentalPercent ?? (overheadBasis === 'MATERIAL' ? 6.0 : 5.0);
+  const engPercent = percentages?.engineeringPercent ?? 2.0;
+  const contPercent = percentages?.contingencyPercent ?? 3.0;
+  const deptPercent = percentages?.departmentalPercent ?? 5.0;
   const contOverheadPercent = percentages?.contractorPercent ?? 10.0;
   const taxPercent = percentages?.taxPercent ?? 0.0;
   const otherCharges = percentages?.otherChargesFixed ?? 0;
 
-  // Overhead calculation basis: on Material Cost for 25 kVA Lump Sum Package, or on Base Prime Cost for general line extensions
-  const overheadBasisAmount = overheadBasis === 'MATERIAL' ? materialCost : basePrimeCost;
+  // All percentage costs calculated directly on Material Cost from dropdown percentages
+  const engineeringChargesAmount = Number((materialCost * (engPercent / 100)).toFixed(2));
+  const contingencyAmount = Number((materialCost * (contPercent / 100)).toFixed(2));
+  const departmentalOverheadAmount = Number((materialCost * (deptPercent / 100)).toFixed(2));
+  const contractorOverheadAmount = Number((materialCost * (contOverheadPercent / 100)).toFixed(2));
+  const taxGstAmount = Number((materialCost * (taxPercent / 100)).toFixed(2));
 
-  const engineeringChargesAmount = Math.round((overheadBasis === 'MATERIAL' ? 0 : basePrimeCost) * (engPercent / 100));
-  const contingencyAmount = Math.round((overheadBasis === 'MATERIAL' ? 0 : basePrimeCost) * (contPercent / 100));
-  const departmentalOverheadAmount = Number((overheadBasisAmount * (deptPercent / 100)).toFixed(2));
-  const contractorOverheadAmount = Number((overheadBasisAmount * (contOverheadPercent / 100)).toFixed(2));
-  const taxGstAmount = Math.round((overheadBasis === 'MATERIAL' ? materialCost : basePrimeCost) * (taxPercent / 100));
+  const totalOverheadsOnMaterial = Number((departmentalOverheadAmount + contractorOverheadAmount).toFixed(2));
 
-  const totalOverheadsOnMaterial = overheadBasis === 'MATERIAL'
-    ? Number((departmentalOverheadAmount + contractorOverheadAmount).toFixed(2))
-    : undefined;
+  const subTotal = Number((materialCost + labourCost).toFixed(2));
 
-  const subTotal = overheadBasis === 'MATERIAL'
-    ? Number((materialCost + labourCost).toFixed(2))
-    : Number((basePrimeCost + engineeringChargesAmount + contingencyAmount).toFixed(2));
-
-  const rawGrandTotal = overheadBasis === 'MATERIAL'
-    ? Number((materialCost + labourCost + departmentalOverheadAmount + contractorOverheadAmount + transportationCost + taxGstAmount + otherCharges).toFixed(2))
-    : Number((subTotal + departmentalOverheadAmount + contractorOverheadAmount + taxGstAmount + otherCharges).toFixed(2));
+  const rawGrandTotal = Number((
+    materialCost + 
+    labourCost + 
+    transportationCost + 
+    civilWorksCost + 
+    engineeringChargesAmount + 
+    contingencyAmount + 
+    departmentalOverheadAmount + 
+    contractorOverheadAmount + 
+    taxGstAmount + 
+    otherCharges
+  ).toFixed(2));
 
   const grandTotal = Number((rawGrandTotal + dismantleNetTotal).toFixed(2));
 
@@ -1728,6 +1741,7 @@ export function computeEstimateCharges(
 
   return {
     materialCost,
+    labourPercent,
     labourCost,
     transportationCost,
     civilWorksCost,
@@ -1745,7 +1759,7 @@ export function computeEstimateCharges(
     subTotal,
     grandTotal,
     costPerKm,
-    overheadBasis,
+    overheadBasis: 'MATERIAL',
     totalOverheadsOnMaterial,
     dismantleMaterialCredit,
     dismantleLabourCost,
@@ -1932,21 +1946,15 @@ export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): voi
     [],
     ['ESTIMATE COST BREAKDOWN', 'AMOUNT (PKR)'],
     ['Material Cost', estimate.charges.materialCost],
-    [`Labour / Erection Cost ${estimate.charges.overheadBasis === 'MATERIAL' ? '(10% on Material Cost)' : ''}`, estimate.charges.labourCost],
-    ...(estimate.charges.overheadBasis === 'MATERIAL' ? [
-      [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}% on Material Cost)`, estimate.charges.departmentalOverheadAmount],
-      [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}% on Material Cost)`, estimate.charges.contractorOverheadAmount],
-      [`Total Overheads (${estimate.charges.departmentalOverheadPercent + estimate.charges.contractorOverheadPercent}% on Material Cost)`, (estimate.charges.departmentalOverheadAmount + estimate.charges.contractorOverheadAmount)]
-    ] : [
-      ['Transportation & Handling Charges', estimate.charges.transportationCost],
-      ['Civil Works & Foundation Works', estimate.charges.civilWorksCost],
-      [`Engineering Charges (${estimate.charges.engineeringChargesPercent}%)`, estimate.charges.engineeringChargesAmount],
-      [`Contingency Allowance (${estimate.charges.contingencyPercent}%)`, estimate.charges.contingencyAmount],
-      [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}%)`, estimate.charges.departmentalOverheadAmount],
-      [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}%)`, estimate.charges.contractorOverheadAmount],
-      [`Taxes / GST (${estimate.charges.taxGstPercent}%)`, estimate.charges.taxGstAmount],
-      ['Other Applicable Charges', estimate.charges.otherChargesAmount]
-    ]),
+    [`Labour / Erection Cost (${estimate.charges.labourPercent ?? 10}% on Material Cost)`, estimate.charges.labourCost],
+    [`Engineering Charges (${estimate.charges.engineeringChargesPercent}% on Material Cost)`, estimate.charges.engineeringChargesAmount],
+    [`Contingency Allowance (${estimate.charges.contingencyPercent}% on Material Cost)`, estimate.charges.contingencyAmount],
+    [`Departmental Overhead (${estimate.charges.departmentalOverheadPercent}% on Material Cost)`, estimate.charges.departmentalOverheadAmount],
+    [`Contractor Overhead (${estimate.charges.contractorOverheadPercent}% on Material Cost)`, estimate.charges.contractorOverheadAmount],
+    [`Taxes / GST (${estimate.charges.taxGstPercent}% on Material Cost)`, estimate.charges.taxGstAmount],
+    ['Transportation & Handling Charges', estimate.charges.transportationCost],
+    ['Civil Works & Foundation Works', estimate.charges.civilWorksCost],
+    ['Other Applicable Charges', estimate.charges.otherChargesAmount],
     ['----------------------------------------', '---------------------'],
     ['NET / GRAND TOTAL ESTIMATE COST (PKR)', estimate.charges.grandTotal],
     ['Total Project Line Length (km)', (estimate.lineDetails.htLengthKm + estimate.lineDetails.ltLengthKm).toFixed(2)],
@@ -1958,8 +1966,7 @@ export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): voi
   // 2. Detailed BOQ Sheet
   const boqHeaders = [
     'Sr No', 'Material Code', 'Description', 'Specification', 'Unit', 
-    'Quantity', 'Material Rate (PKR)', 'Material Amount (PKR)', 
-    'Labour Rate (PKR)', 'Labour Amount (PKR)', 'Total Amount (PKR)', 'Remarks'
+    'Quantity', 'Unit Rate (PKR)', 'Material Amount (PKR)', 'Remarks'
   ];
   const boqRows = estimate.items.map((item, idx) => [
     idx + 1,
@@ -1970,17 +1977,12 @@ export function exportEstimateToExcelWorkbook(estimate: CostEstimateRecord): voi
     item.quantity,
     item.unitRate,
     item.materialAmount,
-    item.labourRate,
-    item.labourAmount,
-    item.totalAmount,
     item.remarks || item.calculationNotes || ''
   ]);
   // Add Total Row
   boqRows.push([
     '', 'TOTAL', '', '', '', 
-    '', '', estimate.charges.materialCost, 
-    '', estimate.charges.labourCost, 
-    estimate.charges.materialCost + estimate.charges.labourCost, ''
+    '', '', estimate.charges.materialCost, ''
   ]);
   const wsBoq = XLSX.utils.aoa_to_sheet([boqHeaders, ...boqRows]);
   XLSX.utils.book_append_sheet(wb, wsBoq, 'Detailed BOQ');
