@@ -40,12 +40,14 @@ import {
   initLocalDatabase, 
   saveFeederToLocalDb, 
   saveAnalysisSnapshotToDb,
-  SavedAnalysisSnapshot 
+  SavedAnalysisSnapshot,
+  resetDatabaseToDefaults
 } from './utils/localDatabase';
 import { 
   getAllEstimatesFromDb, 
   saveEstimateToDb, 
-  buildLinkedEstimateForFeeder 
+  buildLinkedEstimateForFeeder,
+  resetCostDbToDefaults
 } from './utils/costDatabase';
 import { INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS } from './data/materialMaster';
 import { CostEstimateRecord } from './types/costEstimation';
@@ -518,6 +520,14 @@ export default function App() {
     setIsSaveUnifiedOpen(true);
   };
 
+  const handleResetFactory = async () => {
+    if (confirm('Are you sure you want to reset all data to factory defaults? This cannot be undone.')) {
+      await resetCostDbToDefaults();
+      await resetDatabaseToDefaults();
+      window.location.reload();
+    }
+  };
+
   // Save Both ELR Analysis & Cost Estimation as One Project
   const handleConfirmSaveUnifiedProject = async (projectName: string, remarks: string) => {
     const estimateToSave: CostEstimateRecord = currentLinkedEstimate || buildLinkedEstimateForFeeder(activeFeeder, INITIAL_MATERIALS, DEFAULT_DESIGN_FACTORS);
@@ -652,6 +662,7 @@ export default function App() {
           selectedJobTitle={selectedJobTitle}
           onSelectJobTitle={handleSelectJobTitle}
           onSaveUnifiedProject={handleOpenSaveUnifiedProject}
+          onResetToFactory={handleResetFactory}
           theme={theme}
           onToggleTheme={toggleTheme}
         />

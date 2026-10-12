@@ -1,16 +1,19 @@
-import { doc, getDocs, setDoc, collection, deleteDoc } from 'firebase/firestore';
+import { doc, getDocs, setDoc, collection, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { FeederData } from '../types/feeder';
 import { 
   CostEstimateRecord, 
   MaterialItem, 
   DesignFactorsConfig, 
-  ConstructionTemplate
+  ConstructionTemplate,
+  EstimateType
 } from '../types/costEstimation';
 import { 
   INITIAL_MATERIALS, 
   DEFAULT_DESIGN_FACTORS, 
   STANDARD_TEMPLATES 
 } from '../data/materialMaster';
+import { calculateQuantitiesForLine, computeEstimateCharges } from './costEngine';
 
 const MATERIALS_COLLECTION = 'materials';
 const ESTIMATES_COLLECTION = 'estimates';
@@ -69,14 +72,30 @@ export async function saveDesignFactorsToDb(factors: DesignFactorsConfig): Promi
   // TODO: Implement Firestore for settings
 }
 
+
+// Helper to clear a collection
+async function clearCollection(collectionName: string) {
+  const querySnapshot = await getDocs(collection(db, collectionName));
+  const batch = writeBatch(db);
+  querySnapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
+  await batch.commit();
+}
+
 export async function resetCostDbToDefaults(): Promise<{
   estimates: CostEstimateRecord[];
   materials: MaterialItem[];
   designFactors: DesignFactorsConfig;
   templates: ConstructionTemplate[];
 }> {
-  // TODO: Implement Firestore reset
-  return { estimates: [], materials: [], designFactors: DEFAULT_DESIGN_FACTORS, templates: STANDARD_TEMPLATES };
+  // Clear all Firestore collections
+  await clearCollection(MATERIALS_COLLECTION);
+  await clearCollection(ESTIMATES_COLLECTION);
+  // TODO: Add templates/settings collection names if needed
+  
+  // Re-seed
+  return initCostDatabase();
 }
 
 /**

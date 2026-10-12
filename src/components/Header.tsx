@@ -58,6 +58,7 @@ interface HeaderProps {
   selectedJobTitle: JobTitle;
   onSelectJobTitle: (title: JobTitle) => void;
   onSaveUnifiedProject?: () => void;
+  onResetToFactory?: () => void;
   theme: 'light' | 'dark' | 'blue' | 'amber';
   onToggleTheme: (theme: 'light' | 'dark' | 'blue' | 'amber') => void;
 }
@@ -83,6 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedJobTitle,
   onSelectJobTitle,
   onSaveUnifiedProject,
+  onResetToFactory,
   theme,
   onToggleTheme
 }) => {
@@ -276,6 +278,16 @@ export const Header: React.FC<HeaderProps> = ({
               <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
               <span>Old Jobs</span>
             </button>
+            {onResetToFactory && (
+              <button
+                onClick={onResetToFactory}
+                title="Reset all FLADIX & Cost data to factory defaults"
+                className="btn-3d-rose flex items-center gap-1.5 px-2.5 py-1.5 text-xs whitespace-nowrap"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Data</span>
+              </button>
+            )}
 
             {/* Prominent Save Unified Project Button (3D Emerald Finish) */}
             {onSaveUnifiedProject && (
