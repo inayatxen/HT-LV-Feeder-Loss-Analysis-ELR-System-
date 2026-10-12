@@ -1537,7 +1537,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                 </div>
               </div>
 
-              {/* Live 11-Digit Code Breakdown Pills */}
+{/* 
+              Live 11-Digit Code Breakdown Pills 
               {(() => {
                 const p = parse11DigitWorkOrder(projectInfo.workOrderNo);
                 return (
@@ -1564,6 +1565,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   </div>
                 );
               })()}
+              */}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
