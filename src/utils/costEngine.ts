@@ -52,6 +52,224 @@ export interface HtExtensionMiniEstimate {
  * using standard 11kV assemblies (Poles, V-Cross Arms, Pin & Disc Insulators,
  * Conductor, Tapping PG Clamps, D-Fuse Cutouts, Lightning Arresters, Stay Sets, Earthing).
  */
+export interface LtExtensionMiniEstimate {
+  meters: number;
+  calculatedSpans: number;
+  totalPoles: number;
+  conductorQtyKm: number;
+  conductorName: string;
+  materialTotal: number;
+  labourTotal: number;
+  grandTotal: number;
+  items: EstimateItem[];
+}
+
+export function calculateLtExtensionMiniEstimate(
+  details: EstimateLineDetails,
+  factors?: DesignFactorsConfig,
+  materialsList?: MaterialItem[]
+): LtExtensionMiniEstimate | null {
+  const meters = Number(details.ltExtensionMeters || 0);
+  if (meters <= 0) return null;
+
+  const mats = materialsList && materialsList.length > 0 ? materialsList : INITIAL_MATERIALS;
+
+  const findMat = (code: string) => {
+    const query = code.trim().toUpperCase();
+    const cleanQuery = query.replace(/^0+/, '');
+    return mats.find(m => {
+      const mCode = m.code.trim().toUpperCase();
+      const cleanMCode = mCode.replace(/^0+/, '');
+      return mCode === query || cleanMCode === cleanQuery;
+    });
+  };
+
+  const spanLength = details.ltExtensionSpanMeters || 45;
+  const km = meters / 1000;
+  const calculatedSpans = Math.max(1, Math.ceil(meters / spanLength));
+  const totalPoles = calculatedSpans + 1; // intermediate + terminal poles
+
+  const items: EstimateItem[] = [];
+
+  const condType = (details.ltExtensionConductorType || 'WASP').toUpperCase();
+  let conductorCode = '02330'; // Wasp
+  if (condType.includes('RABBIT')) conductorCode = '02120';
+  else if (condType.includes('SQUIRREL')) conductorCode = '02170';
+  else if (condType.includes('ANT')) conductorCode = '02340';
+  else if (condType.includes('ABC')) conductorCode = '2361';
+
+  const condMat = findMat(conductorCode) || {
+    id: `mat-${conductorCode}`,
+    code: conductorCode,
+    name: `ACSR ${condType} Conductor (LT)`,
+    specification: `LT Overhead Line Conductor (${condType})`,
+    unit: 'KM',
+    materialRate: 95000,
+    labourRate: 12000
+  };
+
+  const conductorQtyKm = details.ltExtensionConductorLengthKm && details.ltExtensionConductorLengthKm > 0
+    ? details.ltExtensionConductorLengthKm
+    : parseFloat((km * 4 * 1.15).toFixed(3)); // 4-wire × 1.15 sag
+  const condMatAmt = Math.round(conductorQtyKm * condMat.materialRate);
+  const condLabAmt = Math.round(conductorQtyKm * condMat.labourRate);
+
+  items.push({
+    id: `item-${condMat.code}-lt-ext`,
+    materialId: condMat.id,
+    materialCode: condMat.code,
+    description: `${condMat.name} (LT Line Extension)`,
+    specification: `LT Line Extension Conductor, 4-Wires × 1.15 sag (${meters}m = ${conductorQtyKm} KM)`,
+    unit: condMat.unit,
+    quantity: conductorQtyKm,
+    unitRate: condMat.materialRate,
+    materialAmount: condMatAmt,
+    labourRate: condMat.labourRate,
+    labourAmount: condLabAmt,
+    totalAmount: condMatAmt + condLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `${meters}m (${km} km) × 4 wires × 1.15 allowance = ${conductorQtyKm} km`
+  });
+
+  const poleType = (details.ltExtensionPoleType || '').toUpperCase();
+  let poleCode = '01120'; // 9m PCC Pole
+  if (poleType.includes('STEEL') || poleType.includes('LATTICE') || poleType.includes('STRUCTURE')) {
+    poleCode = '01220';
+  }
+  const poleMat = findMat(poleCode) || {
+    id: 'mat-01120',
+    code: poleCode,
+    name: 'POLE PCC 9 METER (30FT LT)',
+    specification: 'Pre-Stressed Concrete LT Pole 9 Meters (Code 01120)',
+    unit: 'EA',
+    materialRate: 8500,
+    labourRate: 1800
+  };
+
+  const poleQty = totalPoles;
+  const poleMatAmt = poleQty * poleMat.materialRate;
+  const poleLabAmt = poleQty * poleMat.labourRate;
+  items.push({
+    id: `item-${poleMat.code}-lt-ext`,
+    materialId: poleMat.id,
+    materialCode: poleMat.code,
+    description: `${poleMat.name} (LT Extension)`,
+    specification: poleMat.specification,
+    unit: poleMat.unit,
+    quantity: poleQty,
+    unitRate: poleMat.materialRate,
+    materialAmount: poleMatAmt,
+    labourRate: poleMat.labourRate,
+    labourAmount: poleLabAmt,
+    totalAmount: poleMatAmt + poleLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `${calculatedSpans} spans (${meters}m @ ${spanLength}m/span) + 1 terminal = ${poleQty} LT Poles`
+  });
+
+  const caMat = findMat('06270') || {
+    id: 'mat-06270',
+    code: '06270',
+    name: 'LT CHANNEL IRON CROSS ARM / BRACKET',
+    specification: 'Galvanized LT Channel Iron Cross Arm & Bracket',
+    unit: 'EA',
+    materialRate: 350.00,
+    labourRate: 100
+  };
+  const caQty = totalPoles;
+  const caMatAmt = Math.round(caQty * caMat.materialRate);
+  const caLabAmt = Math.round(caQty * caMat.labourRate);
+  items.push({
+    id: 'item-lt-ca-ext',
+    materialId: caMat.id,
+    materialCode: caMat.code,
+    description: `${caMat.name} (LT Extension)`,
+    specification: caMat.specification,
+    unit: caMat.unit,
+    quantity: caQty,
+    unitRate: caMat.materialRate,
+    materialAmount: caMatAmt,
+    labourRate: caMat.labourRate,
+    labourAmount: caLabAmt,
+    totalAmount: caMatAmt + caLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `1 LT Cross Arm / Bracket per pole = ${caQty} Nos`
+  });
+
+  const insMat = findMat('05310') || {
+    id: 'mat-05310',
+    code: '05310',
+    name: 'LT SHACKLE INSULATOR WITH D-IRON',
+    specification: 'Porcelain LT Shackle Insulator with Galvanized D-Iron Bracket',
+    unit: 'EA',
+    materialRate: 220.00,
+    labourRate: 80
+  };
+  const insQty = totalPoles * 4;
+  const insMatAmt = Math.round(insQty * insMat.materialRate);
+  const insLabAmt = Math.round(insQty * insMat.labourRate);
+  items.push({
+    id: 'item-lt-ins-ext',
+    materialId: insMat.id,
+    materialCode: insMat.code,
+    description: `${insMat.name} (LT Extension)`,
+    specification: insMat.specification,
+    unit: insMat.unit,
+    quantity: insQty,
+    unitRate: insMat.materialRate,
+    materialAmount: insMatAmt,
+    labourRate: insMat.labourRate,
+    labourAmount: insLabAmt,
+    totalAmount: insMatAmt + insLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `4 Shackle Insulators per pole (4-wire line) = ${insQty} Nos`
+  });
+
+  const nbMat = findMat('11115') || {
+    id: 'mat-11115',
+    code: '11115',
+    name: 'GALVANIZED NUTS, BOLTS & WASHERS (LT)',
+    specification: 'Assorted Galvanized Structural Bolts, Nuts & Washers',
+    unit: 'KG',
+    materialRate: 280.00,
+    labourRate: 50
+  };
+  const nbQty = Math.round(poleQty * 2.0);
+  const nbMatAmt = Math.round(nbQty * nbMat.materialRate);
+  const nbLabAmt = Math.round(nbQty * nbMat.labourRate);
+  items.push({
+    id: 'item-lt-nb-ext',
+    materialId: nbMat.id,
+    materialCode: nbMat.code,
+    description: `${nbMat.name} (LT Extension)`,
+    specification: nbMat.specification,
+    unit: nbMat.unit,
+    quantity: nbQty,
+    unitRate: nbMat.materialRate,
+    materialAmount: nbMatAmt,
+    labourRate: nbMat.labourRate,
+    labourAmount: nbLabAmt,
+    totalAmount: nbMatAmt + nbLabAmt,
+    isAutoCalculated: true,
+    calculationNotes: `Structural fasteners (2 kg per LT pole)`
+  });
+
+  const materialTotal = items.reduce((sum, i) => sum + i.materialAmount, 0);
+  const labourTotal = items.reduce((sum, i) => sum + i.labourAmount, 0);
+  const grandTotal = materialTotal + labourTotal;
+
+  return {
+    meters,
+    calculatedSpans,
+    totalPoles: poleQty,
+    conductorQtyKm,
+    conductorName: condMat.name,
+    materialTotal,
+    labourTotal,
+    grandTotal,
+    items
+  };
+}
+
 export function calculateHtExtensionMiniEstimate(
   details: EstimateLineDetails,
   factors?: DesignFactorsConfig,
@@ -1250,6 +1468,26 @@ export function calculateQuantitiesForLine(
         resultQuantity: miniEst.meters,
         unit: 'Meters',
         notes: 'Complete 11kV HT feeder line extension mini-estimate merged into transformer project estimate.'
+      });
+    }
+  }
+
+  // LT Extension Calculation & Standard LT Line Assemblies
+  if (details.ltExtensionMeters && details.ltExtensionMeters > 0) {
+    const ltMiniEst = calculateLtExtensionMiniEstimate(details, factors, materials);
+    if (ltMiniEst) {
+      for (const item of ltMiniEst.items) {
+        itemMap.set(item.id, item);
+      }
+
+      steps.push({
+        component: 'LT Line Extension Mini-Estimate Assembly',
+        parameter: `${ltMiniEst.meters} Meters (${ltMiniEst.calculatedSpans} Spans, ${ltMiniEst.totalPoles} Poles)`,
+        formula: 'LT Line Standard Assemblies (WAPDA / PESCO LT Standards)',
+        calculation: `${ltMiniEst.totalPoles} Poles, ${ltMiniEst.conductorQtyKm} km ${ltMiniEst.conductorName}, LT Cross Arms, Shackle Insulators & D-Irons, Fasteners: Material=Rs. ${ltMiniEst.materialTotal.toLocaleString()}, Labour=Rs. ${ltMiniEst.labourTotal.toLocaleString()}, Total=Rs. ${ltMiniEst.grandTotal.toLocaleString()}`,
+        resultQuantity: ltMiniEst.meters,
+        unit: 'Meters',
+        notes: 'Complete LT line extension mini-estimate merged into project estimate.'
       });
     }
   }

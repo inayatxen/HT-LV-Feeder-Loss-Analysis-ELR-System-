@@ -21,6 +21,8 @@ import {
   calculateQuantitiesForLine, 
   calculateHtExtensionMiniEstimate,
   HtExtensionMiniEstimate,
+  calculateLtExtensionMiniEstimate,
+  LtExtensionMiniEstimate,
   computeEstimateCharges, 
   generateEstimateNumber, 
   exportEstimateToExcelWorkbook,
@@ -264,11 +266,11 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     otherChargesFixed: number;
     overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   }>({
-    labourPercent: initialEstimate?.charges.labourPercent ?? 10.0,
-    engineeringPercent: initialEstimate?.charges.engineeringChargesPercent ?? 2.0,
-    contingencyPercent: initialEstimate?.charges.contingencyPercent ?? 3.0,
-    departmentalPercent: initialEstimate?.charges.departmentalOverheadPercent ?? 5.0,
-    contractorPercent: initialEstimate?.charges.contractorOverheadPercent ?? 10.0,
+    labourPercent: initialEstimate?.charges.labourPercent ?? 0.0,
+    engineeringPercent: initialEstimate?.charges.engineeringChargesPercent ?? 0.0,
+    contingencyPercent: initialEstimate?.charges.contingencyPercent ?? 0.0,
+    departmentalPercent: initialEstimate?.charges.departmentalOverheadPercent ?? 0.0,
+    contractorPercent: initialEstimate?.charges.contractorOverheadPercent ?? 0.0,
     taxPercent: initialEstimate?.charges.taxGstPercent ?? 0.0,
     otherChargesFixed: initialEstimate?.charges.otherChargesAmount ?? 0,
     overheadBasis: initialEstimate?.charges.overheadBasis
@@ -297,6 +299,11 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
   const miniEstimate: HtExtensionMiniEstimate | null = useMemo(() => {
     if (!lineDetails.htExtensionMeters || lineDetails.htExtensionMeters <= 0) return null;
     return calculateHtExtensionMiniEstimate(lineDetails, designFactors, materials);
+  }, [lineDetails, designFactors, materials]);
+
+  const ltMiniEstimate: LtExtensionMiniEstimate | null = useMemo(() => {
+    if (!lineDetails.ltExtensionMeters || lineDetails.ltExtensionMeters <= 0) return null;
+    return calculateLtExtensionMiniEstimate(lineDetails, designFactors, materials);
   }, [lineDetails, designFactors, materials]);
 
   const transformerBaseTotal = useMemo(() => {
@@ -512,9 +519,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -581,9 +588,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -651,9 +658,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -722,9 +729,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -794,9 +801,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       setLineDetails(updatedLine);
 
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -995,9 +1002,9 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
       };
       setLineDetails(updatedDetails);
       setPercentages({
-        labourPercent: 10.0,
-        departmentalPercent: 6.0,
-        contractorPercent: 10.0,
+        labourPercent: 0.0,
+        departmentalPercent: 0.0,
+        contractorPercent: 0.0,
         engineeringPercent: 0.0,
         contingencyPercent: 0.0,
         taxPercent: 0.0,
@@ -2117,6 +2124,175 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
             </div>
 
+            {/* 1) LT Line Extension Mini-Estimate Card */}
+            <div className="bg-gradient-to-br from-blue-50/85 via-sky-50/50 to-slate-50 border border-blue-300 rounded-xl p-4 space-y-4 shadow-2xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-blue-200/80 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-blue-600 text-white rounded-lg shadow-2xs">
+                    <Zap className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-bold text-blue-950">
+                        1) LT Line Extension Mini-Estimate & Assemblies
+                      </h4>
+                      <span className="text-[10px] font-semibold uppercase bg-blue-200/80 text-blue-900 px-2 py-0.5 rounded font-mono">
+                        WAPDA / PESCO LT Standards
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-blue-800">
+                      Complete Low Tension (LT) line extension with automatic allied materials (Cross arms, shackles, nut-bolts, fasteners).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-bold flex items-center gap-1 ${
+                    (lineDetails.ltExtensionMeters || 0) > 0 
+                      ? 'bg-blue-100 text-blue-900 border border-blue-300' 
+                      : 'bg-slate-100 text-slate-500 border border-slate-200'
+                  }`}>
+                    {(lineDetails.ltExtensionMeters || 0) > 0 ? (
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Active: {lineDetails.ltExtensionMeters}m ({ltMiniEstimate?.calculatedSpans || 0} Spans)</span>
+                      </>
+                    ) : (
+                      <span>Inactive (0m)</span>
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              {/* Insertion Text Boxes (a to e) Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 bg-white/90 p-3 rounded-lg border border-blue-200">
+                {/* a) LT Line Length in Meters */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-blue-900 mb-1">
+                    a) LT Line Length (m):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={lineDetails.ltExtensionMeters || 0}
+                    onChange={(e) => {
+                      const m = Math.max(0, Number(e.target.value));
+                      setLineDetails({ ...lineDetails, ltExtensionMeters: m, ltLengthKm: m / 1000 });
+                    }}
+                    className="w-full px-3 py-1.5 bg-blue-50/60 border border-blue-300 rounded-lg text-xs font-mono font-bold text-blue-950 focus:ring-blue-500"
+                    placeholder="0 (m)"
+                  />
+                  <span className="text-[10px] text-blue-700 mt-0.5 block font-mono">
+                    = {((lineDetails.ltExtensionMeters || 0) / 1000).toFixed(3)} KM
+                  </span>
+                </div>
+
+                {/* b) LT Poles Type Required */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-blue-900 mb-1">
+                    b) LT Poles Type:
+                  </label>
+                  <select
+                    value={lineDetails.ltExtensionPoleType || 'PCC_9M'}
+                    onChange={(e) => setLineDetails({ ...lineDetails, ltExtensionPoleType: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="PCC_9M">9m Pre-Stressed Concrete Pole (PCC)</option>
+                    <option value="STEEL_STRUCTURE">Steel Structure / Tubular Pole</option>
+                  </select>
+                  <span className="text-[10px] text-blue-700 mt-0.5 block">
+                    Total: <strong>{ltMiniEstimate?.totalPoles || 0} Poles</strong>
+                  </span>
+                </div>
+
+                {/* c) Length of LT Spans in meter */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-blue-900 mb-1">
+                    c) LT Span Length (m):
+                  </label>
+                  <select
+                    value={lineDetails.ltExtensionSpanMeters || 45}
+                    onChange={(e) => setLineDetails({ ...lineDetails, ltExtensionSpanMeters: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="45">45m (Standard LT Span)</option>
+                    <option value="35">35m (Dense Urban Span)</option>
+                    <option value="50">50m (Rural Span)</option>
+                  </select>
+                  <span className="text-[10px] text-blue-700 mt-0.5 block">
+                    Calculated: <strong>{ltMiniEstimate?.calculatedSpans || 0} Spans</strong>
+                  </span>
+                </div>
+
+                {/* d) Length of LT Conductor */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-blue-900 mb-1">
+                    d) LT Conductor (KM):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.001"
+                    value={lineDetails.ltExtensionConductorLengthKm || ltMiniEstimate?.conductorQtyKm || 0}
+                    onChange={(e) => setLineDetails({ ...lineDetails, ltExtensionConductorLengthKm: Number(e.target.value) })}
+                    className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-mono font-bold text-slate-900"
+                  />
+                  <span className="text-[10px] text-blue-700 mt-0.5 block font-mono">
+                    4-Wire × 1.15 sag
+                  </span>
+                </div>
+
+                {/* e) Type of LT Conductor Used */}
+                <div>
+                  <label className="block text-[11px] font-semibold text-blue-900 mb-1">
+                    e) LT Conductor Type:
+                  </label>
+                  <select
+                    value={lineDetails.ltExtensionConductorType || 'WASP'}
+                    onChange={(e) => setLineDetails({ ...lineDetails, ltExtensionConductorType: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-xs font-bold text-slate-800"
+                  >
+                    <option value="WASP">AAC Wasp</option>
+                    <option value="RABBIT">ACSR Rabbit</option>
+                    <option value="SQUIRREL">ACSR Squirrel</option>
+                    <option value="ANT">ACSR Ant</option>
+                    <option value="ABC">Aerial Bunched Cable ABC</option>
+                  </select>
+                  <span className="text-[10px] text-blue-700 mt-0.5 block font-mono">
+                    Rs. {ltMiniEstimate?.grandTotal.toLocaleString('en-PK', {maximumFractionDigits: 0}) || 0} Total
+                  </span>
+                </div>
+              </div>
+
+              {/* Automatic Allied Materials Checklist */}
+              <div className="bg-white/80 p-3 rounded-lg border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-blue-950 uppercase tracking-wide">
+                    Automatic Allied Materials & Hardware Included:
+                  </span>
+                  <span className="text-[10px] text-blue-700 font-mono">
+                    WAPDA LT Standards BOQ
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <div className="p-1.5 bg-blue-50/50 rounded border border-blue-100 flex items-center justify-between">
+                    <span className="text-slate-800">LT Channel Cross Arms / Brackets</span>
+                    <strong className="text-blue-900 font-mono">{ltMiniEstimate?.totalPoles || 0} Nos</strong>
+                  </div>
+                  <div className="p-1.5 bg-blue-50/50 rounded border border-blue-100 flex items-center justify-between">
+                    <span className="text-slate-800">Shackle Insulators with D-Irons</span>
+                    <strong className="text-blue-900 font-mono">{((ltMiniEstimate?.totalPoles || 0) * 4)} Nos</strong>
+                  </div>
+                  <div className="p-1.5 bg-blue-50/50 rounded border border-blue-100 flex items-center justify-between">
+                    <span className="text-slate-800">Galvanized Nuts, Bolts & Fasteners</span>
+                    <strong className="text-blue-900 font-mono">{Math.round((ltMiniEstimate?.totalPoles || 0) * 2)} KG</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* 11kV HT Line Extension Mini-Estimate Card (Feeder Design Standard Assemblies & BOQ) */}
             <div className="bg-gradient-to-br from-emerald-50/80 via-teal-50/50 to-slate-50 border border-emerald-300 rounded-xl p-4 space-y-4 shadow-2xs">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/80 pb-3">
@@ -2127,7 +2303,7 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="text-sm font-bold text-emerald-950">
-                        11kV HT Line Extension Mini-Estimate & Feeder Assemblies
+                        2) HT Line Extension Mini-Estimate & Feeder Assemblies
                       </h4>
                       <span className="text-[10px] font-semibold uppercase bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded font-mono">
                         WAPDA DDS-23 / DDS-10 Standard
@@ -3410,149 +3586,131 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
             </div>
 
             <div className="space-y-2.5 text-xs">
-              {/* 1. Labour Cost Percentage Dropdown */}
-              {(() => {
-                const labourOptions = Array.from(new Set([0, 2, 3, 5, 8, 10, 12, 15, 18, 20, 25, percentages.labourPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Labour Cost (% on Material)</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.labourPercent}
-                      onChange={(e) => setPercentages({ ...percentages, labourPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {labourOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 1. Labour Cost Percentage Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Labour Cost (% on Material)</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.labourPercent}
+                    onChange={(e) => setPercentages({ ...percentages, labourPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
-              {/* 2. Engineering & Supervision Charges Dropdown */}
-              {(() => {
-                const engOptions = Array.from(new Set([0, 1, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10, percentages.engineeringPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Engineering & Supervision Charges</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.engineeringChargesAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.engineeringPercent}
-                      onChange={(e) => setPercentages({ ...percentages, engineeringPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {engOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 2. Engineering & Supervision Charges Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Engineering & Supervision Charges</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.engineeringChargesAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.engineeringPercent}
+                    onChange={(e) => setPercentages({ ...percentages, engineeringPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
-              {/* 3. Contingency Allowance Dropdown */}
-              {(() => {
-                const contOptions = Array.from(new Set([0, 1, 1.5, 2, 3, 4, 5, 7.5, 10, percentages.contingencyPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Contingency Allowance</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.contingencyAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.contingencyPercent}
-                      onChange={(e) => setPercentages({ ...percentages, contingencyPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {contOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 3. Contingency Allowance Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Contingency Allowance</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.contingencyAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.contingencyPercent}
+                    onChange={(e) => setPercentages({ ...percentages, contingencyPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
-              {/* 4. Departmental Overheads Dropdown */}
-              {(() => {
-                const deptOptions = Array.from(new Set([0, 2, 3, 5, 6, 7.5, 8, 10, 12, 15, 16, 20, percentages.departmentalPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Departmental Overheads</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.departmentalOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.departmentalPercent}
-                      onChange={(e) => setPercentages({ ...percentages, departmentalPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {deptOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 4. Departmental Overheads Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Departmental Overheads</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.departmentalOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.departmentalPercent}
+                    onChange={(e) => setPercentages({ ...percentages, departmentalPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
-              {/* 5. Contractor Overheads / Profit Dropdown */}
-              {(() => {
-                const contOverheadOptions = Array.from(new Set([0, 5, 8, 10, 11, 12, 15, 16, 20, percentages.contractorPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Contractor Overheads / Profit</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.contractorOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.contractorPercent}
-                      onChange={(e) => setPercentages({ ...percentages, contractorPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {contOverheadOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 5. Contractor Overheads / Profit Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Contractor Overheads / Profit</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.contractorOverheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.contractorPercent}
+                    onChange={(e) => setPercentages({ ...percentages, contractorPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
-              {/* 6. Taxes / GST Applicable Dropdown */}
-              {(() => {
-                const taxOptions = Array.from(new Set([0, 2, 5, 10, 15, 16, 17, 18, 19, 20, 25, percentages.taxPercent])).sort((a, b) => a - b);
-                return (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <label className="font-semibold text-slate-800 block">Taxes / GST Applicable</label>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        PKR {computedCharges.taxGstAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                      </span>
-                    </div>
-                    <select
-                      value={percentages.taxPercent}
-                      onChange={(e) => setPercentages({ ...percentages, taxPercent: Number(e.target.value) })}
-                      className="px-2.5 py-1 text-xs font-bold font-mono bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500 cursor-pointer"
-                    >
-                      {taxOptions.map(p => (
-                        <option key={p} value={p}>{p}%</option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })()}
+              {/* 6. Taxes / GST Applicable Input */}
+              <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                <div>
+                  <label className="font-semibold text-slate-800 block">Taxes / GST Applicable</label>
+                  <span className="text-[10px] text-slate-500 font-mono">
+                    PKR {computedCharges.taxGstAmount.toLocaleString('en-PK', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={percentages.taxPercent}
+                    onChange={(e) => setPercentages({ ...percentages, taxPercent: e.target.value === '' ? 0 : Number(e.target.value) })}
+                    className="w-20 px-2 py-1 text-xs font-bold font-mono text-right bg-white border border-slate-300 rounded-md text-slate-900 shadow-2xs focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="text-xs font-bold text-slate-600">%</span>
+                </div>
+              </div>
 
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
                 <label className="font-semibold text-slate-700">Other Lump-Sum Charges (PKR)</label>

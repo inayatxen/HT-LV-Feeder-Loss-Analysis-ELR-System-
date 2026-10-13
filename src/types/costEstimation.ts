@@ -91,6 +91,7 @@ export interface EstimateLineDetails {
   htExtensionConductorType?: string;
   htExtensionSpanMeters?: number;
   htExtensionPoleType?: 'PC_SPUN_36FT' | 'STEEL_LATTICE_34_8FT';
+  htExtensionConductorLengthKm?: number;
   htExtensionIncludeCutouts?: boolean;
   htExtensionIncludeLightningArresters?: boolean;
   htExtensionIncludeStaySets?: boolean;
@@ -98,6 +99,17 @@ export interface EstimateLineDetails {
   htExtensionIncludePgClamps?: boolean;
   htExtensionIncludeDangerPlates?: boolean;
   htExtensionMergeWithTransformer?: boolean;
+  // LT Extension fields
+  ltExtensionMeters?: number;
+  ltExtensionPoleType?: string;
+  ltExtensionSpanMeters?: number;
+  ltExtensionConductorType?: string;
+  ltExtensionConductorLengthKm?: number;
+  ltExtensionIncludeCrossArms?: boolean;
+  ltExtensionIncludeHardware?: boolean;
+  ltExtensionIncludeStaySets?: boolean;
+  ltExtensionIncludeEarthing?: boolean;
+  ltExtensionIncludeDangerPlates?: boolean;
   // 25 kVA, 50 kVA, 100 kVA & 200 kVA Transformer Lump Sum Package Flags & 1KM HT Line Package Flags
   is25KvaLumpSumPackage?: boolean;
   is50KvaLumpSumPackage?: boolean;
