@@ -41,19 +41,19 @@ export const GULBHAR_COLONY_LT_FEEDER: FeederData = {
   approvedBy: 'Engr. Abdul Rehman (SE Circle-1)',
   linkedEstimateId: 'est-elr-gulbhar-colony-peshawar',
   nodes: [
-    { id: '0.0', label: 'Node 0 (100 kVA Transformer)', poleNumber: 'T-0', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 160 },
-    { id: '1.0', label: 'Pole 1 (Main Street Entrance)', poleNumber: 'P-1', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 190, y: 160 },
-    { id: '2.0', label: 'Pole 2 (Gulbhar Central Lane)', poleNumber: 'P-2', threePhaseCustomers: 0, singlePhaseCustomers: 16, x: 310, y: 160 },
-    { id: '3.0', label: 'Pole 3 (East/West Junction)', poleNumber: 'P-3', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 430, y: 160 },
-    { id: '4.0', label: 'Pole 4 (Commercial Row North)', poleNumber: 'P-4', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 550, y: 90 },
-    { id: '5.0', label: 'Pole 5 (Market Junction)', poleNumber: 'P-5', threePhaseCustomers: 1, singlePhaseCustomers: 9, x: 670, y: 90 },
-    { id: '6.0', label: 'Pole 6 (Northern Terminal Hub)', poleNumber: 'P-6', threePhaseCustomers: 1, singlePhaseCustomers: 36, x: 790, y: 90 },
-    { id: '7.0', label: 'Pole 7 (End of North Lane)', poleNumber: 'P-7', threePhaseCustomers: 0, singlePhaseCustomers: 19, x: 910, y: 50 },
-    { id: '8.0', label: 'Pole 8 (South Branch Entry)', poleNumber: 'P-8', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 430, y: 260 },
-    { id: '9.0', label: 'Pole 9 (South Residential Mid)', poleNumber: 'P-9', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 550, y: 260 },
-    { id: '10.0', label: 'Pole 10 (South Dead End)', poleNumber: 'P-10', threePhaseCustomers: 0, singlePhaseCustomers: 18, x: 670, y: 260 },
-    { id: '11.0', label: 'Pole 11 (North-East Spur)', poleNumber: 'P-11', threePhaseCustomers: 0, singlePhaseCustomers: 3, x: 860, y: 160 },
-    { id: '12.0', label: 'Pole 12 (Tail-End Flour Mill)', poleNumber: 'P-12', threePhaseCustomers: 2, singlePhaseCustomers: 15, x: 970, y: 160 }
+    { id: '0.0', label: 'Node 0 (100 kVA Transformer)', poleNumber: 'T-0', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 160, lat: 34.00420, lng: 71.58120 },
+    { id: '1.0', label: 'Pole 1 (Main Street Entrance)', poleNumber: 'P-1', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 190, y: 160, lat: 34.00445, lng: 71.58155 },
+    { id: '2.0', label: 'Pole 2 (Gulbhar Central Lane)', poleNumber: 'P-2', threePhaseCustomers: 0, singlePhaseCustomers: 16, x: 310, y: 160, lat: 34.00470, lng: 71.58190 },
+    { id: '3.0', label: 'Pole 3 (East/West Junction)', poleNumber: 'P-3', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 430, y: 160, lat: 34.00495, lng: 71.58225 },
+    { id: '4.0', label: 'Pole 4 (Commercial Row North)', poleNumber: 'P-4', threePhaseCustomers: 0, singlePhaseCustomers: 12, x: 550, y: 90, lat: 34.00525, lng: 71.58245 },
+    { id: '5.0', label: 'Pole 5 (Market Junction)', poleNumber: 'P-5', threePhaseCustomers: 1, singlePhaseCustomers: 9, x: 670, y: 90, lat: 34.00550, lng: 71.58265 },
+    { id: '6.0', label: 'Pole 6 (Northern Terminal Hub)', poleNumber: 'P-6', threePhaseCustomers: 1, singlePhaseCustomers: 36, x: 790, y: 90, lat: 34.00575, lng: 71.58285 },
+    { id: '7.0', label: 'Pole 7 (End of North Lane)', poleNumber: 'P-7', threePhaseCustomers: 0, singlePhaseCustomers: 19, x: 910, y: 50, lat: 34.00600, lng: 71.58305 },
+    { id: '8.0', label: 'Pole 8 (South Branch Entry)', poleNumber: 'P-8', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 430, y: 260, lat: 34.00480, lng: 71.58260 },
+    { id: '9.0', label: 'Pole 9 (South Residential Mid)', poleNumber: 'P-9', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 550, y: 260, lat: 34.00465, lng: 71.58295 },
+    { id: '10.0', label: 'Pole 10 (South Dead End)', poleNumber: 'P-10', threePhaseCustomers: 0, singlePhaseCustomers: 18, x: 670, y: 260, lat: 34.00450, lng: 71.58330 },
+    { id: '11.0', label: 'Pole 11 (North-East Spur)', poleNumber: 'P-11', threePhaseCustomers: 0, singlePhaseCustomers: 3, x: 860, y: 160, lat: 34.00585, lng: 71.58315 },
+    { id: '12.0', label: 'Pole 12 (Tail-End Flour Mill)', poleNumber: 'P-12', threePhaseCustomers: 2, singlePhaseCustomers: 15, x: 970, y: 160, lat: 34.00595, lng: 71.58345 }
   ],
   segments: [
     { id: 's-0-1', fromNodeId: '0.0', toNodeId: '1.0', lengthKm: 0.005, conductorCode: 'A' },
@@ -107,15 +107,15 @@ export const HAYATABAD_11KV_HT_FEEDER: FeederData = {
   approvedBy: 'Engr. Abdul Rehman (SE)',
   linkedEstimateId: 'est-elr-hayatabad-11kv-feeder',
   nodes: [
-    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'CB-01', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150 },
-    { id: '1.0', label: 'Section 1 (Grid Exit Tower)', poleNumber: 'T-1', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 100, x: 190, y: 150 },
-    { id: '2.0', label: 'Section 2 (Industrial Block DTR)', poleNumber: 'T-2', threePhaseCustomers: 2, singlePhaseCustomers: 10, spotLoadKva: 200, x: 320, y: 150 },
-    { id: '3.0', label: 'Section 3 (T-Off Junction)', poleNumber: 'T-3', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 50, x: 450, y: 150 },
-    { id: '4.0', label: 'Section 4 (Sector G Residential DTR)', poleNumber: 'T-4', threePhaseCustomers: 1, singlePhaseCustomers: 45, spotLoadKva: 200, x: 580, y: 90 },
-    { id: '5.0', label: 'Section 5 (Commercial Center DTR)', poleNumber: 'T-5', threePhaseCustomers: 3, singlePhaseCustomers: 60, spotLoadKva: 250, x: 720, y: 90 },
-    { id: '6.0', label: 'Section 6 (Hospital & Emergency DTR)', poleNumber: 'T-6', threePhaseCustomers: 2, singlePhaseCustomers: 20, spotLoadKva: 200, x: 860, y: 90 },
-    { id: '7.0', label: 'Section 7 (Sector H Branch Mid)', poleNumber: 'T-7', threePhaseCustomers: 0, singlePhaseCustomers: 30, spotLoadKva: 100, x: 580, y: 230 },
-    { id: '8.0', label: 'Section 8 (Tail End DTR Station)', poleNumber: 'T-8', threePhaseCustomers: 1, singlePhaseCustomers: 40, spotLoadKva: 100, x: 750, y: 230 }
+    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'CB-01', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150, lat: 33.99220, lng: 71.43480 },
+    { id: '1.0', label: 'Section 1 (Grid Exit Tower)', poleNumber: 'T-1', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 100, x: 190, y: 150, lat: 33.99350, lng: 71.43720 },
+    { id: '2.0', label: 'Section 2 (Industrial Block DTR)', poleNumber: 'T-2', threePhaseCustomers: 2, singlePhaseCustomers: 10, spotLoadKva: 200, x: 320, y: 150, lat: 33.99480, lng: 71.43980 },
+    { id: '3.0', label: 'Section 3 (T-Off Junction)', poleNumber: 'T-3', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 50, x: 450, y: 150, lat: 33.99590, lng: 71.44220 },
+    { id: '4.0', label: 'Section 4 (Sector G Residential DTR)', poleNumber: 'T-4', threePhaseCustomers: 1, singlePhaseCustomers: 45, spotLoadKva: 200, x: 580, y: 90, lat: 33.99720, lng: 71.44350 },
+    { id: '5.0', label: 'Section 5 (Commercial Center DTR)', poleNumber: 'T-5', threePhaseCustomers: 3, singlePhaseCustomers: 60, spotLoadKva: 250, x: 720, y: 90, lat: 33.99840, lng: 71.44490 },
+    { id: '6.0', label: 'Section 6 (Hospital & Emergency DTR)', poleNumber: 'T-6', threePhaseCustomers: 2, singlePhaseCustomers: 20, spotLoadKva: 200, x: 860, y: 90, lat: 33.99960, lng: 71.44620 },
+    { id: '7.0', label: 'Section 7 (Sector H Branch Mid)', poleNumber: 'T-7', threePhaseCustomers: 0, singlePhaseCustomers: 30, spotLoadKva: 100, x: 580, y: 230, lat: 33.99490, lng: 71.44420 },
+    { id: '8.0', label: 'Section 8 (Tail End DTR Station)', poleNumber: 'T-8', threePhaseCustomers: 1, singlePhaseCustomers: 40, spotLoadKva: 100, x: 750, y: 230, lat: 33.99400, lng: 71.44600 }
   ],
   segments: [
     { id: 'ht-0-1', fromNodeId: '0.0', toNodeId: '1.0', lengthKm: 0.85, conductorCode: 'PANTHER' },
@@ -165,13 +165,13 @@ export const WARSAK_11KV_HT_FEEDER: FeederData = {
   approvedBy: 'Engr. Abdul Rehman (SE)',
   linkedEstimateId: 'est-elr-warsak-11kv-feeder',
   nodes: [
-    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'VCB-04', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150 },
-    { id: '1.0', label: 'Section 1 (Warsak Canal Crossing)', poleNumber: 'P-1', threePhaseCustomers: 1, singlePhaseCustomers: 10, spotLoadKva: 150, x: 210, y: 150 },
-    { id: '2.0', label: 'Section 2 (Babu Garhi Market DTR)', poleNumber: 'P-2', threePhaseCustomers: 4, singlePhaseCustomers: 50, spotLoadKva: 300, x: 360, y: 150 },
-    { id: '3.0', label: 'Section 3 (Sardar Garhi T-Off)', poleNumber: 'P-3', threePhaseCustomers: 2, singlePhaseCustomers: 25, spotLoadKva: 200, x: 500, y: 150 },
-    { id: '4.0', label: 'Section 4 (Peshawar Model DTR)', poleNumber: 'P-4', threePhaseCustomers: 3, singlePhaseCustomers: 80, spotLoadKva: 400, x: 650, y: 90 },
-    { id: '5.0', label: 'Section 5 (Northern Bypass Hub)', poleNumber: 'P-5', threePhaseCustomers: 2, singlePhaseCustomers: 35, spotLoadKva: 350, x: 800, y: 90 },
-    { id: '6.0', label: 'Section 6 (Charsadda Road Spur)', poleNumber: 'P-6', threePhaseCustomers: 1, singlePhaseCustomers: 40, spotLoadKva: 200, x: 650, y: 220 }
+    { id: '0.0', label: 'Grid Substation 11kV Feeder Bay (Voltage & Current Source)', poleNumber: 'VCB-04', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150, lat: 34.04120, lng: 71.52820 },
+    { id: '1.0', label: 'Section 1 (Warsak Canal Crossing)', poleNumber: 'P-1', threePhaseCustomers: 1, singlePhaseCustomers: 10, spotLoadKva: 150, x: 210, y: 150, lat: 34.04350, lng: 71.53120 },
+    { id: '2.0', label: 'Section 2 (Babu Garhi Market DTR)', poleNumber: 'P-2', threePhaseCustomers: 4, singlePhaseCustomers: 50, spotLoadKva: 300, x: 360, y: 150, lat: 34.04580, lng: 71.53420 },
+    { id: '3.0', label: 'Section 3 (Sardar Garhi T-Off)', poleNumber: 'P-3', threePhaseCustomers: 2, singlePhaseCustomers: 25, spotLoadKva: 200, x: 500, y: 150, lat: 34.04790, lng: 71.53680 },
+    { id: '4.0', label: 'Section 4 (Peshawar Model DTR)', poleNumber: 'P-4', threePhaseCustomers: 3, singlePhaseCustomers: 80, spotLoadKva: 400, x: 650, y: 90, lat: 34.05010, lng: 71.53910 },
+    { id: '5.0', label: 'Section 5 (Northern Bypass Hub)', poleNumber: 'P-5', threePhaseCustomers: 2, singlePhaseCustomers: 35, spotLoadKva: 350, x: 800, y: 90, lat: 34.05220, lng: 71.54150 },
+    { id: '6.0', label: 'Section 6 (Charsadda Road Spur)', poleNumber: 'P-6', threePhaseCustomers: 1, singlePhaseCustomers: 40, spotLoadKva: 200, x: 650, y: 220, lat: 34.04650, lng: 71.53980 }
   ],
   segments: [
     { id: 'w-0-1', fromNodeId: '0.0', toNodeId: '1.0', lengthKm: 1.10, conductorCode: 'PANTHER' },
@@ -219,12 +219,12 @@ export const AGRI_TUBEWELL_LT_FEEDER: FeederData = {
   approvedBy: 'Engr. Abdul Rehman (SE)',
   linkedEstimateId: 'est-elr-agri-tubewell-feeder',
   nodes: [
-    { id: '0.0', label: 'DTR 100 kVA (Village Gate)', poleNumber: 'P-0', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 160 },
-    { id: '1.0', label: 'Pole 1 (Village Abadi Entry)', poleNumber: 'P-1', threePhaseCustomers: 0, singlePhaseCustomers: 18, x: 220, y: 160 },
-    { id: '2.0', label: 'Pole 2 (Tube-well #1 Pump)', poleNumber: 'P-2', threePhaseCustomers: 1, singlePhaseCustomers: 8, spotLoadKva: 15, x: 380, y: 160 },
-    { id: '3.0', label: 'Pole 3 (Canal Crossing)', poleNumber: 'P-3', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 540, y: 160 },
-    { id: '4.0', label: 'Pole 4 (Tube-well #2 & Flour Mill)', poleNumber: 'P-4', threePhaseCustomers: 2, singlePhaseCustomers: 5, spotLoadKva: 22, x: 700, y: 120 },
-    { id: '5.0', label: 'Pole 5 (Farmland Outpost Tube-well #3)', poleNumber: 'P-5', threePhaseCustomers: 1, singlePhaseCustomers: 2, spotLoadKva: 15, x: 860, y: 120 }
+    { id: '0.0', label: 'DTR 100 kVA (Village Gate)', poleNumber: 'P-0', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: true, x: 80, y: 160, lat: 31.71320, lng: 73.98520 },
+    { id: '1.0', label: 'Pole 1 (Village Abadi Entry)', poleNumber: 'P-1', threePhaseCustomers: 0, singlePhaseCustomers: 18, x: 220, y: 160, lat: 31.71450, lng: 73.98680 },
+    { id: '2.0', label: 'Pole 2 (Tube-well #1 Pump)', poleNumber: 'P-2', threePhaseCustomers: 1, singlePhaseCustomers: 8, spotLoadKva: 15, x: 380, y: 160, lat: 31.71580, lng: 73.98850 },
+    { id: '3.0', label: 'Pole 3 (Canal Crossing)', poleNumber: 'P-3', threePhaseCustomers: 0, singlePhaseCustomers: 6, x: 540, y: 160, lat: 31.71710, lng: 73.99020 },
+    { id: '4.0', label: 'Pole 4 (Tube-well #2 & Flour Mill)', poleNumber: 'P-4', threePhaseCustomers: 2, singlePhaseCustomers: 5, spotLoadKva: 22, x: 700, y: 120, lat: 31.71830, lng: 73.99180 },
+    { id: '5.0', label: 'Pole 5 (Farmland Outpost Tube-well #3)', poleNumber: 'P-5', threePhaseCustomers: 1, singlePhaseCustomers: 2, spotLoadKva: 15, x: 860, y: 120, lat: 31.71960, lng: 73.99350 }
   ],
   segments: [
     { id: 'ag-0-1', fromNodeId: '0.0', toNodeId: '1.0', lengthKm: 0.12, conductorCode: 'A' },

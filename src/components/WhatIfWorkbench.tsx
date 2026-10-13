@@ -31,7 +31,9 @@ import {
   Clock,
   DollarSign,
   Calculator,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Compass,
+  MapPin
 } from 'lucide-react';
 import { CONDUCTOR_LIST } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
@@ -40,6 +42,8 @@ import { BifurcationStatementsPanel } from './BifurcationStatementsPanel';
 import { SensitivityAnalysisSection } from './SensitivityAnalysisSection';
 import { EconomicAnalysisSection } from './EconomicAnalysisSection';
 import { FeederComparisonModal } from './FeederComparisonModal';
+import { VisualMapComponent } from './VisualMapComponent';
+import { SingleLineDiagram } from './SingleLineDiagram';
 
 interface WhatIfWorkbenchProps {
   feeder: FeederData;
@@ -93,6 +97,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   canRedo
 }) => {
   const [showCompareModal, setShowCompareModal] = useState(false);
+  const [visualMode, setVisualMode] = useState<'diagram' | 'map'>('diagram');
+  const [showVisualPanel, setShowVisualPanel] = useState<boolean>(true);
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
   const tariff = feeder.tariffPerKwh || 24.83;
@@ -210,6 +216,42 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               title="Redo"
             >
               <RotateCcw className="w-4 h-4 rotate-180" />
+            </button>
+          </div>
+
+          {/* Feeder Route Visualizer Mode Switcher */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-300 mr-2 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setShowVisualPanel(true);
+                setVisualMode('diagram');
+              }}
+              className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                showVisualPanel && visualMode === 'diagram'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Line Diagram View"
+            >
+              <GitBranch className="w-3.5 h-3.5" />
+              <span>Diagram</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowVisualPanel(true);
+                setVisualMode('map');
+              }}
+              className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                showVisualPanel && visualMode === 'map'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Geographic Map Overlay"
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>Map</span>
             </button>
           </div>
 
@@ -355,6 +397,107 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
           </span>
         </a>
       </div>
+
+      {/* Feeder Route Topology & Geographic Visualizer Section */}
+      {showVisualPanel && (
+        <div className="card-3d bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="p-3 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3 border-b border-slate-800">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                {visualMode === 'map' ? <Compass className="w-4 h-4" /> : <GitBranch className="w-4 h-4" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-black text-white tracking-tight uppercase">
+                    {visualMode === 'map' ? 'Geographic Feeder Route (GIS Map Overlay)' : 'Single Line Diagram (Electrical Network Topology)'}
+                  </h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                    {feeder.nodes.length} Nodes · {feeder.segments.length} Spans
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {visualMode === 'map' 
+                    ? 'Geographic route overlay with coordinate pins, conductors, and what-if bifurcation points' 
+                    : 'Interactive electrical single-line schematic with power flows, loading, and bifurcation split'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Toggle Buttons */}
+              <div className="flex items-center bg-slate-800 p-0.5 rounded-lg border border-slate-700 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVisualMode('diagram')}
+                  className={`px-3 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    visualMode === 'diagram' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <GitBranch className="w-3.5 h-3.5" />
+                  <span>Line Diagram View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisualMode('map')}
+                  className={`px-3 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    visualMode === 'map' ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  <span>Map Overlay</span>
+                </button>
+              </div>
+
+              {/* Hide / Collapse Visualizer */}
+              <button
+                type="button"
+                onClick={() => setShowVisualPanel(false)}
+                className="px-2 py-1 text-[11px] font-semibold text-slate-400 hover:text-white rounded bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer"
+                title="Hide visual panel"
+              >
+                Hide
+              </button>
+            </div>
+          </div>
+
+          <div className="p-0">
+            {visualMode === 'map' ? (
+              <VisualMapComponent 
+                feeder={feeder} 
+                bifurcationConfig={bifurcationConfig}
+              />
+            ) : (
+              <div className="p-2 sm:p-4 bg-slate-950 rounded-b-xl overflow-hidden">
+                <SingleLineDiagram
+                  feeder={feeder}
+                  summary={proposedSummary}
+                  existingSummary={existingSummary}
+                  bifurcationConfig={bifurcationConfig}
+                  onUpdateBifurcation={onSetBifurcation}
+                  bifurcationDossier={bifurcationDossier}
+                  onQuickReconductor={onSetConductor}
+                  onQuickCapacitor={onSetCapacitor}
+                  activeCapacitors={activeCapacitors}
+                  activeConductors={activeConductors}
+                  onOpenPrintReport={onOpenPrintReport}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      {!showVisualPanel && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setShowVisualPanel(true)}
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 border border-blue-200 cursor-pointer"
+          >
+            <Compass className="w-4 h-4" />
+            <span>Show Feeder Visualizer ({visualMode === 'map' ? 'Map Overlay' : 'Line Diagram'})</span>
+          </button>
+        </div>
+      )}
 
       {/* 5 Interactive Intervention Panels Grid (3D Hardware Chassis Look) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 sm:gap-4">

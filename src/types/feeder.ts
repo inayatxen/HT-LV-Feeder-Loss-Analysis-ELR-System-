@@ -123,6 +123,8 @@ export interface FeederNode {
   isTransformerNode?: boolean;
   x?: number;              // Diagram visual layout coordinate
   y?: number;
+  lat?: number;            // Geographic coordinates for map view
+  lng?: number;
 }
 
 export interface FeederSegment {
