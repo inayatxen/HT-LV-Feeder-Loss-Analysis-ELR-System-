@@ -14,21 +14,85 @@ import {
 } from '../data/materialMaster';
 import { calculateQuantitiesForLine, computeEstimateCharges } from './costEngine';
 
+const LOCAL_STORAGE_KEY_ESTIMATES = 'pesco_cost_db_estimates';
+const LOCAL_STORAGE_KEY_MATERIALS = 'pesco_cost_db_materials';
+
+const CostFallbackStorage = {
+  getEstimates(): CostEstimateRecord[] {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY_ESTIMATES);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn('LocalStorage read estimates error:', e);
+    }
+    return [];
+  },
+  saveEstimates(estimates: CostEstimateRecord[]): void {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_ESTIMATES, JSON.stringify(estimates));
+    } catch (e) {
+      console.warn('LocalStorage write estimates error:', e);
+    }
+  },
+  getMaterials(): MaterialItem[] {
+    try {
+      const raw = localStorage.getItem(LOCAL_STORAGE_KEY_MATERIALS);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.warn('LocalStorage read materials error:', e);
+    }
+    return [];
+  },
+  saveMaterials(materials: MaterialItem[]): void {
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY_MATERIALS, JSON.stringify(materials));
+    } catch (e) {
+      console.warn('LocalStorage write materials error:', e);
+    }
+  }
+};
+
 export async function getAllMaterialsFromDb(): Promise<MaterialItem[]> {
-  const { data, error } = await supabase.from('materials').select('*');
-  if (error) throw error;
-  return data as MaterialItem[];
+  try {
+    const { data, error } = await supabase.from('materials').select('*');
+    if (!error && data && data.length > 0) {
+      CostFallbackStorage.saveMaterials(data as MaterialItem[]);
+      return data as MaterialItem[];
+    }
+  } catch (err) {
+    console.warn('Supabase materials offline, using local fallback:', err);
+  }
+  const cached = CostFallbackStorage.getMaterials();
+  return cached.length > 0 ? cached : INITIAL_MATERIALS;
 }
 
 export async function saveMaterialToDb(material: MaterialItem): Promise<void> {
-  const { error } = await supabase.from('materials').upsert(material);
-  if (error) throw error;
+  const current = CostFallbackStorage.getMaterials();
+  const filtered = current.filter(m => m.id !== material.id && m.code !== material.code);
+  filtered.push(material);
+  CostFallbackStorage.saveMaterials(filtered);
+
+  try {
+    const { error } = await supabase.from('materials').upsert(material);
+    if (error) {
+      console.warn('Supabase material upsert warning:', error);
+    }
+  } catch (err) {
+    console.warn('Supabase material upsert network error:', err);
+  }
 }
 
 export async function getAllEstimatesFromDb(): Promise<CostEstimateRecord[]> {
-  const { data, error } = await supabase.from('estimates').select('*');
-  if (error) throw error;
-  return data as unknown as CostEstimateRecord[];
+  try {
+    const { data, error } = await supabase.from('estimates').select('*');
+    if (!error && data) {
+      CostFallbackStorage.saveEstimates(data as unknown as CostEstimateRecord[]);
+      return data as unknown as CostEstimateRecord[];
+    }
+  } catch (err) {
+    console.warn('Supabase estimates offline, using local fallback:', err);
+  }
+  return CostFallbackStorage.getEstimates();
 }
 
 export async function saveEstimateToDb(estimate: CostEstimateRecord): Promise<void> {
@@ -41,13 +105,34 @@ export async function saveEstimateToDb(estimate: CostEstimateRecord): Promise<vo
     items: estimate.items,
     charges: estimate.charges
   };
-  const { error } = await supabase.from('estimates').upsert(cleanEstimate);
-  if (error) throw error;
+
+  const current = CostFallbackStorage.getEstimates();
+  const filtered = current.filter(e => e.id !== estimate.id);
+  filtered.unshift(estimate);
+  CostFallbackStorage.saveEstimates(filtered);
+
+  try {
+    const { error } = await supabase.from('estimates').upsert(cleanEstimate);
+    if (error) {
+      console.warn('Supabase estimate upsert warning:', error);
+    }
+  } catch (err) {
+    console.warn('Supabase estimate upsert network error:', err);
+  }
 }
 
 export async function deleteEstimateFromDb(id: string): Promise<void> {
-  const { error } = await supabase.from('estimates').delete().eq('id', id);
-  if (error) throw error;
+  const current = CostFallbackStorage.getEstimates();
+  CostFallbackStorage.saveEstimates(current.filter(e => e.id !== id));
+
+  try {
+    const { error } = await supabase.from('estimates').delete().eq('id', id);
+    if (error) {
+      console.warn('Supabase estimate delete warning:', error);
+    }
+  } catch (err) {
+    console.warn('Supabase estimate delete network error:', err);
+  }
 }
 
 export async function initCostDatabase(): Promise<{
