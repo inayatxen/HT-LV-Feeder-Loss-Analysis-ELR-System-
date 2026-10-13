@@ -141,6 +141,8 @@ export interface BifurcationConfig {
   transformerCapacityKva: number;      // Rating of newly installed transformer (for LT)
   mode: 'ADDITIONAL_TRANSFORMER' | 'EXPRESS_FEEDER';
   name?: string;
+  bifurcationCutoffNodeId?: string;            // The pole where jumper wires are removed
+  transformerConnectionKva?: number;           // The T-2 transformer to which cut-off load will be connected
 
   // HT Feeder Bifurcation & Second Line Extension fields:
   gridSourceType?: 'SAME_GRID' | 'OTHER_GRID'; // Present Grid Station vs Nearby Alternative Grid Station
