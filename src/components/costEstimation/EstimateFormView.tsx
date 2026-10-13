@@ -207,36 +207,8 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         totalAmount: item.materialAmount
       }));
     }
-    // Auto calculate initial default BOQ
-    const calc = calculateQuantitiesForLine(estimateType, lineDetails, designFactors, materials);
-    if (lineDetails.is50KvaLumpSumPackage || lineDetails.transformerCapacityKva === 50) {
-      return calc.items.map(item => ({
-        ...item,
-        labourRate: 0,
-        labourAmount: 0,
-        totalAmount: item.materialAmount
-      })).filter(i => {
-        if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
-        return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
-      });
-    }
-    if (lineDetails.is25KvaLumpSumPackage || lineDetails.transformerCapacityKva === 25) {
-      return calc.items.map(item => ({
-        ...item,
-        labourRate: 0,
-        labourAmount: 0,
-        totalAmount: item.materialAmount
-      })).filter(i => {
-        if (i.id === 'item-stay-ext' || i.id?.endsWith('-ext')) return true;
-        return i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD');
-      });
-    }
-    return calc.items.map(item => ({
-      ...item,
-      labourRate: 0,
-      labourAmount: 0,
-      totalAmount: item.materialAmount
-    }));
+    // Start with empty array
+    return [];
   });
 
   // Dismantle Items State
