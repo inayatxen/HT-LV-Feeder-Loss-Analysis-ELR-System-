@@ -134,7 +134,7 @@ export const JustificationSlipView: React.FC<JustificationSlipViewProps> = ({
   // Calculations
   const totalProposalLosses = proposalALosses + proposalBLosses + proposalCLosses + proposalDLosses;
   const energySavingsKwh = Math.max(0, existingLosses5Yrs - totalProposalLosses);
-  const annualBenefitA = energySavingsKwh * energyRateA;
+  const annualBenefitA = (energySavingsKwh / studyPeriodYears) * energyRateA;
 
   const annualBenefitB = transformerAnnualKwh * benefitRateB;
 
