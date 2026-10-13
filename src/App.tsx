@@ -723,6 +723,7 @@ export default function App() {
             onSelectFeeder={handleSelectFeeder}
             availableFeeders={availableFeeders}
             onSaveUnifiedProject={handleOpenSaveUnifiedProject}
+            onLoadSnapshot={handleLoadSnapshot}
           />
         ) : (
           <>

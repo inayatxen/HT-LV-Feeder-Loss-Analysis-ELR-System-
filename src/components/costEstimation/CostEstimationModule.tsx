@@ -20,6 +20,7 @@ import {
   resetCostDbToDefaults,
   buildLinkedEstimateForFeeder
 } from '../../utils/costDatabase';
+import { SavedAnalysisSnapshot } from '../../utils/localDatabase';
 import { FeederData, FeederAnalysisSummary, BifurcationConfig } from '../../types/feeder';
 import { CostEstimationDashboard } from './CostEstimationDashboard';
 import { EstimateFormView } from './EstimateFormView';
@@ -60,6 +61,7 @@ interface CostEstimationModuleProps {
   onSelectFeeder?: (feederId: string) => void;
   availableFeeders?: FeederData[];
   onSaveUnifiedProject?: () => void;
+  onLoadSnapshot?: (snapshot: SavedAnalysisSnapshot) => void;
 }
 
 export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
@@ -74,7 +76,8 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
   onSwitchToAnalysis,
   onSelectFeeder,
   availableFeeders = [],
-  onSaveUnifiedProject
+  onSaveUnifiedProject,
+  onLoadSnapshot
 }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'form' | 'materials' | 'design_factors' | 'cost_benefit' | 'justification_slip'>('dashboard');
   const [estimates, setEstimates] = useState<CostEstimateRecord[]>([]);
@@ -619,6 +622,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
           userName={userName}
           onSaveEstimate={handleSaveEstimate}
           onSaveUnifiedProject={onSaveUnifiedProject}
+          onLoadSnapshot={onLoadSnapshot}
         />
       )}
 
