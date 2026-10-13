@@ -27,7 +27,8 @@ import {
   FileSpreadsheet,
   Download,
   Upload,
-  RefreshCw
+  RefreshCw,
+  Save
 } from 'lucide-react';
 import { WAPDA_SCHEDULE_RAW, lookupWapdaScheduleItem } from '../../data/wapdaScheduleRates';
 import { 
@@ -37,6 +38,7 @@ import {
   parseAndApplyMaterialRates,
   MatchedUpdateResult 
 } from '../../utils/materialCsvHelper';
+import { saveMaterialToDb } from '../../utils/costDatabase';
 
 interface MaterialMasterViewProps {
   materials: MaterialItem[];
@@ -60,6 +62,7 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleSearch, setScheduleSearch] = useState('');
+  const [isSavingAllWapda, setIsSavingAllWapda] = useState(false);
 
   // Bulk CSV / Excel Import State
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
@@ -261,6 +264,44 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
       setBulkFileName('');
       setBulkSuccessMsg('');
     }, 2000);
+  };
+
+  const handleSaveAllWapdaScheduleToDb = async () => {
+    if (!window.confirm(`Are you sure you want to save all ${WAPDA_SCHEDULE_RAW.length} Official WAPDA Schedule items to Supabase/database?`)) return;
+    setIsSavingAllWapda(true);
+    try {
+      const allItems: MaterialItem[] = WAPDA_SCHEDULE_RAW.map(([sc, desc, um, aup]) => ({
+        id: `mat-${sc}`,
+        code: sc,
+        name: desc,
+        category: sc.startsWith('01') ? 'POLES' : sc.startsWith('02') || sc.startsWith('14') ? 'CONDUCTORS' : sc.startsWith('05') ? 'INSULATORS' : sc.startsWith('08') ? 'TRANSFORMERS' : 'HARDWARE',
+        unit: um || 'EA',
+        specification: `Official WAPDA Store Code ${sc} - ${desc}`,
+        voltageApplicability: 'HT',
+        defaultQtyFactor: 1,
+        materialRate: aup,
+        labourRate: Math.round(aup * 0.15),
+        installationRate: Math.round(aup * 0.08),
+        transportationRate: Math.round(aup * 0.04),
+        effectiveFrom: new Date().toISOString().split('T')[0],
+        isActive: true
+      }));
+
+      if (onSaveAllMaterials) {
+        onSaveAllMaterials(allItems);
+      } else {
+        for (const item of allItems) {
+          await saveMaterialToDb(item);
+        }
+      }
+      alert(`Successfully saved all ${WAPDA_SCHEDULE_RAW.length} Official WAPDA Schedule items to Supabase!`);
+      setShowScheduleModal(false);
+    } catch (err: any) {
+      console.error(err);
+      alert(`Error saving to database: ${err.message || err}`);
+    } finally {
+      setIsSavingAllWapda(false);
+    }
   };
 
   return (
@@ -1032,10 +1073,21 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
                   className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
-              <div className="text-xs text-slate-500 font-mono">
-                {WAPDA_SCHEDULE_RAW.filter(([sc, desc]) => 
-                  !scheduleSearch || sc.toLowerCase().includes(scheduleSearch.toLowerCase()) || desc.toLowerCase().includes(scheduleSearch.toLowerCase())
-                ).length} of {WAPDA_SCHEDULE_RAW.length} Items Listed
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleSaveAllWapdaScheduleToDb}
+                  disabled={isSavingAllWapda}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs flex items-center gap-1.5 shadow-sm transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingAllWapda ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                  <span>{isSavingAllWapda ? 'Saving All to Database...' : '💾 Save All Items to Supabase'}</span>
+                </button>
+                <div className="text-xs text-slate-500 font-mono">
+                  {WAPDA_SCHEDULE_RAW.filter(([sc, desc]) => 
+                    !scheduleSearch || sc.toLowerCase().includes(scheduleSearch.toLowerCase()) || desc.toLowerCase().includes(scheduleSearch.toLowerCase())
+                  ).length} of {WAPDA_SCHEDULE_RAW.length} Items Listed
+                </div>
               </div>
             </div>
 
