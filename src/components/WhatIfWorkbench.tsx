@@ -421,49 +421,6 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
                     </select>
                   </div>
 
-                  {/* Bifurcation Cut-off Node (Jumpers Removal Point) */}
-                  <div>
-                    <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                      Cut-Off Node (Jumper Removal Point):
-                    </label>
-                    <select
-                      value={bifurcationConfig.bifurcationCutoffNodeId || ''}
-                      onChange={(e) => onSetBifurcation({
-                        ...bifurcationConfig,
-                        bifurcationCutoffNodeId: e.target.value
-                      })}
-                      className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                    >
-                      <option value="">Select Cut-off Node...</option>
-                      {candidateNodes.map(n => (
-                        <option key={n.id} value={n.id}>
-                          {n.label || `Node ${n.id}`}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Transformer Connection for Cut-off Load */}
-                  <div>
-                    <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                      Transformer Connection (for Cut-off Load):
-                    </label>
-                    <select
-                      value={bifurcationConfig.transformerConnectionKva || ''}
-                      onChange={(e) => onSetBifurcation({
-                        ...bifurcationConfig,
-                        transformerConnectionKva: parseInt(e.target.value) || 0
-                      })}
-                      className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
-                    >
-                      <option value="">Select Transformer...</option>
-                      <option value={100}>Existing Transformer (T-1)</option>
-                      <option value={bifurcationConfig.transformerCapacityKva || 100}>
-                        Proposed Transformer (T-2, {bifurcationConfig.transformerCapacityKva || 100} kVA)
-                      </option>
-                    </select>
-                  </div>
-
                 {!isHtLine && (
                   <div className="bg-amber-100/60 p-2 rounded-lg border border-amber-200 space-y-1.5 mt-2">
                     <span className="text-[10px] font-bold text-amber-950 uppercase tracking-wider block">
