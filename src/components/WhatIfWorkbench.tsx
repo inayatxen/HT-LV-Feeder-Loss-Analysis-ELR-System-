@@ -400,26 +400,49 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
 
             {bifurcationConfig.enabled ? (
               <div className="space-y-2 text-xs">
-                  {/* Bifurcation Split Node / Point of Line Break */}
-                  <div>
-                    <label className="text-[10px] font-bold text-purple-900 block mb-1">
-                      {isHtLine ? 'Point of Line Break / Cut-Off Node:' : 'Bifurcation Cut-Off Point / Split Node:'}
-                    </label>
-                    <select
-                      value={bifurcationConfig.bifurcationNodeId}
-                      onChange={(e) => onSetBifurcation({
-                        ...bifurcationConfig,
-                        bifurcationNodeId: e.target.value
-                      })}
-                      className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                {/* Bifurcation Split Node / Point of Line Break */}
+                <div>
+                  <label className="text-[10px] font-bold text-purple-900 block mb-1">
+                    Point of Line Break / Cut-Off Node:
+                  </label>
+                  <select
+                    value={bifurcationConfig.bifurcationNodeId}
+                    onChange={(e) => onSetBifurcation({
+                      ...bifurcationConfig,
+                      bifurcationNodeId: e.target.value
+                    })}
+                    className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-purple-500 cursor-pointer"
+                  >
+                    {candidateNodes.map(n => (
+                      <option key={n.id} value={n.id}>
+                        {n.label || `Node ${n.id}`} ({n.spotLoadKva ? `${n.spotLoadKva} kVA` : `${n.singlePhaseCustomers} 1-Ph, ${n.threePhaseCustomers} 3-Ph`})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {/* Transformer connection option at cut-off point */}
+                <div className="mt-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
+                  <label className="text-[10px] font-bold text-slate-900 block mb-1">
+                    Cut-Off Node Load Connection:
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSetBifurcation({ ...bifurcationConfig, cutOffTransformerConnection: 'EXISTING' })}
+                      className={`flex-1 py-1 text-[10px] font-bold rounded border ${bifurcationConfig.cutOffTransformerConnection !== 'PROPOSED' ? 'bg-purple-600 text-white border-purple-700' : 'bg-white text-slate-700 border-slate-300'}`}
                     >
-                      {candidateNodes.map(n => (
-                        <option key={n.id} value={n.id}>
-                          {n.label || `Node ${n.id}`} ({n.spotLoadKva ? `${n.spotLoadKva} kVA` : `${n.singlePhaseCustomers} 1-Ph, ${n.threePhaseCustomers} 3-Ph`})
-                        </option>
-                      ))}
-                    </select>
+                      Existing T/F
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onSetBifurcation({ ...bifurcationConfig, cutOffTransformerConnection: 'PROPOSED' })}
+                      className={`flex-1 py-1 text-[10px] font-bold rounded border ${bifurcationConfig.cutOffTransformerConnection === 'PROPOSED' ? 'bg-purple-600 text-white border-purple-700' : 'bg-white text-slate-700 border-slate-300'}`}
+                    >
+                      Proposed T/F
+                    </button>
                   </div>
+                </div>
 
                 {!isHtLine && (
                   <div className="bg-amber-100/60 p-2 rounded-lg border border-amber-200 space-y-1.5 mt-2">

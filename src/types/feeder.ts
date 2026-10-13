@@ -157,6 +157,9 @@ export interface BifurcationConfig {
   line1InjectedCurrentAmps?: number;           // Injected / Measured Current for Line 1 (Amps)
   line2InjectedVoltage?: number;               // Injected Line Voltage at Line 2 Grid Bay (e.g. 11000 V)
   line2InjectedCurrentAmps?: number;           // Injected / Measured Current for Line 2 (Amps)
+  
+  // Consumer KVA connection at cut-off point
+  cutOffTransformerConnection?: 'EXISTING' | 'PROPOSED';
 }
 
 export interface SegmentAnalysisResult {
