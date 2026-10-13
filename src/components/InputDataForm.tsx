@@ -1532,6 +1532,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                           <option value="GOPHER">GOPHER (25 mm² ACSR)</option>
                           <option value="ANT">ANT (50 mm² AAC)</option>
                           <option value="A">A (7/0.122" ACSR)</option>
+                          <option value="NAT">NAT (147A)</option>
                         </>
                       ) : (
                         <>
@@ -1544,6 +1545,7 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
                           <option value="PANTHER">PANTHER (200 mm²)</option>
                           <option value="ABC-70">ABC-70 (70 mm²)</option>
                           <option value="ABC-120">ABC-120 (120 mm²)</option>
+                          <option value="NAT">NAT (147A)</option>
                         </>
                       )}
                     </select>
