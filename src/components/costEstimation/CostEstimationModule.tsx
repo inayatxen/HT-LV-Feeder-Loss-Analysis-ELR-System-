@@ -216,6 +216,30 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     }
   };
 
+  const handleOpenFeederEstimate = (feeder: FeederData) => {
+    if (onSelectFeeder) {
+      onSelectFeeder(feeder.id);
+    }
+    let est = estimates.find(e => 
+      e.id === feeder.linkedEstimateId || 
+      e.id === `est-elr-${feeder.id}` || 
+      e.projectInfo.feederName?.trim().toLowerCase() === feeder.name?.trim().toLowerCase() ||
+      (feeder.workOrderNo && e.projectInfo.workOrderNo === feeder.workOrderNo)
+    );
+    if (!est && materials.length > 0) {
+      est = buildLinkedEstimateForFeeder(feeder, materials, designFactors);
+      if (feeder.workOrderNo) {
+        est.projectInfo.workOrderNo = feeder.workOrderNo;
+      }
+      setEstimates(prev => [est!, ...prev]);
+      saveEstimateToDb(est!).catch(console.error);
+    }
+    if (est) {
+      setSelectedEstimate(est);
+      setActiveTab('form');
+    }
+  };
+
   // Handler: Save Estimate and synchronize unified project state
   const handleSaveEstimate = async (updated: CostEstimateRecord) => {
     setEstimates(prev => {
@@ -577,6 +601,8 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
         <CostEstimationDashboard
           estimates={estimates}
           activeFeederId={activeFeeder?.id}
+          availableFeeders={availableFeeders}
+          onOpenFeederEstimate={handleOpenFeederEstimate}
           onNewEstimate={() => {
             setSelectedEstimate(null);
             setActiveTab('form');
