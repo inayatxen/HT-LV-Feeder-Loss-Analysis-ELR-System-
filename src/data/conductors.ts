@@ -113,6 +113,15 @@ export const STANDARD_CONDUCTORS: Record<string, Conductor> = {
     ampacity: 550,
     type: 'ACSR',
     description: 'Very large capacity conductor for HT mains.'
+  },
+  'NAT': {
+    code: 'NAT',
+    name: 'NAT Conductor',
+    resistancePerKm: 0.300,
+    reactancePerKm: 0.300,
+    ampacity: 147,
+    type: 'ACSR',
+    description: 'NAT conductor with 147A capacity.'
   }
 };
 
