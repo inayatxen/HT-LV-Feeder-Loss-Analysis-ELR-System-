@@ -746,14 +746,14 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                         </td>
                         <td className="py-2.5 px-3 text-right bg-emerald-50/20">
                           <span className={`font-semibold ${row.percentLoading > 75 ? 'text-amber-600' : 'text-slate-700'}`}>
-                            {row.percentLoading}%
+                            {isTieCut ? '0.0%' : `${row.percentLoading}%`}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-right bg-emerald-50/20">
                           <span className={`font-semibold ${
                             row.percentVoltDrop > 9 ? 'text-rose-600 font-bold' : (row.percentVoltDrop > 5 ? 'text-amber-600' : 'text-emerald-700')
                           }`}>
-                            {row.percentVoltDrop.toFixed(1)}%
+                            {isTieCut ? '0.0%' : `${row.percentVoltDrop.toFixed(1)}%`}
                           </span>
                         </td>
                         <td className="py-2.5 px-3 text-right text-slate-800 bg-emerald-50/20">
@@ -767,7 +767,7 @@ export const SegmentTable: React.FC<SegmentTableProps> = ({
                         </td>
                         <td className="py-2.5 px-3 text-right font-bold bg-emerald-50/20">
                           <span className={row.lineLossKw > 0.8 ? 'text-rose-600 text-sm' : 'text-slate-900'}>
-                            {row.lineLossKw.toFixed(3)} kW
+                            {isTieCut ? '0.000 kW' : `${row.lineLossKw.toFixed(3)} kW`}
                           </span>
                         </td>
                       </tr>
