@@ -160,6 +160,7 @@ export interface EstimateCharges {
   otherChargesAmount: number;
   subTotal: number;
   grandTotal: number;
+  finalEstimatedCost?: number;
   costPerKm: number;
   overheadBasis?: 'MATERIAL' | 'PRIME_COST';
   totalOverheadsOnMaterial?: number;

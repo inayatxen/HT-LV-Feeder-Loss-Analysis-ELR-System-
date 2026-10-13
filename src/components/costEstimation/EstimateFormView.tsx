@@ -905,6 +905,10 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     return computedCharges.grandTotal - netDismantleCost;
   }, [computedCharges, netDismantleCost]);
 
+  const finalEstimatedCostWith05 = useMemo(() => {
+    return Number((finalTotal * 1.005).toFixed(2));
+  }, [finalTotal]);
+
   // Handler: Run Automatic Material Calculation Engine
   const handleCalculateRequiredMaterials = () => {
     const is25Kva = lineDetails.is25KvaLumpSumPackage || 
@@ -3635,13 +3639,23 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
             )}
 
-            {/* Grand Total Box */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <span className="text-[11px] text-slate-400 font-sans block">
-                {computedCharges.overheadBasis === 'MATERIAL' ? 'NET ESTIMATED COST (GRAND TOTAL):' : 'ESTIMATED GRAND TOTAL:'}
-              </span>
-              <div className="text-2xl font-black text-amber-400 font-mono tracking-tight">
-                Rs. {finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+            {/* Grand Total & Final Estimated Cost Box */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+              <div>
+                <span className="text-[10px] text-slate-400 font-sans uppercase block tracking-wider">
+                  {computedCharges.overheadBasis === 'MATERIAL' ? 'NET ESTIMATED COST (GRAND TOTAL):' : 'ESTIMATED GRAND TOTAL:'}
+                </span>
+                <div className="text-xl font-bold text-slate-200 font-mono tracking-tight mt-0.5">
+                  Rs. {finalTotal.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+              <div className="pt-2.5 border-t border-slate-800">
+                <span className="text-[11px] text-amber-400 font-sans uppercase font-bold block tracking-wider">
+                  Final Estimated Cost (incl. 0.5% Add-on):
+                </span>
+                <div className="text-2xl font-black text-amber-400 font-mono tracking-tight mt-0.5">
+                  Rs. {finalEstimatedCostWith05.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
               </div>
             </div>
 

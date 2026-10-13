@@ -1735,6 +1735,7 @@ export function computeEstimateCharges(
   ).toFixed(2));
 
   const grandTotal = Number((rawGrandTotal + dismantleNetTotal).toFixed(2));
+  const finalEstimatedCost = Number((grandTotal * 1.005).toFixed(2));
 
   const effectiveKm = Math.max(0.01, lineKm);
   const costPerKm = Math.round(grandTotal / effectiveKm);
@@ -1758,6 +1759,7 @@ export function computeEstimateCharges(
     otherChargesAmount: otherCharges,
     subTotal,
     grandTotal,
+    finalEstimatedCost,
     costPerKm,
     overheadBasis: 'MATERIAL',
     totalOverheadsOnMaterial,

@@ -297,6 +297,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
   const grandTotal = isLumpSumOverhead
     ? Number((materialCost + labourCost + totalOverheads + (estimate.charges.transportationCost || 0) + (estimate.charges.taxGstAmount || 0)).toFixed(2))
     : estimate.charges.grandTotal;
+  const finalEstimatedCost = Number((grandTotal * 1.005).toFixed(2));
 
   return (
     <div 
@@ -699,7 +700,7 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
               </div>
             )}
 
-            {/* Grand Total Sanction Banner */}
+            {/* Grand Total & Final Estimated Cost Sanction Banner */}
             <div className="bg-slate-900 text-white p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3 shadow-xs">
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-amber-400 font-extrabold block">
@@ -712,13 +713,14 @@ export const PrintDocumentLayout: React.FC<PrintDocumentLayoutProps> = ({
                 </span>
               </div>
               <div className="text-left sm:text-right">
-                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight">
+                <div className="text-xl font-bold text-slate-200 font-mono tracking-tight">
                   PKR {grandTotal.toLocaleString()}
                 </div>
-                <span className="text-[11px] text-emerald-400 font-mono font-bold block">
-                  {isLumpSumOverhead
-                    ? `Net Sanctioned Package Cost: PKR ${grandTotal.toLocaleString()}`
-                    : `Average Rate: PKR ${estimate.charges.costPerKm.toLocaleString()} / km`}
+                <div className="text-2xl sm:text-3xl font-black text-amber-400 font-mono tracking-tight mt-0.5">
+                  Final Cost: PKR {finalEstimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold block mt-0.5">
+                  (Includes 0.5% addition on grand total)
                 </span>
               </div>
             </div>

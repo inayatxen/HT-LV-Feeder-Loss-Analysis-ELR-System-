@@ -110,6 +110,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
   const grandTotal = isLumpSumOverhead
     ? Number((materialCost + labourCost + totalOverheads + (estimate.charges.transportationCost || 0) + (estimate.charges.taxGstAmount || 0)).toFixed(2))
     : estimate.charges.grandTotal;
+  const finalEstimatedCost = Number((grandTotal * 1.005).toFixed(2));
 
   return (
     <div className={`fixed inset-0 z-50 ${isMaximized ? 'bg-slate-950 p-0 overflow-hidden flex flex-col' : 'bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto'} print:p-0 print:bg-white print:static print:overflow-visible`}>
@@ -504,7 +505,7 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
               </div>
             )}
 
-            {/* Grand Total Banner */}
+            {/* Grand Total & Final Estimated Cost Banner */}
             <div className="bg-slate-900 text-white p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-3">
               <div>
                 <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold block">
@@ -517,18 +518,15 @@ export const EstimatePrintReportModal: React.FC<EstimatePrintReportModalProps> =
                 </span>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-black text-amber-400 font-mono">
+                <div className="text-xl font-bold text-slate-200 font-mono">
                   PKR {grandTotal.toLocaleString()}
                 </div>
-                {isLumpSumOverhead ? (
-                  <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                    Net Package Cost: PKR {grandTotal.toLocaleString()}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-emerald-400 font-mono font-bold">
-                    Cost per km: PKR {estimate.charges.costPerKm.toLocaleString()} / km
-                  </span>
-                )}
+                <div className="text-2xl font-black text-amber-400 font-mono tracking-tight mt-0.5">
+                  Final Cost: PKR {finalEstimatedCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+                <span className="text-[10px] text-emerald-400 font-mono font-bold block mt-0.5">
+                  (Includes 0.5% addition on grand total)
+                </span>
               </div>
             </div>
           </div>
