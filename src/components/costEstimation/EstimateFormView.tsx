@@ -370,6 +370,28 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
     );
   }, [items, tableFilterQuery]);
 
+  const [boqSegregationTab, setBoqSegregationTab] = useState<'all' | 'ht' | 'lt' | 'substation'>('all');
+
+  const getMaterialSegregationType = (item: EstimateItem): 'ht' | 'lt' | 'substation' => {
+    const desc = (item.description || '').toUpperCase();
+    const code = (item.materialCode || '').toUpperCase();
+    if (desc.includes('TRANSFORMER') || desc.includes('KVA') || desc.includes('SUB-STATION') || code.startsWith('08') || desc.includes('DROP OUT') || desc.includes('LIGHTNING ARRESTER') || desc.includes('EARTHING')) {
+      return 'substation';
+    }
+    if (desc.includes('LT') || desc.includes('400V') || desc.includes('LOW TENSION') || desc.includes('RACCOON') || desc.includes('SPIDER') || desc.includes('SERVICE') || desc.includes('9 METER') || desc.includes('9.5M') || code.startsWith('1113')) {
+      return 'lt';
+    }
+    if (desc.includes('HT') || desc.includes('11KV') || desc.includes('DOG') || desc.includes('RABBIT') || desc.includes('ANT') || desc.includes('H-TYPE') || desc.includes('PIN') || desc.includes('DISC') || desc.includes('CROSS ARM') || desc.includes('36 FEET') || code.startsWith('01110')) {
+      return 'ht';
+    }
+    return 'ht';
+  };
+
+  const segregatedBoqItems = useMemo(() => {
+    if (boqSegregationTab === 'all') return filteredBoqItems;
+    return filteredBoqItems.filter(i => getMaterialSegregationType(i) === boqSegregationTab);
+  }, [filteredBoqItems, boqSegregationTab]);
+
   const PRESET_COMBINATIONS = [
     {
       key: 'preset-25kva-transformer-lump-sum',
@@ -3100,6 +3122,44 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
               </div>
             </div>
 
+            {/* Segregation Filter Tabs by Voltage Nature of Work */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                <span className="font-bold text-slate-700 mr-1 flex items-center gap-1">
+                  <span>Nature of Work Segregation:</span>
+                </span>
+                {[
+                  { id: 'all', label: `All Materials (${filteredBoqItems.length})`, count: filteredBoqItems.length },
+                  { id: 'ht', label: `⚡ HT Line Materials (11kV) (${filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'ht').length})`, count: filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'ht').length },
+                  { id: 'lt', label: `⚡ LT Line Materials (400V) (${filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'lt').length})`, count: filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'lt').length },
+                  { id: 'substation', label: `🔌 Substation & Transformer (${filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'substation').length})`, count: filteredBoqItems.filter(i => getMaterialSegregationType(i) === 'substation').length }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setBoqSegregationTab(tab.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                      boqSegregationTab === tab.id
+                        ? 'bg-slate-900 text-amber-300 shadow-sm ring-1 ring-slate-800'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {boqSegregationTab !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setBoqSegregationTab('all')}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-bold underline cursor-pointer"
+                >
+                  Show All
+                </button>
+              )}
+            </div>
+
             {/* Table */}
             {selectedItemIds.size > 0 && (
               <button
@@ -3119,10 +3179,10 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                       <input 
                         type="checkbox"
                         className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        checked={selectedItemIds.size > 0 && selectedItemIds.size === filteredBoqItems.length}
+                        checked={selectedItemIds.size > 0 && selectedItemIds.size === segregatedBoqItems.length}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedItemIds(new Set(filteredBoqItems.map(i => i.id)));
+                            setSelectedItemIds(new Set(segregatedBoqItems.map(i => i.id)));
                           } else {
                             setSelectedItemIds(new Set());
                           }
@@ -3139,16 +3199,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-mono tabular-nums">
-                  {filteredBoqItems.length === 0 ? (
+                  {segregatedBoqItems.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="py-8 text-center text-slate-400 font-sans">
-                        {tableFilterQuery 
-                          ? `No items found in BOQ matching "${tableFilterQuery}". Clear search filter above.`
-                          : 'No materials in BOQ yet. Use the search bar above or click "Calculate Required Materials".'}
+                        {boqSegregationTab !== 'all'
+                          ? `No ${boqSegregationTab.toUpperCase()} materials found in BOQ for this estimate.`
+                          : tableFilterQuery 
+                            ? `No items found in BOQ matching "${tableFilterQuery}".`
+                            : 'No materials in BOQ yet. Use the search bar above or click "Calculate Required Materials".'}
                       </td>
                     </tr>
                   ) : (
-                    filteredBoqItems.map((item, idx) => (
+                    segregatedBoqItems.map((item, idx) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-2 px-2 text-center text-slate-400 font-sans text-[11px]">
                           <input 

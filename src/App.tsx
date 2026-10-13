@@ -455,7 +455,7 @@ export default function App() {
   };
 
   // Input Data Form update with automatic local database persistence
-  const handleSaveFeeder = (updatedFeeder: FeederData) => {
+  const handleSaveFeeder = async (updatedFeeder: FeederData) => {
     setCustomFeeders(prev => ({
       ...prev,
       [selectedFeederId]: updatedFeeder
@@ -470,6 +470,35 @@ export default function App() {
       .catch(err => {
         console.error('Failed to auto-save to local database:', err);
       });
+
+    // Automatically carry forward work order number to Cost Estimation estimate if linked
+    if (updatedFeeder.workOrderNo) {
+      try {
+        const allEsts = await getAllEstimatesFromDb();
+        const matchedEst = allEsts.find(e => 
+          e.id === updatedFeeder.linkedEstimateId ||
+          e.id === `est-elr-${updatedFeeder.id}` ||
+          e.projectInfo.feederName?.trim().toLowerCase() === updatedFeeder.name?.trim().toLowerCase()
+        );
+        if (matchedEst) {
+          const updatedEst = {
+            ...matchedEst,
+            projectInfo: {
+              ...matchedEst.projectInfo,
+              workOrderNo: updatedFeeder.workOrderNo,
+              feederName: updatedFeeder.name,
+              subDivision: updatedFeeder.subDivision || matchedEst.projectInfo.subDivision,
+              division: updatedFeeder.division || matchedEst.projectInfo.division,
+              circle: updatedFeeder.circle || matchedEst.projectInfo.circle
+            },
+            updatedAt: new Date().toISOString()
+          };
+          await saveEstimateToDb(updatedEst);
+        }
+      } catch (err) {
+        console.warn('Failed to carry forward work order number to cost estimate:', err);
+      }
+    }
   };
 
   // Restore snapshot from local database into workspace

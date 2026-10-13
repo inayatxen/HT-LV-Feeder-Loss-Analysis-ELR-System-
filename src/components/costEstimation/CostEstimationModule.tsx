@@ -155,13 +155,31 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
     if (!activeFeeder) return;
 
     if (linkedEstimate) {
-      if (!selectedEstimate || selectedEstimate.id !== linkedEstimate.id) {
+      if (activeFeeder.workOrderNo && linkedEstimate.projectInfo.workOrderNo !== activeFeeder.workOrderNo) {
+        const updatedLinked = {
+          ...linkedEstimate,
+          projectInfo: {
+            ...linkedEstimate.projectInfo,
+            workOrderNo: activeFeeder.workOrderNo,
+            feederName: activeFeeder.name,
+            subDivision: activeFeeder.subDivision || linkedEstimate.projectInfo.subDivision,
+            division: activeFeeder.division || linkedEstimate.projectInfo.division,
+            circle: activeFeeder.circle || linkedEstimate.projectInfo.circle
+          },
+          updatedAt: new Date().toISOString()
+        };
+        setSelectedEstimate(updatedLinked);
+        saveEstimateToDb(updatedLinked).catch(console.error);
+      } else if (!selectedEstimate || selectedEstimate.id !== linkedEstimate.id) {
         setSelectedEstimate(linkedEstimate);
         setActiveTab('form');
       }
     } else if (materials.length > 0 && estimates.length > 0) {
       // Synthesize on the fly for active feeder if none exists yet
       const newLinked = buildLinkedEstimateForFeeder(activeFeeder, materials, designFactors);
+      if (activeFeeder.workOrderNo) {
+        newLinked.projectInfo.workOrderNo = activeFeeder.workOrderNo;
+      }
       setEstimates(prev => [newLinked, ...prev]);
       saveEstimateToDb(newLinked).catch(console.error);
       setSelectedEstimate(newLinked);
@@ -174,7 +192,7 @@ export const CostEstimationModule: React.FC<CostEstimationModuleProps> = ({
         });
       }
     }
-  }, [activeFeeder?.id, linkedEstimate?.id, materials.length, estimates.length]);
+  }, [activeFeeder?.id, activeFeeder?.workOrderNo, linkedEstimate?.id, materials.length, estimates.length]);
 
   // Open the estimate of this particular analysis ELR
   const handleOpenLinkedEstimate = () => {
