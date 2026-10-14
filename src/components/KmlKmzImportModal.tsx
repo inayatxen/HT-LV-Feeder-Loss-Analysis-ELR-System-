@@ -6,7 +6,6 @@
 import React, { useState, useRef } from 'react';
 import { 
   Upload, 
-  FileCode, 
   MapPin, 
   CheckCircle2, 
   AlertCircle, 
@@ -14,12 +13,14 @@ import {
   Compass, 
   Zap, 
   Layers, 
-  Sparkles,
-  ArrowRight
+  ArrowRight,
+  List,
+  Eye
 } from 'lucide-react';
 import { FeederData } from '../types/feeder';
 import { extractKmlTextFromFile, parseKmlToFeederData, KmlParseResult } from '../utils/kmlKmzParser';
 import { GUJAR_GARHI_11KV_HT_FEEDER } from '../data/presetFeeders';
+import { VisualMapComponent } from './VisualMapComponent';
 
 interface KmlKmzImportModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [parseResult, setParseResult] = useState<KmlParseResult | null>(null);
+  const [previewTab, setPreviewTab] = useState<'map' | 'table'>('map');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -53,6 +55,7 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
       const { kmlText, fileName } = await extractKmlTextFromFile(file);
       const result = parseKmlToFeederData(kmlText, fileName);
       setParseResult(result);
+      setPreviewTab('map');
     } catch (err: any) {
       console.error('Error importing KML/KMZ:', err);
       setError(err.message || 'Failed to parse KML/KMZ file.');
@@ -88,8 +91,8 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -102,26 +105,26 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
                   Import Node-to-Node GIS Data (KML / KMZ)
                 </h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                  MapToKML Supported
+                  Auto Lat/Lng Plot
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Upload Google Earth .kmz / .kml to load real geographic coordinates, poles, spans & spot loads
+                Reads longitude & latitude of every point and automatically plots the feeder network on Google Maps
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Body Content */}
-        <div className="p-5 sm:p-6 space-y-5 overflow-y-auto">
+        <div className="p-4 sm:p-6 space-y-4 overflow-y-auto">
           {/* Quick Preset Banner for Gujar Garhi */}
-          <div className="p-3.5 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 rounded-xl flex items-center justify-between gap-3 shadow-xs">
+          <div className="p-3 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border border-purple-200 rounded-xl flex items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2.5">
               <div className="p-2 rounded-lg bg-purple-600 text-white">
                 <Zap className="w-4 h-4 fill-white" />
@@ -151,7 +154,7 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-6 sm:p-8 text-center cursor-pointer transition-all ${
+            className={`border-2 border-dashed rounded-xl p-5 sm:p-7 text-center cursor-pointer transition-all ${
               isDragging 
                 ? 'border-blue-500 bg-blue-50/70 scale-[0.99]' 
                 : 'border-slate-300 hover:border-blue-400 bg-slate-50/50 hover:bg-slate-50'
@@ -164,14 +167,14 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
               accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml"
               className="hidden"
             />
-            <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 mx-auto flex items-center justify-center mb-3 shadow-xs">
-              <Upload className="w-6 h-6" />
+            <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-600 mx-auto flex items-center justify-center mb-2.5 shadow-xs">
+              <Upload className="w-5 h-5" />
             </div>
             <h4 className="text-sm font-bold text-slate-800">
-              {loading ? 'Processing KMZ / KML...' : 'Drop your .KMZ or .KML file here, or click to browse'}
+              {loading ? 'Reading Longitudes & Latitudes from KMZ / KML...' : 'Drop your .KMZ or .KML file here, or click to browse'}
             </h4>
             <p className="text-xs text-slate-500 mt-1">
-              Supports <span className="font-semibold text-slate-700">GujarGarhi_MapToKML - Copy.kmz</span>, Google Earth GIS exports & standard KML files
+              Supports <span className="font-semibold text-slate-700">GujarGarhi_MapToKML - Copy.kmz</span>, Google Earth exports, AutoCAD MapToKML files
             </p>
           </div>
 
@@ -183,73 +186,111 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
             </div>
           )}
 
-          {/* Parsed Result Preview */}
+          {/* Parsed Result Preview with Live Map & Coordinates */}
           {parseResult && (
             <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs space-y-0">
-              <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between">
+              {/* Header Bar */}
+              <div className="p-3 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                   <span className="text-xs font-bold">{parseResult.feeder.name}</span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-blue-900 text-blue-200 font-mono text-[10px] font-bold">
-                  {parseResult.summary.detectedType} {parseResult.feeder.nominalVoltage}V
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-blue-900 text-blue-200 font-mono text-[10px] font-bold">
+                    {parseResult.summary.detectedType} {parseResult.feeder.nominalVoltage}V
+                  </span>
+
+                  {/* Switch between Live Map Plot & Coordinates Table */}
+                  <div className="flex items-center bg-slate-800 rounded-lg p-0.5 border border-slate-700 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('map')}
+                      className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        previewTab === 'map' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Eye className="w-3 h-3" />
+                      <span>Live Map Plot</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('table')}
+                      className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        previewTab === 'table' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <List className="w-3 h-3" />
+                      <span>Coordinates Table</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-3.5 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              {/* Metric Highlights */}
+              <div className="p-3 bg-slate-50 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs border-b border-slate-200">
                 <div className="bg-white p-2 rounded border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Poles / Nodes</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Poles / Nodes Plotted</span>
                   <span className="font-mono font-bold text-slate-900 text-sm">
                     {parseResult.summary.totalNodes} Nodes
                   </span>
                 </div>
                 <div className="bg-white p-2 rounded border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Line Spans</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Conductor Spans</span>
                   <span className="font-mono font-bold text-slate-900 text-sm">
                     {parseResult.summary.totalSegments} Spans
                   </span>
                 </div>
                 <div className="bg-white p-2 rounded border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Feeder Length</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Feeder Route Length</span>
                   <span className="font-mono font-bold text-slate-900 text-sm">
                     {parseResult.summary.totalLengthKm} km
                   </span>
                 </div>
                 <div className="bg-white p-2 rounded border border-slate-200">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Transformer</span>
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Connected Load</span>
                   <span className="font-mono font-bold text-slate-900 text-sm">
                     {parseResult.feeder.existingTransformerKva} kVA
                   </span>
                 </div>
               </div>
 
-              {/* Node to Node Table Preview */}
-              <div className="max-h-48 overflow-y-auto p-2 bg-white text-xs">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase">
-                      <th className="py-1 px-2">Node</th>
-                      <th className="py-1 px-2">Pole Label</th>
-                      <th className="py-1 px-2">Coordinates (Lat, Lng)</th>
-                      <th className="py-1 px-2">Load (kVA)</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
-                    {parseResult.feeder.nodes.map(n => (
-                      <tr key={n.id} className="hover:bg-slate-50">
-                        <td className="py-1 px-2 font-bold text-slate-800">{n.id}</td>
-                        <td className="py-1 px-2 text-slate-700">{n.label}</td>
-                        <td className="py-1 px-2 text-slate-500">
-                          {n.lat?.toFixed(5)}, {n.lng?.toFixed(5)}
-                        </td>
-                        <td className="py-1 px-2 text-emerald-700 font-bold">
-                          {n.spotLoadKva || 0} kVA
-                        </td>
+              {/* LIVE MAP PREVIEW: Shows all points plotted with their coordinates */}
+              {previewTab === 'map' ? (
+                <div className="p-0 border-t border-slate-200">
+                  <VisualMapComponent 
+                    feeder={parseResult.feeder} 
+                    height="320px"
+                  />
+                </div>
+              ) : (
+                /* Node Coordinates Table Preview */
+                <div className="max-h-64 overflow-y-auto p-2 bg-white text-xs">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-[10px] text-slate-400 uppercase">
+                        <th className="py-1 px-2">Node</th>
+                        <th className="py-1 px-2">Pole Label</th>
+                        <th className="py-1 px-2">Latitude</th>
+                        <th className="py-1 px-2">Longitude</th>
+                        <th className="py-1 px-2">Load (kVA)</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                      {parseResult.feeder.nodes.map(n => (
+                        <tr key={n.id} className="hover:bg-slate-50">
+                          <td className="py-1 px-2 font-bold text-slate-800">{n.id}</td>
+                          <td className="py-1 px-2 text-slate-700">{n.label}</td>
+                          <td className="py-1 px-2 text-blue-700 font-bold">{n.lat?.toFixed(6)}</td>
+                          <td className="py-1 px-2 text-emerald-700 font-bold">{n.lng?.toFixed(6)}</td>
+                          <td className="py-1 px-2 text-slate-700">
+                            {n.spotLoadKva ? `${n.spotLoadKva} kVA` : `${n.singlePhaseCustomers} cust`}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -259,7 +300,7 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -271,7 +312,7 @@ export const KmlKmzImportModal: React.FC<KmlKmzImportModalProps> = ({
             className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
-            <span>Apply Node-to-Node Data to Feeder Model</span>
+            <span>Apply & Plot on Main Geographic Map</span>
           </button>
         </div>
       </div>

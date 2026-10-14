@@ -134,6 +134,7 @@ export interface FeederSegment {
   lengthKm: number;        // Length in kilometers
   conductorCode: string;
   proposedConductorCode?: string; // For what-if reconductoring
+  path?: { lat: number; lng: number }[]; // Exact GIS geographic line coordinates from KML/KMZ
 }
 
 export interface BifurcationConfig {

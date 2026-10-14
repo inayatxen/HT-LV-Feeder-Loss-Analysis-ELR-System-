@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { 
   FeederData, 
   FeederAnalysisSummary,
@@ -70,6 +70,7 @@ interface WhatIfWorkbenchProps {
   canUndo: boolean;
   canRedo: boolean;
   onOpenKmlImport?: () => void;
+  initialVisualMode?: 'diagram' | 'map';
 }
 
 export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
@@ -96,10 +97,21 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   onRedo,
   canUndo,
   canRedo,
-  onOpenKmlImport
+  onOpenKmlImport,
+  initialVisualMode
 }) => {
   const [showCompareModal, setShowCompareModal] = useState(false);
-  const [visualMode, setVisualMode] = useState<'diagram' | 'map'>('diagram');
+  const [visualMode, setVisualMode] = useState<'diagram' | 'map'>(() => {
+    return initialVisualMode || (feeder.nodes.some(n => n.lat !== undefined && n.lng !== undefined) ? 'map' : 'diagram');
+  });
+
+  useEffect(() => {
+    if (initialVisualMode) {
+      setVisualMode(initialVisualMode);
+    } else if (feeder.nodes.some(n => n.lat !== undefined && n.lng !== undefined)) {
+      setVisualMode('map');
+    }
+  }, [feeder.id, initialVisualMode]);
   const [showVisualPanel, setShowVisualPanel] = useState<boolean>(true);
   const isHtLine = feeder.type === 'HT' || feeder.category === 'HV' || feeder.nominalVoltage >= 1000;
   const currentInjectedVoltage = activeInjectedVoltage !== undefined ? activeInjectedVoltage : feeder.nominalVoltage;
