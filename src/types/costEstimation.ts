@@ -42,6 +42,10 @@ export interface RateHistoryEntry {
   effectiveTo?: string;
   approvedBy: string;
   remarks?: string;
+  materialRate?: number;
+  installationRate?: number;
+  transportationRate?: number;
+  revisionRef?: string;
 }
 
 export interface MaterialItem {

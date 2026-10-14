@@ -37,6 +37,13 @@ import { calculateFoundationCharges } from '../../utils/foundationCharges';
 import { DismantleMaterialSection } from './DismantleMaterialSection';
 import { FoundationChargesSection } from './FoundationChargesSection';
 import { 
+  getLatestLumpSum25KvaSchedule,
+  getLatestLumpSum50KvaSchedule,
+  getLatestLumpSum100KvaSchedule,
+  getLatestLumpSum200KvaSchedule,
+  getLatestLumpSum1KmHtSchedule
+} from '../../data/materialMaster';
+import { 
   Plus, 
   Trash2, 
   Save, 
@@ -509,17 +516,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         vehicleType: 'Standard Truck'
       });
 
+      const sched25 = getLatestLumpSum25KvaSchedule(materials);
       setProjectInfo(prev => ({
         ...prev,
         schemeProjectName: preset.schemeName,
-        purposeOfWork: 'Installation of 25 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list (Rs. 447,128.07), 10% Labour Cost (Rs. 44,712.81), and 16% Over Heads on material cost (Rs. 71,540.49). Net Cost: Rs. 563,381.37.'
+        purposeOfWork: `Installation of 25 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list (Rs. ${sched25.totals.materialCost.toLocaleString()}), 10% Labour Cost (Rs. ${sched25.totals.labourCost.toLocaleString()}), and 16% Over Heads on material cost (Rs. ${sched25.totals.overheadAmount.toLocaleString()}). Net Cost: Rs. ${sched25.totals.netCost.toLocaleString()}.`
       }));
 
       const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
       setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
       setCalculationSteps(res.steps);
 
-      setSaveToast('✅ 25 KVA Transformer Installation Package applied: 18-item lump sum material schedule loaded (Rs. 447,128.07) + 10% Labour (Rs. 44,712.81) + 16% Over Heads on Material (Rs. 71,540.49) = Net Cost Rs. 563,381.37.');
+      setSaveToast(`✅ 25 KVA Transformer Installation Package applied: 18-item lump sum schedule loaded with latest rates (Material: Rs. ${sched25.totals.materialCost.toLocaleString()}, Net Cost: Rs. ${sched25.totals.netCost.toLocaleString()}).`);
       setTimeout(() => setSaveToast(''), 5500);
 
       const tableEl = document.getElementById('boq-materials-table');
@@ -578,17 +586,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         vehicleType: 'Standard Truck'
       });
 
+      const sched50 = getLatestLumpSum50KvaSchedule(materials);
       setProjectInfo(prev => ({
         ...prev,
         schemeProjectName: preset.schemeName,
-        purposeOfWork: 'Installation of 50 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list including Store Code 08120 @ Rate Rs. 434,200 (Total Material Rs. 571,542.07), 10% Labour Cost (Rs. 57,154.21), and 16% Over Heads on material cost (Rs. 91,446.73). Net Cost: Rs. 720,143.01.'
+        purposeOfWork: `Installation of 50 KVA 11/0.415 kV Distribution Transformer with 18-item lump sum material list including Store Code 08120 (Total Material: Rs. ${sched50.totals.materialCost.toLocaleString()}), 10% Labour Cost (Rs. ${sched50.totals.labourCost.toLocaleString()}), and 16% Over Heads on material cost (Rs. ${sched50.totals.overheadAmount.toLocaleString()}). Net Cost: Rs. ${sched50.totals.netCost.toLocaleString()}.`
       }));
 
       const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
       setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
       setCalculationSteps(res.steps);
 
-      setSaveToast('✅ 50 KVA Transformer Installation Package applied: 18-item lump sum material schedule loaded with Code 08120 @ Rs. 434,200 (Material Rs. 571,542.07) + 10% Labour (Rs. 57,154.21) + 16% Over Heads on Material (Rs. 91,446.73) = Net Cost Rs. 720,143.01.');
+      setSaveToast(`✅ 50 KVA Transformer Installation Package applied: 18-item lump sum schedule loaded with latest rates (Material: Rs. ${sched50.totals.materialCost.toLocaleString()}, Net Cost: Rs. ${sched50.totals.netCost.toLocaleString()}).`);
       setTimeout(() => setSaveToast(''), 5500);
 
       const tableEl = document.getElementById('boq-materials-table');
@@ -648,17 +657,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         vehicleType: 'Standard Truck'
       });
 
+      const sched100 = getLatestLumpSum100KvaSchedule(materials);
       setProjectInfo(prev => ({
         ...prev,
         schemeProjectName: preset.schemeName,
-        purposeOfWork: 'Installation of 100 KVA 11/0.415 kV Distribution Transformer with 20-item lump sum material list including Store Code 08130 @ Rate Rs. 631,000 (Total Material Rs. 851,227.21), 10% Labour Cost (Rs. 85,122.72), and 16% Over Heads on material cost (Rs. 136,196.35). Net Cost: Rs. 1,072,546.28.'
+        purposeOfWork: `Installation of 100 KVA 11/0.415 kV Distribution Transformer with 20-item lump sum material list including Store Code 08130 (Total Material: Rs. ${sched100.totals.materialCost.toLocaleString()}), 10% Labour Cost (Rs. ${sched100.totals.labourCost.toLocaleString()}), and 16% Over Heads on material cost (Rs. ${sched100.totals.overheadAmount.toLocaleString()}). Net Cost: Rs. ${sched100.totals.netCost.toLocaleString()}.`
       }));
 
       const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
       setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
       setCalculationSteps(res.steps);
 
-      setSaveToast('✅ 100 KVA Transformer Installation Package applied: 20-item lump sum material schedule loaded with Code 08130 @ Rs. 631,000 (Material Rs. 851,227.21) + 10% Labour (Rs. 85,122.72) + 16% Over Heads on Material (Rs. 136,196.35) = Net Cost Rs. 1,072,546.28.');
+      setSaveToast(`✅ 100 KVA Transformer Installation Package applied: 20-item lump sum schedule loaded with latest rates (Material: Rs. ${sched100.totals.materialCost.toLocaleString()}, Net Cost: Rs. ${sched100.totals.netCost.toLocaleString()}).`);
       setTimeout(() => setSaveToast(''), 5500);
 
       const tableEl = document.getElementById('boq-materials-table');
@@ -719,17 +729,18 @@ export const EstimateFormView: React.FC<EstimateFormViewProps> = ({
         vehicleType: 'Standard Truck'
       });
 
+      const sched200 = getLatestLumpSum200KvaSchedule(materials);
       setProjectInfo(prev => ({
         ...prev,
         schemeProjectName: preset.schemeName,
-        purposeOfWork: 'Installation of 200 KVA 11/0.415 kV Distribution Transformer with lump sum material list (Total Material Rs. 1,981,233.97), 10% Labour Cost (Rs. 198,123.40), and 16% Over Heads on material cost (Rs. 316,997.44). Net Cost: Rs. 2,496,354.81.'
+        purposeOfWork: `Installation of 200 KVA 11/0.415 kV Distribution Transformer with lump sum material list (Total Material: Rs. ${sched200.totals.materialCost.toLocaleString()}), 10% Labour Cost (Rs. ${sched200.totals.labourCost.toLocaleString()}), and 16% Over Heads on material cost (Rs. ${sched200.totals.overheadAmount.toLocaleString()}). Net Cost: Rs. ${sched200.totals.netCost.toLocaleString()}.`
       }));
 
       const res = calculateQuantitiesForLine('NEW_DISTRIBUTION_TRANSFORMER', updatedLine, designFactors, materials);
       setItems(res.items.filter(i => i.materialCode !== '15310' && !i.description.toUpperCase().includes('STAY ROD')));
       setCalculationSteps(res.steps);
 
-      setSaveToast('✅ 200 KVA Transformer Installation Package applied: lump sum material schedule loaded (Material Rs. 1,981,233.97) + 10% Labour (Rs. 198,123.40) + 16% Over Heads on Material (Rs. 316,997.44) = Net Cost Rs. 2,496,354.81.');
+      setSaveToast(`✅ 200 KVA Transformer Installation Package applied: lump sum material schedule loaded with latest rates (Material: Rs. ${sched200.totals.materialCost.toLocaleString()}, Net Cost: Rs. ${sched200.totals.netCost.toLocaleString()}).`);
       setTimeout(() => setSaveToast(''), 5500);
 
       const tableEl2 = document.getElementById('boq-materials-table');

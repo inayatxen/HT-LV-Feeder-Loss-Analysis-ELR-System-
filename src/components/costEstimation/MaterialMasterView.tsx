@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   MaterialItem, 
   MaterialCategory, 
@@ -28,8 +28,15 @@ import {
   Download,
   Upload,
   RefreshCw,
-  Save
+  Save,
+  Zap
 } from 'lucide-react';
+import { 
+  OFFICIAL_LUMP_SUM_PACKAGES, 
+  LumpSumPackageInfo, 
+  LumpSum25KvaItem, 
+  normalizeMaterialCode 
+} from '../../data/materialMaster';
 import { WAPDA_SCHEDULE_RAW, lookupWapdaScheduleItem } from '../../data/wapdaScheduleRates';
 import { 
   downloadCsvFile, 
@@ -70,6 +77,112 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
   const [bulkUpdateResult, setBulkUpdateResult] = useState<MatchedUpdateResult | null>(null);
   const [isParsingBulk, setIsParsingBulk] = useState(false);
   const [bulkSuccessMsg, setBulkSuccessMsg] = useState('');
+
+  // Master View Mode: Catalog vs Live Lump Sum Package Management
+  const [masterViewMode, setMasterViewMode] = useState<'catalog' | 'lump_sum'>('catalog');
+  const [selectedLumpSumKey, setSelectedLumpSumKey] = useState<'25kva' | '50kva' | '100kva' | '200kva' | '1km-ht'>('25kva');
+  const [lumpSumSearch, setLumpSumSearch] = useState('');
+  const [editingLumpSumItem, setEditingLumpSumItem] = useState<{
+    item: LumpSum25KvaItem;
+    rate: number;
+    labourRate: number;
+  } | null>(null);
+  const [lumpSumToast, setLumpSumToast] = useState('');
+
+  // Selected Lump Sum Package Info & dynamic schedule looked up from current materials
+  const selectedPackage = useMemo(() => {
+    return OFFICIAL_LUMP_SUM_PACKAGES.find(p => p.key === selectedLumpSumKey) || OFFICIAL_LUMP_SUM_PACKAGES[0];
+  }, [selectedLumpSumKey]);
+
+  const dynamicLumpSumSchedule = useMemo(() => {
+    return selectedPackage.getSchedule(materials);
+  }, [selectedPackage, materials]);
+
+  const filteredLumpSumItems = useMemo(() => {
+    if (!lumpSumSearch.trim()) return dynamicLumpSumSchedule.items;
+    const q = lumpSumSearch.toLowerCase().trim();
+    return dynamicLumpSumSchedule.items.filter(i => 
+      i.code.toLowerCase().includes(q) ||
+      i.description.toLowerCase().includes(q) ||
+      i.specification.toLowerCase().includes(q)
+    );
+  }, [dynamicLumpSumSchedule.items, lumpSumSearch]);
+
+  // Handler: Save Updated Material Rate from Lump Sum Material List
+  const handleSaveLumpSumRate = (item: LumpSum25KvaItem, newRate: number, customLabourRate?: number) => {
+    const itemNorm = normalizeMaterialCode(item.code);
+    const existing = materials.find(m => {
+      const mNorm = normalizeMaterialCode(m.code);
+      return mNorm === itemNorm || m.code === item.code || m.id === `mat-code-${item.code}` || m.id === `mat-${item.code}`;
+    });
+
+    // Check if conductor stored in Km but item measured in MR
+    const isKmConductor = existing && existing.unit?.trim().toLowerCase() === 'km' && (item.unit?.toUpperCase() === 'MR' || item.unit?.toUpperCase() === 'M' || item.unit?.toUpperCase() === 'MTR');
+    const rateToStore = isKmConductor ? Math.round(newRate * 1000) : newRate;
+    const defaultLabourRate = isKmConductor ? Math.round(rateToStore * 0.10) : Number((newRate * 0.10).toFixed(2));
+    const labourRateToStore = customLabourRate !== undefined 
+      ? (isKmConductor ? Math.round(customLabourRate * 1000) : customLabourRate)
+      : (existing && existing.labourRate > 0 ? (isKmConductor ? rateToStore * 0.10 : existing.labourRate) : defaultLabourRate);
+
+    const updatedMat: MaterialItem = existing ? {
+      ...existing,
+      materialRate: rateToStore,
+      labourRate: labourRateToStore,
+      effectiveFrom: new Date().toISOString().split('T')[0],
+      rateHistory: [
+        {
+          id: `rh-${Date.now()}`,
+          rate: rateToStore,
+          labourRate: labourRateToStore,
+          effectiveFrom: new Date().toISOString().split('T')[0],
+          materialRate: rateToStore,
+          installationRate: existing.installationRate,
+          transportationRate: existing.transportationRate,
+          revisionRef: 'Lump Sum Rate Sync',
+          remarks: `Updated rate for Store Code ${item.code} in Lump Sum schedule to Rs. ${newRate.toLocaleString('en-PK')}`,
+          approvedBy: approvedBy || 'SDO'
+        },
+        ...(existing.rateHistory || [])
+      ]
+    } : {
+      id: `mat-code-${item.code}`,
+      code: item.code,
+      name: item.description,
+      category: item.category as any,
+      unit: item.unit,
+      specification: item.specification,
+      voltageApplicability: 'HT',
+      defaultQtyFactor: 1,
+      materialRate: rateToStore,
+      labourRate: labourRateToStore,
+      installationRate: Math.round(newRate * 0.05),
+      transportationRate: Math.round(newRate * 0.02),
+      effectiveFrom: new Date().toISOString().split('T')[0],
+      isActive: true,
+      rateHistory: []
+    };
+
+    onSaveMaterial(updatedMat);
+    setEditingLumpSumItem(null);
+    setLumpSumToast(`✅ Store Code ${item.code} rate updated to Rs. ${newRate.toLocaleString('en-PK')}! All Lump Sum lists & estimates dynamically synchronized.`);
+    setTimeout(() => setLumpSumToast(''), 5000);
+  };
+
+  const handleExportLumpSumCsv = () => {
+    const pkg = selectedPackage;
+    const sched = dynamicLumpSumSchedule;
+    let csv = `OFFICIAL WAPDA / DISCO LUMP SUM MATERIAL SCHEDULE - ${pkg.name.toUpperCase()}\r\n`;
+    csv += `Generated Date: ${new Date().toLocaleDateString()}\r\n`;
+    csv += `Total Material Cost: Rs. ${sched.totals.materialCost.toLocaleString()}\r\n`;
+    csv += `10% Labour Cost: Rs. ${sched.totals.labourCost.toLocaleString()}\r\n`;
+    csv += `16% Overhead Charges: Rs. ${sched.totals.overheadAmount.toLocaleString()}\r\n`;
+    csv += `Net Turnkey Package Cost: Rs. ${sched.totals.netCost.toLocaleString()}\r\n\r\n`;
+    csv += `Sr,Store Code,Standard Description,Unit,Quantity,Latest Unit Rate (PKR),Material Amount (PKR),Labour Rate (PKR),Labour Amount (PKR),Total Amount (PKR)\r\n`;
+    sched.items.forEach((it, idx) => {
+      csv += `${idx + 1},"${it.code}","${it.description.replace(/"/g, '""')}","${it.unit}",${it.quantity},${it.unitRate},${it.materialAmount},${it.labourRate},${it.labourAmount},${it.totalAmount}\r\n`;
+    });
+    downloadCsvFile(`lump_sum_${pkg.key}_schedule_rates.csv`, csv);
+  };
 
   // Edit material state
   const [editCode, setEditCode] = useState<string>('');
@@ -385,72 +498,116 @@ export const MaterialMasterView: React.FC<MaterialMasterViewProps> = ({
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search material through Name or Store Code (e.g. 08110, DOG, 15310, stay rod, transformer)..."
-              className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-200 transition-colors cursor-pointer"
-                title="Clear search"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
+      {/* Live Synchronization Toast Notification */}
+      {lumpSumToast && (
+        <div className="bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-md flex items-center justify-between text-xs font-bold animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-200" />
+            <span>{lumpSumToast}</span>
           </div>
+          <button
+            type="button"
+            onClick={() => setLumpSumToast('')}
+            className="text-white hover:text-emerald-200 p-1 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
-              {(['ALL', 'POLES', 'CONDUCTORS', 'INSULATORS', 'HARDWARE', 'TRANSFORMERS', 'OTHER'] as const).map(cat => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                    selectedCategory === cat
-                      ? 'bg-white text-slate-900 shadow-xs font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {cat === 'ALL' ? 'All Items' : cat.charAt(0) + cat.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
+      {/* Top View Mode Switcher: Full Catalog vs Official Lump Sum Packages */}
+      <div className="bg-slate-100 p-1.5 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 border border-slate-200">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setMasterViewMode('catalog')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              masterViewMode === 'catalog'
+                ? 'bg-blue-700 text-white shadow-xs'
+                : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Material Master Catalog ({materials.length} Items)</span>
+          </button>
 
-            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
-              {(['ALL', 'HT', 'LT'] as const).map(vol => (
-                <button
-                  key={vol}
-                  type="button"
-                  onClick={() => setSelectedVoltage(vol)}
-                  className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
-                    selectedVoltage === vol
-                      ? 'bg-slate-900 text-white font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {vol}
-                </button>
-              ))}
-            </div>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMasterViewMode('lump_sum')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              masterViewMode === 'lump_sum'
+                ? 'bg-emerald-700 text-white shadow-xs'
+                : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+            }`}
+          >
+            <Zap className="w-4 h-4 text-amber-300" />
+            <span>⚡ Lump Sum Material Lists & Live Dynamic Rates</span>
+            <span className="px-2 py-0.5 text-[10px] font-black uppercase tracking-wider bg-white/25 rounded-full">
+              5 Packages
+            </span>
+          </button>
         </div>
 
-        <div className="text-xs text-slate-500 flex items-center justify-between border-t border-slate-100 pt-2">
-          <span>Showing <strong>{filteredMaterials.length}</strong> of <strong>{materials.length}</strong> catalog items</span>
-          <span className="font-mono text-[11px] text-slate-400">All prices in Pakistani Rupees (PKR)</span>
+        <div className="text-[11px] text-slate-500 font-mono px-3 self-center sm:self-auto">
+          {masterViewMode === 'lump_sum' 
+            ? '⚡ Instant Rate Synchronization Active' 
+            : `Showing ${filteredMaterials.length} of ${materials.length} CSR items`}
         </div>
       </div>
+
+      {masterViewMode === 'catalog' ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search material through Name or Store Code..."
+                  className="w-full pl-9 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+                  {(['ALL', 'POLES', 'CONDUCTORS', 'INSULATORS', 'HARDWARE', 'TRANSFORMERS', 'OTHER'] as const).map(cat => (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                        selectedCategory === cat ? 'bg-white text-slate-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {cat === 'ALL' ? 'All Items' : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg text-xs font-semibold">
+                  {(['ALL', 'HT', 'LT'] as const).map(vol => (
+                    <button
+                      key={vol}
+                      type="button"
+                      onClick={() => setSelectedVoltage(vol)}
+                      className={`px-2.5 py-1 rounded-md transition-colors cursor-pointer ${
+                        selectedVoltage === vol ? 'bg-slate-900 text-white font-bold' : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      {vol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+      ) : (
+        <div className="text-center p-10 bg-slate-50 rounded-xl border border-slate-200 text-slate-500">
+          Lump Sum Package View (Coming Soon)
+        </div>
+      )}
+
+
 
       {/* Materials Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">

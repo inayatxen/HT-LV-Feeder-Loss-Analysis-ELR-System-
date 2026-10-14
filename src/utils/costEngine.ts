@@ -24,6 +24,11 @@ import {
   LUMP_SUM_200KVA_TOTALS,
   LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS,
   LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS,
+  getLatestLumpSum25KvaSchedule,
+  getLatestLumpSum50KvaSchedule,
+  getLatestLumpSum100KvaSchedule,
+  getLatestLumpSum200KvaSchedule,
+  getLatestLumpSum1KmHtSchedule,
   DEFAULT_DESIGN_FACTORS,
   INITIAL_MATERIALS
 } from '../data/materialMaster';
@@ -886,7 +891,8 @@ export function calculateQuantitiesForLine(
     const multiplier = lineKm;
     itemMap.clear();
 
-    const baseMaterialTotal = LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS.materialCost;
+    const latest1KmSchedule = getLatestLumpSum1KmHtSchedule(materials);
+    const baseMaterialTotal = latest1KmSchedule.totals.materialCost;
     const scaledMaterialTotal = Number((baseMaterialTotal * multiplier).toFixed(2));
     const scaledLabourTotal = Number((scaledMaterialTotal * 0.10).toFixed(2));
     const scaledOverheadTotal = Number((scaledMaterialTotal * 0.16).toFixed(2));
@@ -895,14 +901,14 @@ export function calculateQuantitiesForLine(
     steps.push({
       component: `${multiplier} KM HT Line Extension (DOG Conductor & H-Type Steel Structures)`,
       parameter: `Official WAPDA / PESCO Lump Sum Material Schedule (${multiplier}x multiple for ${multiplier} KM Line)`,
-      formula: `Lump Sum Base Materials (Rs. 3,399,531.32 × ${multiplier}) + 10% Labour Cost (Rs. ${(339953.13 * multiplier).toFixed(2)}) + 16% Over Heads on Material Cost (Rs. ${(543925.01 * multiplier).toFixed(2)})`,
+      formula: `Lump Sum Base Materials (Rs. ${baseMaterialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})} × ${multiplier}) + 10% Labour Cost (Rs. ${scaledLabourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 16% Over Heads on Material Cost (Rs. ${scaledOverheadTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})})`,
       calculation: `WAPDA CSR Schedule Items for ${multiplier} KM: Material = Rs. ${scaledMaterialTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${scaledLabourTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${scaledOverheadTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${scaledNetTotal.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
       resultQuantity: multiplier,
       unit: 'KM',
-      notes: `Includes ${multiplier} KM 11kV HT line extension using ACSR DOG conductor (${Math.round(3150 * multiplier)}m) and H-Type Steel Structures (${Math.round(16 * multiplier)} Nos), Pin and Disc insulators, cross arms, stays, and hardware fittings.`
+      notes: `Includes ${multiplier} KM 11kV HT line extension using ACSR DOG conductor (${Math.round(3150 * multiplier)}m) and H-Type Steel Structures (${Math.round(16 * multiplier)} Nos), Pin and Disc insulators, cross arms, stays, and hardware fittings (Latest Material Master Rates applied).`
     });
 
-    LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS.forEach(lsItem => {
+    latest1KmSchedule.items.forEach(lsItem => {
       const itemMat = findMat(lsItem.code);
       const rawQty = lsItem.quantity * multiplier;
       const itemQty = lsItem.unit === 'EA' || lsItem.unit === 'NOS' ? Math.round(rawQty) : Number(rawQty.toFixed(2));
@@ -925,7 +931,7 @@ export function calculateQuantitiesForLine(
         labourAmount: itemLabourAmount,
         totalAmount: itemTotal,
         isAutoCalculated: true,
-        calculationNotes: `${multiplier} KM HT Line (DOG & H-Type) Schedule item (${multiplier}x multiple of base ${lsItem.quantity} ${lsItem.unit}): 10% Labour Cost applied`
+        calculationNotes: `${multiplier} KM HT Line (DOG & H-Type) Schedule item (${multiplier}x multiple of base ${lsItem.quantity} ${lsItem.unit}): Latest Material Rate Rs. ${lsItem.unitRate.toLocaleString()}, 10% Labour Cost applied`
       });
     });
 
@@ -1518,17 +1524,18 @@ export function calculateQuantitiesForLine(
         itemMap.clear();
       }
 
+      const latest200Schedule = getLatestLumpSum200KvaSchedule(materials);
       steps.push({
         component: '200 KVA Distribution Transformer Sub-Station',
         parameter: 'Official WAPDA / PESCO Lump Sum Material Schedule',
-        formula: 'Lump Sum Materials (Rs. 1,981,233.97) + 10% Labour Cost (Rs. 198,123.40) + 16% Over Heads on Material Cost (Rs. 316,997.44)',
-        calculation: `WAPDA CSR Schedule Items: Material = Rs. 1,981,233.97, Labour (10%) = Rs. 198,123.40, Over Heads (16% on Material) = Rs. 316,997.44. Net Cost = Rs. 2,496,354.81`,
+        formula: `Lump Sum Materials (Rs. ${latest200Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 10% Labour Cost (Rs. ${latest200Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 16% Over Heads on Material Cost (Rs. ${latest200Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})})`,
+        calculation: `WAPDA CSR Schedule Items: Material = Rs. ${latest200Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${latest200Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${latest200Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${latest200Schedule.totals.netCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
         resultQuantity: count,
         unit: 'Job / Set',
-        notes: 'Includes 200 KVA Copper Transformer Sub-Station installation with WASP and ANT conductors, PCC Poles, Cross Arms, Drop Out Cut Outs, and Platform.'
+        notes: 'Includes 200 KVA Copper Transformer Sub-Station installation with WASP and ANT conductors, PCC Poles, Cross Arms, Drop Out Cut Outs, and Platform with latest material rates.'
       });
 
-      LUMP_SUM_200KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+      latest200Schedule.items.forEach(lsItem => {
         const itemMat = findMat(lsItem.code);
         const itemQty = lsItem.quantity * count;
         const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
@@ -1550,14 +1557,13 @@ export function calculateQuantitiesForLine(
           labourAmount: itemLabourAmount,
           totalAmount: itemTotal,
           isAutoCalculated: true,
-          calculationNotes: `200 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+          calculationNotes: `200 kVA Transformer Installation Schedule item: Latest Rate Rs. ${lsItem.unitRate.toLocaleString()}, 10% Labour Cost applied`
         });
       });
     } else if (targetKva === 100 || details.is100KvaLumpSumPackage || is100Kva) {
       // -------------------------------------------------------------
       // OFFICIAL 20-ITEM WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 100 KVA TRANSFORMER
-      // Total Material: Rs. 851,227.21 | 10% Labour: Rs. 85,122.72 | 16% Over Heads on Material: Rs. 136,196.35
-      // Net Cost: Rs. 1,072,546.28
+      // Dynamic Latest Rates Synced
       // -------------------------------------------------------------
       itemMap.delete('15310');
       itemMap.delete('mat-code-15310');
@@ -1568,17 +1574,18 @@ export function calculateQuantitiesForLine(
         itemMap.clear();
       }
 
+      const latest100Schedule = getLatestLumpSum100KvaSchedule(materials);
       steps.push({
         component: '100 KVA Distribution Transformer Sub-Station',
         parameter: '20-Item Official WAPDA / PESCO Lump Sum Material Schedule',
-        formula: 'Lump Sum Materials (Rs. 851,227.21) + 10% Labour Cost (Rs. 85,122.72) + 16% Over Heads on Material Cost (Rs. 136,196.35)',
-        calculation: `20 WAPDA CSR Schedule Items: Material = Rs. 851,227.21 (Transformer 100 kVA Code 08130 @ Rs. 631,000), Labour (10%) = Rs. 85,122.72, Over Heads (16% on Material) = Rs. 136,196.35. Net Cost = Rs. 1,072,546.28`,
+        formula: `Lump Sum Materials (Rs. ${latest100Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 10% Labour Cost (Rs. ${latest100Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 16% Over Heads on Material Cost (Rs. ${latest100Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})})`,
+        calculation: `20 WAPDA CSR Schedule Items: Material = Rs. ${latest100Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${latest100Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${latest100Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${latest100Schedule.totals.netCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
         resultQuantity: count,
         unit: 'Job / Set',
-        notes: 'Includes 100 KVA Copper Transformer (08130 @ Rs. 631,000), 11kV Drop Out Cut Outs (13311), Double Structure Platform (10720), 11kV Lattice Cross Arms (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, Wasp Conductor, Rabbit Conductor, L Type Lattice Steel Structure (01220), Fuse Links & Fasteners (Stay Rods 15310 excluded).'
+        notes: 'Includes 100 KVA Copper Transformer, Drop Out Cut Outs, Double Structure Platform, Lattice Cross Arms, LT Spool & 11kV Pin Insulators, Earthing Unit, Wasp & Rabbit Conductors with latest updated material rates.'
       });
 
-      LUMP_SUM_100KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+      latest100Schedule.items.forEach(lsItem => {
         const itemMat = findMat(lsItem.code);
         const itemQty = lsItem.quantity * count;
         const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
@@ -1600,14 +1607,13 @@ export function calculateQuantitiesForLine(
           labourAmount: itemLabourAmount,
           totalAmount: itemTotal,
           isAutoCalculated: true,
-          calculationNotes: `100 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+          calculationNotes: `100 kVA Transformer Installation Schedule item: Latest Rate Rs. ${lsItem.unitRate.toLocaleString()}, 10% Labour Cost applied`
         });
       });
     } else if (targetKva === 50 || details.is50KvaLumpSumPackage || is50Kva) {
       // -------------------------------------------------------------
       // OFFICIAL 18-ITEM WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 50 KVA TRANSFORMER
-      // Total Material: Rs. 571,542.07 | 10% Labour: Rs. 57,154.21 | 16% Over Heads on Material: Rs. 91,446.73
-      // Net Cost: Rs. 720,143.01
+      // Dynamic Latest Rates Synced
       // -------------------------------------------------------------
       itemMap.delete('15310');
       itemMap.delete('mat-code-15310');
@@ -1618,17 +1624,18 @@ export function calculateQuantitiesForLine(
         itemMap.clear();
       }
 
+      const latest50Schedule = getLatestLumpSum50KvaSchedule(materials);
       steps.push({
         component: '50 KVA Distribution Transformer Sub-Station',
         parameter: '18-Item Official WAPDA / PESCO Lump Sum Material Schedule',
-        formula: 'Lump Sum Materials (Rs. 571,542.07) + 10% Labour Cost (Rs. 57,154.21) + 16% Over Heads on Material Cost (Rs. 91,446.73)',
-        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. 571,542.07 (Transformer 50 kVA Code 08120 @ Rs. 434,200), Labour (10%) = Rs. 57,154.21, Over Heads (16% on Material) = Rs. 91,446.73. Net Cost = Rs. 720,143.01`,
+        formula: `Lump Sum Materials (Rs. ${latest50Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 10% Labour Cost (Rs. ${latest50Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 16% Over Heads on Material Cost (Rs. ${latest50Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})})`,
+        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. ${latest50Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${latest50Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${latest50Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${latest50Schedule.totals.netCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
         resultQuantity: count,
         unit: 'Job / Set',
-        notes: 'Includes 50 KVA Copper Transformer (08120 @ Rs. 434,200), 11kV Drop Out Cut Outs (13311), Single Structure Platform (10710), 11kV Lattice Cross Arm (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable, PG Connectors, Fuse Links & Fasteners (Stay Rods 15310 excluded).'
+        notes: 'Includes 50 KVA Copper Transformer, Drop Out Cut Outs, Single Structure Platform, Lattice Cross Arm, LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable with latest updated material rates.'
       });
 
-      LUMP_SUM_50KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+      latest50Schedule.items.forEach(lsItem => {
         const itemMat = findMat(lsItem.code);
         const itemQty = lsItem.quantity * count;
         const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
@@ -1650,37 +1657,35 @@ export function calculateQuantitiesForLine(
           labourAmount: itemLabourAmount,
           totalAmount: itemTotal,
           isAutoCalculated: true,
-          calculationNotes: `50 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+          calculationNotes: `50 kVA Transformer Installation Schedule item: Latest Rate Rs. ${lsItem.unitRate.toLocaleString()}, 10% Labour Cost applied`
         });
       });
     } else if (targetKva === 25 || details.is25KvaLumpSumPackage || is25Kva) {
       // -------------------------------------------------------------
       // OFFICIAL 18-ITEM WAPDA / PESCO LUMP SUM MATERIAL SCHEDULE: 25 KVA TRANSFORMER
-      // Total Material: Rs. 447,128.07 | 10% Labour: Rs. 44,712.81 | 16% Over Heads on Material: Rs. 71,540.49
-      // Net Cost: Rs. 563,381.37
+      // Dynamic Latest Rates Synced
       // -------------------------------------------------------------
-      // Exclude Stay Rod 15310 from 25 kVA Transformer Installation BOQ
       itemMap.delete('15310');
       itemMap.delete('mat-code-15310');
       itemMap.delete('HW-STAY-SET');
       itemMap.delete('mat-hw-stay-set');
 
       if (htKm === 0 && ltKm === 0) {
-        // Pure transformer installation package contains ONLY the official 18 items
         itemMap.clear();
       }
 
+      const latest25Schedule = getLatestLumpSum25KvaSchedule(materials);
       steps.push({
         component: '25 KVA Distribution Transformer Sub-Station',
         parameter: '18-Item Official WAPDA / PESCO Lump Sum Material Schedule',
-        formula: 'Lump Sum Materials (Rs. 447,128.07) + 10% Labour Cost (Rs. 44,712.81) + 16% Over Heads on Material Cost (Rs. 71,540.49)',
-        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. 447,128.07, Labour (10%) = Rs. 44,712.81, Over Heads (16% on Material) = Rs. 71,540.49. Net Cost = Rs. 563,381.37`,
+        formula: `Lump Sum Materials (Rs. ${latest25Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 10% Labour Cost (Rs. ${latest25Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}) + 16% Over Heads on Material Cost (Rs. ${latest25Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})})`,
+        calculation: `18 WAPDA CSR Schedule Items: Material = Rs. ${latest25Schedule.totals.materialCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Labour (10%) = Rs. ${latest25Schedule.totals.labourCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}, Over Heads (16% on Material) = Rs. ${latest25Schedule.totals.overheadAmount.toLocaleString('en-PK', {minimumFractionDigits: 2})}. Net Cost = Rs. ${latest25Schedule.totals.netCost.toLocaleString('en-PK', {minimumFractionDigits: 2})}`,
         resultQuantity: count,
         unit: 'Job / Set',
-        notes: 'Includes 25 KVA Copper Transformer (08110), 11kV Drop Out Cut Outs (13311), Single Structure Platform (10710), 11kV Lattice Cross Arm (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable, PG Connectors, Fuse Links & Fasteners (Stay Rods 15310 excluded).'
+        notes: 'Includes 25 KVA Copper Transformer (08110), 11kV Drop Out Cut Outs (13311), Single Structure Platform (10710), 11kV Lattice Cross Arm (06250), LT Spool & 11kV Pin Insulators, Earthing Unit, LT 4-Core Cable, PG Connectors with latest updated material rates.'
       });
 
-      LUMP_SUM_25KVA_TRANSFORMER_ITEMS.forEach(lsItem => {
+      latest25Schedule.items.forEach(lsItem => {
         const itemMat = findMat(lsItem.code);
         const itemQty = lsItem.quantity * count;
         const itemMatAmount = Number((lsItem.unitRate * itemQty).toFixed(2));
@@ -1702,7 +1707,7 @@ export function calculateQuantitiesForLine(
           labourAmount: itemLabourAmount,
           totalAmount: itemTotal,
           isAutoCalculated: true,
-          calculationNotes: `25 kVA Transformer Installation Schedule item: 10% Labour Cost applied`
+          calculationNotes: `25 kVA Transformer Installation Schedule item: Latest Rate Rs. ${lsItem.unitRate.toLocaleString()}, 10% Labour Cost applied`
         });
       });
     } else {

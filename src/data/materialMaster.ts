@@ -1585,8 +1585,8 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
     specification: 'Distribution Transformer 200 kVA, 11/0.415 kV (Code 08140 / 8140, AUP: Rs. 460,000.00)',
     voltageApplicability: 'HT',
     defaultQtyFactor: 1,
-    materialRate: 460000.00,
-    labourRate: 45000,
+    materialRate: 631000.00,
+    labourRate: 63100.00,
     installationRate: 28000,
     transportationRate: 18000,
     effectiveFrom: '2026-01-01',
@@ -1917,6 +1917,182 @@ export const INITIAL_MATERIALS: MaterialItem[] = [
     labourRate: 5,
     installationRate: 3,
     transportationRate: 1,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-03320',
+    code: '03320',
+    name: 'WIRE SOFT ANNEALED ALUMINIUM',
+    category: 'HARDWARE',
+    unit: 'KG',
+    specification: 'Wire Soft Annealed Aluminium for Binding (WAPDA Code 03320)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 60,
+    labourRate: 6,
+    installationRate: 4,
+    transportationRate: 2,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-11142',
+    code: '11142',
+    name: 'BOLT & HEX.STEEL NUT 1/2"X2"-1 1/2" THREAD',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Bolt & Hex. Steel Nut 1/2" x 2" with 1-1/2" Thread (WAPDA Code 11142)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 110,
+    labourRate: 11,
+    installationRate: 5,
+    transportationRate: 2,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-11143',
+    code: '11143',
+    name: 'BOLT & HEX.STEEL NUT 1/2"X6"-2" THREAD',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Bolt & Hex. Steel Nut 1/2" x 6" with 2" Thread (WAPDA Code 11143)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 125,
+    labourRate: 12.5,
+    installationRate: 5,
+    transportationRate: 2,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-11212',
+    code: '11212',
+    name: 'WASHER ROUND 1.25"DIA,BOLT SIZE 0.5"',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Washer Round 1.25" Dia for 0.5" Bolt Size (WAPDA Code 11212)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 8.5,
+    labourRate: 0.85,
+    installationRate: 1,
+    transportationRate: 0.5,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-11258',
+    code: '11258',
+    name: 'WASHER SQUARE 2.25" x 11/16"',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Washer Square 2.25" x 11/16" (WAPDA Code 11258)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 12.5,
+    labourRate: 1.25,
+    installationRate: 1,
+    transportationRate: 0.5,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-11260',
+    code: '11260',
+    name: 'WASHER SQUARE 2" X 2" X .125"',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Washer Square 2" x 2" x .125" (WAPDA Code 11260)',
+    voltageApplicability: 'BOTH',
+    defaultQtyFactor: 1,
+    materialRate: 10.5,
+    labourRate: 1.05,
+    installationRate: 1,
+    transportationRate: 0.5,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-13322',
+    code: '13322',
+    name: 'FUSE LINK 6K',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Fuse Link 6K Type for 11kV Drop Out Cut Out (WAPDA Code 13322)',
+    voltageApplicability: 'HT',
+    defaultQtyFactor: 1,
+    materialRate: 48,
+    labourRate: 4.8,
+    installationRate: 5,
+    transportationRate: 2,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-13323',
+    code: '13323',
+    name: 'FUSE LINK 10A',
+    category: 'HARDWARE',
+    unit: 'EA',
+    specification: 'Fuse Link 10A for 11kV Drop Out Cut Out (WAPDA Code 13323)',
+    voltageApplicability: 'HT',
+    defaultQtyFactor: 1,
+    materialRate: 50.62,
+    labourRate: 5.06,
+    installationRate: 5,
+    transportationRate: 2,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-01110-hc',
+    code: '01110-HC',
+    name: 'POLE PC HC TYPE',
+    category: 'POLES',
+    unit: 'EA',
+    specification: 'Prestressed Concrete Pole PC HC Type (WAPDA Code 01110 HC)',
+    voltageApplicability: 'HT',
+    defaultQtyFactor: 1,
+    materialRate: 36722.82,
+    labourRate: 3672.28,
+    installationRate: 5000,
+    transportationRate: 3500,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-01110-lc',
+    code: '01110-LC',
+    name: 'POLE PC LC TYPE',
+    category: 'POLES',
+    unit: 'EA',
+    specification: 'Prestressed Concrete Pole PC LC Type (WAPDA Code 01110 LC)',
+    voltageApplicability: 'LT',
+    defaultQtyFactor: 1,
+    materialRate: 26707.51,
+    labourRate: 2670.75,
+    installationRate: 4000,
+    transportationRate: 2500,
+    effectiveFrom: '2026-01-01',
+    isActive: true
+  },
+  {
+    id: 'mat-code-01220',
+    code: '01220',
+    name: 'STRUCTURE LATTICE STEEL L TYPE',
+    category: 'POLES',
+    unit: 'EA',
+    specification: 'Structure Lattice Steel L Type (WAPDA Code 01220)',
+    voltageApplicability: 'HT',
+    defaultQtyFactor: 1,
+    materialRate: 55000,
+    labourRate: 5500,
+    installationRate: 7000,
+    transportationRate: 4000,
     effectiveFrom: '2026-01-01',
     isActive: true
   }
@@ -3274,6 +3450,199 @@ export const LUMP_SUM_1KM_HT_DOG_H_TYPE_TOTALS = {
   overheadAmount: 543925.01,
   netCost: 4283409.46
 };
+
+// ==========================================
+// DYNAMIC LUMP SUM MATERIAL RATE SYNCHRONIZATION
+// ==========================================
+
+/**
+ * Normalizes material code for matching (e.g. '08110' -> '8110')
+ */
+export function normalizeMaterialCode(code: string): string {
+  if (!code) return '';
+  return code.trim().replace(/^0+/, '').toUpperCase();
+}
+
+/**
+ * Returns Lump Sum items with their LATEST material rates looked up from the current Material Master list.
+ * Automatically recalculates material amount, 10% labour rate, labour amount, and total amount.
+ * Intelligently handles unit conversions (e.g. Km vs MR/Meter for conductors).
+ */
+export function getLatestLumpSumItems(
+  baseItems: LumpSum25KvaItem[],
+  materials: MaterialItem[]
+): LumpSum25KvaItem[] {
+  if (!materials || materials.length === 0) return baseItems;
+
+  return baseItems.map(item => {
+    const itemNorm = normalizeMaterialCode(item.code);
+    const matched = materials.find(m => {
+      const mNorm = normalizeMaterialCode(m.code);
+      return mNorm === itemNorm || m.code === item.code || m.id === `mat-code-${item.code}` || m.id === `mat-${item.code}`;
+    });
+
+    if (matched && Number(matched.materialRate) > 0) {
+      let unitRate = Number(matched.materialRate);
+      const mUnit = (matched.unit || '').trim().toLowerCase();
+      const iUnit = (item.unit || '').trim().toLowerCase();
+
+      // Check for Km <-> Meter (MR / M / MTR) unit conversion
+      const isKmToMeter = (mUnit === 'km') && (iUnit === 'mr' || iUnit === 'm' || iUnit === 'mtr');
+      const isMeterToKm = (mUnit === 'mr' || mUnit === 'm' || mUnit === 'mtr') && (iUnit === 'km');
+
+      if (isKmToMeter) {
+        unitRate = Number((unitRate / 1000).toFixed(4));
+      } else if (isMeterToKm) {
+        unitRate = Number((unitRate * 1000).toFixed(2));
+      }
+
+      const labourRate = Number(matched.labourRate) > 0 
+        ? (isKmToMeter ? Number((matched.labourRate / 1000).toFixed(4)) : Number(matched.labourRate))
+        : Number((unitRate * 0.10).toFixed(2));
+      const materialAmount = Number((unitRate * item.quantity).toFixed(2));
+      const labourAmount = Number((labourRate * item.quantity).toFixed(2));
+      const totalAmount = Number((materialAmount + labourAmount).toFixed(2));
+
+      return {
+        ...item,
+        unitRate,
+        materialAmount,
+        labourRate,
+        labourAmount,
+        totalAmount
+      };
+    }
+
+    return item;
+  });
+}
+
+/**
+ * Calculates dynamic totals for a Lump Sum schedule
+ */
+export function calculateLumpSumTotals(items: LumpSum25KvaItem[]) {
+  const materialCost = Number(items.reduce((acc, i) => acc + i.materialAmount, 0).toFixed(2));
+  const labourCost = Number(items.reduce((acc, i) => acc + i.labourAmount, 0).toFixed(2));
+  const labourPercent = 10.0;
+  const overheadPercent = 16.0;
+  const overheadAmount = Number((materialCost * (overheadPercent / 100)).toFixed(2));
+  const netCost = Number((materialCost + labourCost + overheadAmount).toFixed(2));
+
+  return {
+    materialCost,
+    labourPercent,
+    labourCost,
+    overheadPercent,
+    overheadAmount,
+    netCost
+  };
+}
+
+export function getLatestLumpSum25KvaSchedule(materials: MaterialItem[]) {
+  const items = getLatestLumpSumItems(LUMP_SUM_25KVA_TRANSFORMER_ITEMS, materials);
+  const totals = calculateLumpSumTotals(items);
+  return { items, totals };
+}
+
+export function getLatestLumpSum50KvaSchedule(materials: MaterialItem[]) {
+  const items = getLatestLumpSumItems(LUMP_SUM_50KVA_TRANSFORMER_ITEMS, materials);
+  const totals = calculateLumpSumTotals(items);
+  return { items, totals };
+}
+
+export function getLatestLumpSum100KvaSchedule(materials: MaterialItem[]) {
+  const items = getLatestLumpSumItems(LUMP_SUM_100KVA_TRANSFORMER_ITEMS, materials);
+  const totals = calculateLumpSumTotals(items);
+  return { items, totals };
+}
+
+export function getLatestLumpSum200KvaSchedule(materials: MaterialItem[]) {
+  const items = getLatestLumpSumItems(LUMP_SUM_200KVA_TRANSFORMER_ITEMS, materials);
+  const totals = calculateLumpSumTotals(items);
+  return { items, totals };
+}
+
+export function getLatestLumpSum1KmHtSchedule(materials: MaterialItem[]) {
+  const items = getLatestLumpSumItems(LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS, materials);
+  const totals = calculateLumpSumTotals(items);
+  return { items, totals };
+}
+
+export interface LumpSumPackageInfo {
+  id: string;
+  key: '25kva' | '50kva' | '100kva' | '200kva' | '1km-ht';
+  name: string;
+  shortName: string;
+  category: 'TRANSFORMER' | 'HT_LINE';
+  itemCount: number;
+  badgeColor: string;
+  description: string;
+  baseItems: LumpSum25KvaItem[];
+  getSchedule: (materials: MaterialItem[]) => { items: LumpSum25KvaItem[]; totals: ReturnType<typeof calculateLumpSumTotals> };
+}
+
+export const OFFICIAL_LUMP_SUM_PACKAGES: LumpSumPackageInfo[] = [
+  {
+    id: 'pkg-25kva',
+    key: '25kva',
+    name: '25 KVA Transformer Installation',
+    shortName: '25 kVA Transformer',
+    category: 'TRANSFORMER',
+    itemCount: 18,
+    badgeColor: 'bg-rose-500/10 text-rose-700 border-rose-200',
+    description: 'Official 18-Item WAPDA Standard 25 kVA 11/0.415 kV Sub-Station (10% Labour, 16% Overhead)',
+    baseItems: LUMP_SUM_25KVA_TRANSFORMER_ITEMS,
+    getSchedule: getLatestLumpSum25KvaSchedule
+  },
+  {
+    id: 'pkg-50kva',
+    key: '50kva',
+    name: '50 KVA Transformer Installation',
+    shortName: '50 kVA Transformer',
+    category: 'TRANSFORMER',
+    itemCount: 18,
+    badgeColor: 'bg-indigo-500/10 text-indigo-700 border-indigo-200',
+    description: 'Official 18-Item WAPDA Standard 50 kVA Sub-Station with Store Code 08120 (10% Labour, 16% Overhead)',
+    baseItems: LUMP_SUM_50KVA_TRANSFORMER_ITEMS,
+    getSchedule: getLatestLumpSum50KvaSchedule
+  },
+  {
+    id: 'pkg-100kva',
+    key: '100kva',
+    name: '100 KVA Transformer Installation',
+    shortName: '100 kVA Transformer',
+    category: 'TRANSFORMER',
+    itemCount: 20,
+    badgeColor: 'bg-amber-500/10 text-amber-700 border-amber-200',
+    description: 'Official 20-Item WAPDA Standard 100 kVA Sub-Station with Store Code 08130, Double Platform & Hardware',
+    baseItems: LUMP_SUM_100KVA_TRANSFORMER_ITEMS,
+    getSchedule: getLatestLumpSum100KvaSchedule
+  },
+  {
+    id: 'pkg-200kva',
+    key: '200kva',
+    name: '200 KVA Transformer Installation',
+    shortName: '200 kVA Transformer',
+    category: 'TRANSFORMER',
+    itemCount: 29,
+    badgeColor: 'bg-purple-500/10 text-purple-700 border-purple-200',
+    description: 'Official WAPDA Standard 200 kVA Sub-Station with Store Code 08140, WASP & ANT Conductors, and Hardware',
+    baseItems: LUMP_SUM_200KVA_TRANSFORMER_ITEMS,
+    getSchedule: getLatestLumpSum200KvaSchedule
+  },
+  {
+    id: 'pkg-1km-ht',
+    key: '1km-ht',
+    name: '1.0 KM HT Line (DOG & H-Type Steel Structures)',
+    shortName: '1.0 KM HT Line (DOG)',
+    category: 'HT_LINE',
+    itemCount: 29,
+    badgeColor: 'bg-emerald-500/10 text-emerald-700 border-emerald-200',
+    description: 'Official WAPDA Standard 1.0 KM 11kV Line Schedule with DOG Conductor, 16 H-Type Steel Structures & Allied Gear',
+    baseItems: LUMP_SUM_1KM_HT_DOG_H_TYPE_ITEMS,
+    getSchedule: getLatestLumpSum1KmHtSchedule
+  }
+];
 
 export const STANDARD_TEMPLATES: ConstructionTemplate[] = [
   {
