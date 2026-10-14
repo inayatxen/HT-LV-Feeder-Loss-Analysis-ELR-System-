@@ -35,12 +35,14 @@ import {
   Minimize2,
   Link2,
   Building2,
-  FileCheck2
+  FileCheck2,
+  Compass
 } from 'lucide-react';
 import { CONDUCTOR_LIST, getConductor } from '../data/conductors';
 import { TRANSFORMER_CAPACITIES } from '../data/transformers';
 import { GULBHAR_COLONY_LT_FEEDER } from '../data/presetFeeders';
 import { ExcelImportModal } from './ExcelImportModal';
+import { KmlKmzImportModal } from './KmlKmzImportModal';
 import { downloadExcelTemplate, exportFullFeederToExcel } from '../utils/excelImport';
 import { calculateNonOverlappingSLDLayout } from '../utils/sldLayout';
 import { generate11DigitWorkOrder, format11DigitWorkOrder } from '../utils/costEngine';
@@ -140,8 +142,34 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
   const [saveSuccessMessage, setSaveSuccessMessage] = useState(false);
   const [showCsvImport, setShowCsvImport] = useState(false);
   const [showExcelModal, setShowExcelModal] = useState(false);
+  const [showKmlModal, setShowKmlModal] = useState(false);
   const [csvText, setCsvText] = useState('');
   const [importError, setImportError] = useState('');
+
+  // Handle applied feeder from KML / KMZ GIS import
+  const handleImportKmlFeeder = (imported: FeederData) => {
+    onSaveFeeder(imported);
+    const newRows: InputRow[] = imported.segments.map((s, idx) => {
+      const toNode = imported.nodes.find(n => n.id === s.toNodeId);
+      return {
+        id: s.id || `row-${idx}`,
+        fromNode: s.fromNodeId.replace('.0', ''),
+        toNode: s.toNodeId.replace('.0', ''),
+        lengthKm: s.lengthKm,
+        lengthMeters: Math.round(s.lengthKm * 1000),
+        threePhaseCust: toNode?.threePhaseCustomers || 0,
+        singlePhaseCust: toNode?.singlePhaseCustomers || 0,
+        nodeKva: toNode?.spotLoadKva,
+        conductorCode: s.conductorCode
+      };
+    });
+    setRows(newRows);
+    setFeederName(imported.name);
+    setSubstationName(imported.substationName);
+    setNominalVoltage(imported.nominalVoltage);
+    setSaveSuccessMessage(true);
+    setTimeout(() => setSaveSuccessMessage(false), 3000);
+  };
 
   // Handle applied rows from Excel import modal
   const handleApplyImportedRows = (
@@ -563,6 +591,16 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
             >
               <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" />
               <span>Import from Excel (.xlsx)</span>
+            </button>
+
+            {/* KML / KMZ GIS Route Import Button */}
+            <button
+              onClick={() => setShowKmlModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-blue-950 bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded-lg shadow-2xs transition-all cursor-pointer"
+              title="Import node-to-node GIS route data from Google Earth KML / KMZ file"
+            >
+              <Compass className="w-3.5 h-3.5 text-blue-700" />
+              <span>Import KML / KMZ</span>
             </button>
 
             {/* Excel Export Button */}
@@ -1752,6 +1790,13 @@ export const InputDataForm: React.FC<InputDataFormProps> = ({
         onClose={() => setShowExcelModal(false)}
         onApplyImportedData={handleApplyImportedRows}
         feeder={feeder}
+      />
+
+      {/* KML / KMZ GIS Import Modal */}
+      <KmlKmzImportModal
+        isOpen={showKmlModal}
+        onClose={() => setShowKmlModal(false)}
+        onImportFeeder={handleImportKmlFeeder}
       />
     </div>
   );

@@ -69,6 +69,7 @@ interface WhatIfWorkbenchProps {
   onRedo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  onOpenKmlImport?: () => void;
 }
 
 export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
@@ -94,7 +95,8 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
   onUndo,
   onRedo,
   canUndo,
-  canRedo
+  canRedo,
+  onOpenKmlImport
 }) => {
   const [showCompareModal, setShowCompareModal] = useState(false);
   const [visualMode, setVisualMode] = useState<'diagram' | 'map'>('diagram');
@@ -465,6 +467,7 @@ export const WhatIfWorkbench: React.FC<WhatIfWorkbenchProps> = ({
               <VisualMapComponent 
                 feeder={feeder} 
                 bifurcationConfig={bifurcationConfig}
+                onOpenKmlImport={onOpenKmlImport}
               />
             ) : (
               <div className="p-2 sm:p-4 bg-slate-950 rounded-b-xl overflow-hidden">

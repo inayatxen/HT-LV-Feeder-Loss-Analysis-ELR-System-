@@ -28,6 +28,7 @@
     "html2canvas": "^1.4.1",
     "html2canvas-pro": "^2.5.1",
     "jspdf": "^4.2.1",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "pg": "^8.23.1",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/google.maps": "^3.66.6",
+    "@types/jszip": "^3.4.1",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

@@ -235,9 +235,77 @@ export const AGRI_TUBEWELL_LT_FEEDER: FeederData = {
   ]
 };
 
+export const GUJAR_GARHI_11KV_HT_FEEDER: FeederData = {
+  id: 'gujar-garhi-11kv-feeder',
+  name: 'Gujar Garhi 11 kV HT Feeder (PESCO Mardan)',
+  description: 'Authentic 11 kV High Tension distribution feeder from 132/11 kV Gujar Garhi Grid Substation in Mardan District, sourced from MapToKML node-to-node GIS dataset supplying 11 distribution transformers (DTRs) totaling 1,850 kVA capacity.',
+  type: 'HT',
+  category: 'HV',
+  substationName: 'Gujar Garhi 132/11 kV Grid Substation',
+  gridVoltageKv: 11.0,
+  nominalVoltage: 11000,
+  loadPerSinglePhaseCustomerKva: 2.5,
+  operatingPowerFactor: 0.85,
+  loadFactor: 0.65,
+  annualGrowthRatePercent: 5.0,
+  tariffPerKwh: 24.83,
+  currencySymbol: 'Rupees',
+  existingTransformerKva: 1850,
+  proposedTransformerKva: 2500,
+
+  // Unified Project & ELR Scheme Linking
+  workOrderNo: '26147126046',
+  schemeCategory: 'ELR',
+  elrCode: 'ELR-71-26-046',
+  accountHead: '4-71 ELR Capital Loss Reduction',
+  circle: 'Mardan Circle',
+  division: 'Mardan Division',
+  subDivision: 'Gujar Garhi Sub-Division',
+  district: 'Mardan',
+  villageLocality: 'Gujar Garhi, Mardan',
+  applicantDepartment: 'PESCO Operations & Planning Directorate',
+  schemeProjectName: 'Gujar Garhi 11kV Feeder Loss Reduction, Bifurcation & Re-conductoring Scheme',
+  purposeOfWork: 'Comprehensive 11kV HT line loss reduction, bifurcation with additional transformer, and GIS node-to-node route upgrade.',
+  preparedBy: 'Engr. M. Inayat (SDO Gujar Garhi)',
+  checkedBy: 'Engr. Tariq Khan (XEN Mardan)',
+  approvedBy: 'Engr. Abdul Rehman (SE Mardan)',
+  linkedEstimateId: 'est-elr-gujar-garhi-11kv-feeder',
+  nodes: [
+    { id: '0.0', label: 'Gujar Garhi 132/11kV Grid 11kV Feeder Bay (Source)', poleNumber: 'VCB-02', threePhaseCustomers: 0, singlePhaseCustomers: 0, isTransformerNode: false, x: 80, y: 150, lat: 34.22880, lng: 72.01590 },
+    { id: '1.0', label: 'Section 1 (Grid Exit Tower P-1)', poleNumber: 'T-1', threePhaseCustomers: 0, singlePhaseCustomers: 0, spotLoadKva: 0, x: 190, y: 150, lat: 34.23020, lng: 72.01730 },
+    { id: '2.0', label: 'Section 2 (Takht Bhai Road Crossing P-2)', poleNumber: 'T-2', threePhaseCustomers: 1, singlePhaseCustomers: 20, spotLoadKva: 100, x: 310, y: 150, lat: 34.23190, lng: 72.01910 },
+    { id: '3.0', label: 'Section 3 (Gujar Garhi Main Bazar DTR)', poleNumber: 'T-3', threePhaseCustomers: 3, singlePhaseCustomers: 60, spotLoadKva: 200, x: 440, y: 150, lat: 34.23360, lng: 72.02070 },
+    { id: '4.0', label: 'Section 4 (Canal Bridge North P-4)', poleNumber: 'T-4', threePhaseCustomers: 0, singlePhaseCustomers: 15, spotLoadKva: 50, x: 570, y: 150, lat: 34.23540, lng: 72.02240 },
+    { id: '5.0', label: 'Section 5 (Industrial Flour Mill DTR)', poleNumber: 'T-5', threePhaseCustomers: 4, singlePhaseCustomers: 25, spotLoadKva: 300, x: 700, y: 150, lat: 34.23710, lng: 72.02410 },
+    { id: '6.0', label: 'Section 6 (East-West T-Off Junction P-6)', poleNumber: 'T-6', threePhaseCustomers: 1, singlePhaseCustomers: 30, spotLoadKva: 100, x: 830, y: 150, lat: 34.23890, lng: 72.02580 },
+    { id: '7.0', label: 'Section 7 (Rural Agricultural Tube-well DTR)', poleNumber: 'T-7', threePhaseCustomers: 3, singlePhaseCustomers: 10, spotLoadKva: 200, x: 960, y: 100, lat: 34.24070, lng: 72.02750 },
+    { id: '8.0', label: 'Section 8 (Village Abadi North DTR)', poleNumber: 'T-8', threePhaseCustomers: 2, singlePhaseCustomers: 80, spotLoadKva: 250, x: 1090, y: 100, lat: 34.24250, lng: 72.02920 },
+    { id: '9.0', label: 'Section 9 (Tail-End Farmland Outpost DTR)', poleNumber: 'T-9', threePhaseCustomers: 2, singlePhaseCustomers: 20, spotLoadKva: 150, x: 1220, y: 100, lat: 34.24420, lng: 72.03090 },
+    { id: '10.0', label: 'Section 10 (East Tube-well Cluster DTR)', poleNumber: 'T-10', threePhaseCustomers: 2, singlePhaseCustomers: 15, spotLoadKva: 200, x: 960, y: 220, lat: 34.23820, lng: 72.02820 },
+    { id: '11.0', label: 'Section 11 (Tail End East Agricultural Substation)', poleNumber: 'T-11', threePhaseCustomers: 1, singlePhaseCustomers: 25, spotLoadKva: 100, x: 1090, y: 220, lat: 34.23760, lng: 72.03060 },
+    { id: '12.0', label: 'Section 12 (South-East Lift Irrigation DTR)', poleNumber: 'T-12', threePhaseCustomers: 3, singlePhaseCustomers: 10, spotLoadKva: 200, x: 1220, y: 220, lat: 34.23680, lng: 72.03280 }
+  ],
+  segments: [
+    { id: 'gg-0-1', fromNodeId: '0.0', toNodeId: '1.0', lengthKm: 0.20, conductorCode: 'PANTHER' },
+    { id: 'gg-1-2', fromNodeId: '1.0', toNodeId: '2.0', lengthKm: 0.25, conductorCode: 'PANTHER' },
+    { id: 'gg-2-3', fromNodeId: '2.0', toNodeId: '3.0', lengthKm: 0.24, conductorCode: 'PANTHER' },
+    { id: 'gg-3-4', fromNodeId: '3.0', toNodeId: '4.0', lengthKm: 0.26, conductorCode: 'DOG' },
+    { id: 'gg-4-5', fromNodeId: '4.0', toNodeId: '5.0', lengthKm: 0.24, conductorCode: 'DOG' },
+    { id: 'gg-5-6', fromNodeId: '5.0', toNodeId: '6.0', lengthKm: 0.25, conductorCode: 'DOG' },
+    { id: 'gg-6-7', fromNodeId: '6.0', toNodeId: '7.0', lengthKm: 0.26, conductorCode: 'DOG' },
+    { id: 'gg-7-8', fromNodeId: '7.0', toNodeId: '8.0', lengthKm: 0.25, conductorCode: 'RABBIT' },
+    { id: 'gg-8-9', fromNodeId: '8.0', toNodeId: '9.0', lengthKm: 0.24, conductorCode: 'RABBIT' },
+    { id: 'gg-6-10', fromNodeId: '6.0', toNodeId: '10.0', lengthKm: 0.24, conductorCode: 'DOG' },
+    { id: 'gg-10-11', fromNodeId: '10.0', toNodeId: '11.0', lengthKm: 0.23, conductorCode: 'RABBIT' },
+    { id: 'gg-11-12', fromNodeId: '11.0', toNodeId: '12.0', lengthKm: 0.22, conductorCode: 'RABBIT' }
+  ]
+};
+
 export const PRESET_FEEDERS: FeederData[] = [
+  GUJAR_GARHI_11KV_HT_FEEDER,
   GULBHAR_COLONY_LT_FEEDER,
   AGRI_TUBEWELL_LT_FEEDER,
   HAYATABAD_11KV_HT_FEEDER,
   WARSAK_11KV_HT_FEEDER
 ];
+

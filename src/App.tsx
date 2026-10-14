@@ -37,6 +37,7 @@ import { LocalDatabaseModal } from './components/LocalDatabaseModal';
 import { NewJobModal } from './components/NewJobModal';
 import { CostEstimationModule } from './components/costEstimation/CostEstimationModule';
 import { SaveUnifiedProjectModal } from './components/SaveUnifiedProjectModal';
+import { KmlKmzImportModal } from './components/KmlKmzImportModal';
 import { 
   initLocalDatabase, 
   saveFeederToLocalDb, 
@@ -277,7 +278,30 @@ export default function App() {
   const [isSaveUnifiedOpen, setIsSaveUnifiedOpen] = useState(false);
   const [currentLinkedEstimate, setCurrentLinkedEstimate] = useState<CostEstimateRecord | null>(null);
   const [dbToast, setDbToast] = useState('');
+  const [isKmlImportOpen, setIsKmlImportOpen] = useState(false);
   const [inspectedNode, setInspectedNode] = useState<FeederNode | null>(null);
+
+  // KML / KMZ Feeder Import Handler
+  const handleImportKmlFeeder = (newFeeder: FeederData) => {
+    setCustomFeeders(prev => ({
+      ...prev,
+      [newFeeder.id]: newFeeder
+    }));
+    setSelectedFeederId(newFeeder.id);
+    const cat = newFeeder.category || (newFeeder.type === 'HT' ? 'HV' : 'LV');
+    setActiveCategory(cat);
+    setActiveTransformerKva(newFeeder.existingTransformerKva);
+    setActiveInjectedVoltage(newFeeder.nominalVoltage);
+    setActiveConductors({});
+    setActiveCapacitors({});
+    setActiveLoadFactor(undefined);
+    setBifurcationConfig(getSavedBifurcationConfig(newFeeder));
+    setActiveTab('whatif');
+
+    saveFeederToLocalDb(newFeeder).catch(console.error);
+    setDbToast(`Loaded GIS Feeder from KML/KMZ: "${newFeeder.name}"`);
+    setTimeout(() => setDbToast(''), 4000);
+  };
 
   // Start new job handler
   const handleCreateNewJob = (newFeeder: FeederData) => {
@@ -693,6 +717,7 @@ export default function App() {
           onSelectJobTitle={handleSelectJobTitle}
           onSaveUnifiedProject={handleOpenSaveUnifiedProject}
           onResetToFactory={handleResetFactory}
+          onOpenKmlImport={() => setIsKmlImportOpen(true)}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
@@ -897,6 +922,7 @@ export default function App() {
                   onRedo={redo}
                   canUndo={historyIndex > 0}
                   canRedo={historyIndex < history.length - 1}
+                  onOpenKmlImport={() => setIsKmlImportOpen(true)}
                 />
               </div>
             )}
@@ -1018,6 +1044,12 @@ export default function App() {
         estimate={currentLinkedEstimate}
         onConfirmSave={handleConfirmSaveUnifiedProject}
         onExportProjectFile={handleExportUnifiedProjectFile}
+      />
+
+      <KmlKmzImportModal
+        isOpen={isKmlImportOpen}
+        onClose={() => setIsKmlImportOpen(false)}
+        onImportFeeder={handleImportKmlFeeder}
       />
     </div>
   );

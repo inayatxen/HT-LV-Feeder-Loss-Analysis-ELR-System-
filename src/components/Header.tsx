@@ -25,7 +25,8 @@ import {
   Calculator,
   Save,
   FolderDown,
-  Activity
+  Activity,
+  Compass
 } from 'lucide-react';
 import { 
   FeederType, 
@@ -58,6 +59,7 @@ interface HeaderProps {
   summary?: FeederAnalysisSummary;
   selectedJobTitle: JobTitle;
   onSelectJobTitle: (title: JobTitle) => void;
+  onOpenKmlImport?: () => void;
   onSaveUnifiedProject?: () => void;
   onResetToFactory?: () => void;
   theme: 'light' | 'dark' | 'blue' | 'amber';
@@ -84,6 +86,7 @@ export const Header: React.FC<HeaderProps> = ({
   summary,
   selectedJobTitle,
   onSelectJobTitle,
+  onOpenKmlImport,
   onSaveUnifiedProject,
   onResetToFactory,
   theme,
@@ -279,6 +282,18 @@ export const Header: React.FC<HeaderProps> = ({
               <FolderOpen className="w-3.5 h-3.5 text-amber-400" />
               <span>Old Jobs</span>
             </button>
+
+            {onOpenKmlImport && (
+              <button
+                onClick={onOpenKmlImport}
+                title="Import node-to-node GIS route data from Google Earth KML / KMZ file"
+                className="btn-3d-blue flex items-center gap-1.5 px-2.5 py-1.5 text-xs whitespace-nowrap text-white font-bold"
+              >
+                <Compass className="w-3.5 h-3.5 text-cyan-300" />
+                <span className="hidden md:inline">Import KML/KMZ</span>
+                <span className="md:hidden">KML</span>
+              </button>
+            )}
             {onResetToFactory && (
               <button
                 onClick={onResetToFactory}

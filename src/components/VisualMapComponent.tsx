@@ -28,7 +28,8 @@ import {
   Info,
   CheckCircle2,
   Compass,
-  Eye
+  Eye,
+  Upload
 } from 'lucide-react';
 
 interface VisualMapComponentProps {
@@ -36,6 +37,7 @@ interface VisualMapComponentProps {
   bifurcationConfig?: BifurcationConfig;
   highlightNodeId?: string;
   onSelectNode?: (node: FeederNode) => void;
+  onOpenKmlImport?: () => void;
 }
 
 declare const google: any;
@@ -107,7 +109,8 @@ export const VisualMapComponent: React.FC<VisualMapComponentProps> = ({
   feeder,
   bifurcationConfig,
   highlightNodeId,
-  onSelectNode
+  onSelectNode,
+  onOpenKmlImport
 }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || 'AIzaSyDVQU7xNNVrBzYOLPgsDZjAIwnm47DAynI';
   const [selectedNode, setSelectedNode] = useState<FeederNode | null>(null);
@@ -294,6 +297,19 @@ export const VisualMapComponent: React.FC<VisualMapComponentProps> = ({
             <Eye className="w-3.5 h-3.5" />
             <span>Loads</span>
           </button>
+
+          {/* Import KMZ / KML Button */}
+          {onOpenKmlImport && (
+            <button
+              type="button"
+              onClick={onOpenKmlImport}
+              className="px-2.5 py-1 text-xs rounded-lg font-bold border border-blue-500 bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-1 cursor-pointer shadow-xs"
+              title="Import node-to-node GIS route data from Google Earth KML / KMZ file"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span>Import KMZ</span>
+            </button>
+          )}
         </div>
       </div>
 
